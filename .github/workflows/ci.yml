@@ -52,11 +52,12 @@ jobs:
         run: uv run --frozen pytest --cov --cov-report=term-missing
 
       # The remaining pre-commit hooks (markdownlint, YAML/TOML, whitespace, large files).
-      # Ruff and mypy ran above; gitleaks' hook scans only staged files, so the history scan
-      # is the gitleaks job below.
+      # Ruff and mypy ran above; terraform fmt runs in the Terraform job (this job has no
+      # Terraform); gitleaks' hook scans only staged files, so the history scan is the gitleaks
+      # job below. tests/unit/test_ci_config.py checks every skipped hook is covered elsewhere.
       - name: Other pre-commit hooks
         env:
-          SKIP: ruff-check,ruff-format,mypy,gitleaks
+          SKIP: ruff-check,ruff-format,mypy,terraform-fmt,gitleaks
         run: uv run --frozen pre-commit run --all-files --show-diff-on-failure
 
   terraform:

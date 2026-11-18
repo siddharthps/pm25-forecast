@@ -160,6 +160,28 @@ def test_ci_terraform_version_matches_main_tf() -> None:
     assert setup[0]["with"]["terraform_version"] == match.group(1)
 
 
+def test_every_skipped_pre_commit_hook_is_checked_elsewhere_in_ci() -> None:
+    # A hook skipped in CI's pre-commit step must be covered by its own CI step, or a check
+    # would silently vanish from CI.
+    covered_by = {
+        "ruff-check": "uv run --frozen ruff check",
+        "ruff-format": "uv run --frozen ruff format --check",
+        "mypy": "uv run --frozen mypy",
+        "terraform-fmt": "terraform fmt -check -recursive",
+        "gitleaks": "gitleaks/gitleaks-action@",
+    }
+    ci = _load(CI)
+    steps = [s for job in ci["jobs"].values() for s in job.get("steps", [])]
+    skip_steps = [s for s in steps if "SKIP" in s.get("env", {})]
+    assert len(skip_steps) == 1
+    skipped = set(skip_steps[0]["env"]["SKIP"].split(","))
+    unknown = skipped - covered_by.keys()
+    assert not unknown, f"skipped in CI with no known replacement: {sorted(unknown)}"
+    text = CI.read_text(encoding="utf-8")
+    for hook in skipped:
+        assert covered_by[hook] in text, f"{hook} is skipped but nothing else in CI runs it"
+
+
 def test_ci_never_keeps_the_checkout_token() -> None:
     for path in _workflow_files():
         for job in _load(path)["jobs"].values():

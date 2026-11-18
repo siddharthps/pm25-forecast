@@ -1,0 +1,101 @@
+[project]
+name = "airwatch"
+version = "0.1.0"
+description = "AirWatch: live next-day PM2.5 forecasts for a US metro area, with an honest public track record."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Siddharth Puranam" }]
+# D-026: match the Python in Prefect's managed image (prefecthq/prefect:3-python3.12).
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.170.15",
+    "mypy>=2.4.1",
+    "pre-commit>=4.7.0",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.5",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.9,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.uv]
+required-version = ">=0.13.9"
+
+# ---------------------------------------------------------------------------
+# Ruff: lint + format. It covers every folder by default; nothing is excluded,
+# and tests/unit/test_lint_config.py fails if a code folder ever goes unlinted.
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "B",        # bugbear
+    "UP",       # pyupgrade
+    "SIM",      # simplify
+    "C4",       # comprehensions
+    "PTH",      # pathlib over os.path
+    "PL",       # pylint
+    "RUF",      # ruff-specific
+    "S",        # bandit (security)
+    "N",        # naming
+    "DTZ",      # no naive datetimes (the spec requires UTC with an explicit zone)
+    "T20",      # no print(): use logging
+    "ARG",      # unused arguments
+    "ERA",      # commented-out code
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S101",     # assert is how pytest works
+    "PLR2004",  # magic values are normal in tests
+    "S603",     # subprocess calls with fixed arguments in tool-config tests
+]
+
+# ---------------------------------------------------------------------------
+# mypy: strict on src/ (spec); tests are type-checked but may skip annotations.
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src", "tests"]
+warn_unreachable = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+# ---------------------------------------------------------------------------
+# pytest: plain `uv run pytest` runs the fast, offline core suite.
+# `-m slow` / `-m live` select the others explicitly.
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config", "-m", "not slow and not live"]
+markers = [
+    "slow: model smoke tests on small data (not in the core suite)",
+    "live: calls real external APIs; opt-in only, never in CI",
+]
+xfail_strict = true
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+source = ["airwatch"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+# The 85% floor (spec) is switched on in CI once the first feature module lands (#6, T2).

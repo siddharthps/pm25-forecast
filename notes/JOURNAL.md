@@ -504,7 +504,5 @@ The 3 failing tests:
 - **T3b (#8):** PR #41 is green, and the apply is done and verified. Owner: add the `Terraform`
   check to `protect-main` and delete `infra/tfplan`. Then merge #41 and tick #8's boxes.
 - **T2 (#6):** close once Monday's scheduled lock job opens its PR and CI passes on it.
-- **2026-11-20:** milestone A due.
-- After CI is green on uv 0.13.9: delete `~/.local/bin/uv-0.7.20-backup/` (owner's OK).
 - **2026-11-20:** milestone A due. **2026-11-25:** skeleton checkpoint, D-014 review, delete the
   old AWS key and IAM user.

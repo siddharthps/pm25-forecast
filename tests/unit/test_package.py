@@ -1,6 +1,5 @@
 """The package installs and reports the version recorded in pyproject.toml."""
 
-import os  # deliberate lint error for the T2 red/green proof
 import tomllib
 from importlib.metadata import version
 from pathlib import Path

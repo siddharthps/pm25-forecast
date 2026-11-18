@@ -465,9 +465,26 @@ The 3 failing tests:
   Putting a secret's value in Terraform would store it in the state. Proposal: a later task where
   the owner writes the parameter with the CLI and Terraform manages only its name and permissions.
 
+### PR #41 and a review against the global rules
+
+- **The first CI run on #41 failed.** The new `terraform fmt` hook ran in the Python job, which
+  has no Terraform. The hook is now skipped there (the Terraform job covers it). A new test fails
+  if any hook is skipped in CI without another step running the same check; a planted bad skip
+  proved it. All three checks are green.
+- **The owner asked whether the tests follow the global CLAUDE.md.** Mostly. There were four gaps:
+  - no mutmut: **#42**;
+  - no idempotency or step-failure tests for the uv-lock job: **#43**;
+  - the Terraform tests use a mock provider, so the real proof is the owner's apply plus the
+    agent's read-back;
+  - the `ruff format` exclusion of vendored skills.
+- **The exclusion was accepted by the owner** and recorded as D-029. The global rule, SPEC
+  § Boundaries and the repo `CLAUDE.md` now allow scoping one check away from files we don't
+  own, recorded as a D-entry. The repo `CLAUDE.md` also gained the Terraform and Hypothesis
+  commands and a pointer to `infra/`.
+
 ### Next
 
-- **T3b (#8):** PR and CI. Owner: the first `plan` and `apply` (infra/README.md), then add the
+- **T3b (#8):** PR #41 is green. Owner: the first `plan` and `apply` (infra/README.md), then add the
   `Terraform` check to `protect-main`. The agent verifies the result read-only.
 - **T2 (#6):** close once Monday's scheduled lock job opens its PR and CI passes on it.
 - **2026-11-20:** milestone A due.

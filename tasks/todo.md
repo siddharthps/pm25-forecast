@@ -48,5 +48,12 @@ line** (2026-12-16) · **D: Complete**.
 | T29 | [#35](https://github.com/siddharthps/pm25-forecast/issues/35) | Live acceptance | D | open |
 | T30 | [#36](https://github.com/siddharthps/pm25-forecast/issues/36) | Retire v1 | D | open |
 
+## Added along the way (no T-number; plan.md rule 6)
+
+| Issue | Title | Found in | Milestone |
+| --- | --- | --- | --- |
+| [#42](https://github.com/siddharthps/pm25-forecast/issues/42) | Mutation testing (mutmut) on the existing core logic | T3b | B |
+| [#43](https://github.com/siddharthps/pm25-forecast/issues/43) | uv-lock job: idempotency and step-failure tests | T3b | B |
+
 The **State** column is a snapshot. GitHub is the source of truth, and this column is not kept in
 sync.

@@ -601,6 +601,24 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   risk above.
 - **Status:** Active. Owner's choice, 2026-11-18.
 
+## D-029 · 2026-11-18 · `ruff format` skips the vendored skills (scoped, not loosened)
+
+- **Decision:** `[tool.ruff.format] exclude = [".claude/skills/**"]` in `pyproject.toml`. Ruff
+  *lint* coverage is unchanged, and so is formatting of every file the project owns, including
+  Python code blocks in our own Markdown.
+- **Why:**
+  - `ruff format` also formats Python code blocks inside Markdown, and one upstream skill file
+    failed.
+  - Those files are copied from upstream and not edited here (D-020). Reformatting them would
+    fork them from their source and make updates noisy.
+  - The rule "fix the cause, never loosen the check" is about our own output. These files aren't
+    ours.
+- **Rule refined (owner, 2026-11-18):**
+  - The owner's global CLAUDE.md and SPEC § Boundaries now allow scoping one check away from
+    files the project doesn't own, recorded as a D-entry.
+  - Whole checks and rules are never relaxed.
+- **Status:** Active. Owner accepted, 2026-11-18.
+
 ---
 
 ## Open questions (to settle, then move into a D-entry)

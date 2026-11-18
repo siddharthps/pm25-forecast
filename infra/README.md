@@ -32,7 +32,17 @@ The total is **under $0.10 a month**, well inside the $5 budget alarm (success c
 
 ## First apply: step by step (owner)
 
-PowerShell, from the repo root.
+PowerShell, from the repo root. **In bash** (Git Bash, or the `!` prefix in Claude Code), use
+`cp` instead of `Copy-Item`, and put the profile in front of each command, because each `!`
+command may start a fresh shell:
+
+```bash
+aws sso login --profile pm25
+cp infra/terraform.tfvars.example infra/terraform.tfvars
+AWS_PROFILE=pm25 terraform -chdir=infra init
+AWS_PROFILE=pm25 terraform -chdir=infra plan -out=tfplan
+AWS_PROFILE=pm25 terraform -chdir=infra apply tfplan
+```
 
 1. **Log in** (an 8-hour session):
 

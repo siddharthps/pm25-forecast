@@ -482,10 +482,27 @@ The 3 failing tests:
   own, recorded as a D-entry. The repo `CLAUDE.md` also gained the Terraform and Hypothesis
   commands and a pointer to `infra/`.
 
+### T3b apply (owner) and read-back (agent)
+
+- **The owner ran `init`, `plan` and `apply`.** The plan said `16 to add, 0 to change, 0 to
+  destroy`, as the guide predicted.
+- **Trap:** the guide's `$env:AWS_PROFILE = "pm25"` failed in the owner's bash shell. The README
+  now has bash versions too, with `AWS_PROFILE=pm25` in front of each command, because each `!`
+  command may start a fresh shell.
+- **Read-back (read-only):**
+  - A second `plan` reports no changes (detailed exit code 0), and the state holds 16 resources.
+  - Both buckets are versioned and have ACLs off.
+  - The private bucket has all four public-access blocks on, and AWS says its policy is not
+    public. The public bucket has the two ACL blocks on and the two policy blocks off, and AWS
+    says its policy is public, as designed.
+  - CORS allows `https://siddharthps.github.io` with GET and HEAD only.
+  - Anonymous requests got 403 for listing the private bucket, listing the public bucket, and
+    plain HTTP to the public bucket.
+
 ### Next
 
-- **T3b (#8):** PR #41 is green. Owner: the first `plan` and `apply` (infra/README.md), then add the
-  `Terraform` check to `protect-main`. The agent verifies the result read-only.
+- **T3b (#8):** PR #41 is green, and the apply is done and verified. Owner: add the `Terraform`
+  check to `protect-main` and delete `infra/tfplan`. Then merge #41 and tick #8's boxes.
 - **T2 (#6):** close once Monday's scheduled lock job opens its PR and CI passes on it.
 - **2026-11-20:** milestone A due.
 - After CI is green on uv 0.13.9: delete `~/.local/bin/uv-0.7.20-backup/` (owner's OK).

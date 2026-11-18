@@ -288,11 +288,41 @@ The 3 failing tests:
   unchecked.
 - The file-writing tool refuses to overwrite a file it hasn't read in the session. Read first.
 
+### T1 wrap-up and local clean-up
+
+- **PR #37 merged** (owner's request), squash commit `7703303`. Both commits on `main` have
+  noreply author and committer. Before merging, the owner confirmed GitHub's "Keep my email
+  addresses private" and "Block command line pushes that expose my email" were already on, since
+  GitHub's own merge commits use the account email, not the repo-local one.
+- **#5's last box:** the owner opened a Claude Code session in the repo folder; the project skills
+  are listed.
+- **Local clean-up (owner's OK), about 2.1 GB freed:**
+  - From the v1 folder: `.venv` (1.5 GB), caches (338 MB), `mlartifacts/` + `reports/` (72 MB),
+    and `.env` (retired key).
+  - Python 3.12.11 (only the v1 `.venv` used it) and the download leftovers.
+  - After the merge: the old folder's `notes/` and `tasks/`, deleted after a token check showed the
+    repo copies contained everything except two deliberate edits, plus the parent-folder skills
+    copy and `skills-lock.json`.
+  - Kept: the v1 code (until T30); `mlruns/` and `flows/mlflow.db` (under 1 MB, gone with the v1
+    folder); the uv 0.7.20 backup (until T2's CI is green on uv 0.13.9).
+
+#### Traps found (wrap-up)
+
+- **GitHub's merge commits use the account's commit email**, not the repo's `git config`. Check
+  the account's email privacy before the first web or `gh` merge.
+- `sed` replacement text treats `\U` as "uppercase from here", so a Windows path like
+  `C:\Users\…` mangled a memory file. Use the file tools, not `sed`, for Windows paths.
+- Claude Code memory is per folder. A session in the repo folder doesn't see the parent folder's
+  memory, so the repo's `CLAUDE.md`, this journal and issue comments carry the state.
+- A slow `du` over a cache of many tiny files hit the 2-minute tool limit. Measure big folders
+  once, or in the background.
+
 ### Next
 
-- The owner reviews the T1 changes. On their go-ahead: commit on `5-t1-scaffold`, push, open the
-  PR for #5 and wait for checks by PR number. There is no CI yet (that's T2), so the PR has no
-  checks to wait for. Merge on the owner's request.
-- After the merge: the owner opens a Claude Code session **in the repo folder** to confirm the
-  skills load (#5's last box); then delete the parent-folder skills copy and the old folder's
-  `notes/` and `tasks/` copies (owner confirms).
+- **T2 (#6) CI** on branch `6-ci`: a GitHub Actions workflow running `uv sync --frozen`, Ruff,
+  mypy, pytest (+ coverage report) and gitleaks on every PR. Actions pinned to SHAs (looked up).
+  Dependabot for actions (and `uv` if GitHub supports it). Then add the required checks to the
+  `protect-main` ruleset.
+- After CI is green on uv 0.13.9: delete `~/.local/bin/uv-0.7.20-backup/` (owner's OK).
+- **2026-11-20:** milestone A due. **2026-11-25:** skeleton checkpoint, D-014 review, delete the
+  old AWS key and IAM user.

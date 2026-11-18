@@ -418,11 +418,59 @@ The 3 failing tests:
   (no DST), but that is from memory and must be verified against the AQS docs. If true, the AQS
   local day differs from the civil local day for half the year.
 
+- **PR #40 merged** (squash `bc09989`); #7 closed. CI on Linux passed too, using the system tz
+  database.
+
+### T3b (#8) Terraform base, on branch `8-terraform-base`
+
+- **Decision (owner):** D-028 puts the public JSON in its own bucket. The first prompt was too
+  jargon-heavy; the owner asked for a plain explanation and then chose.
+- **The checks came first:**
+  - `infra/tests/storage.tftest.hcl` has 8 runs, on the plan with a mock AWS provider, offline.
+  - They check that the private bucket can never be public and is versioned and encrypted.
+  - Only `raw/` may expire old versions; `records/` keeps everything.
+  - The public bucket allows exactly one Allow (anonymous `GetObject` on objects), and CORS is
+    the Pages origin with GET and HEAD only.
+  - Both buckets deny plain HTTP.
+  - The pipeline policy has no wildcards, no deletes, `*.json` only on the public bucket, and
+    names only these two buckets.
+  - Bad `pages_origin` and `alert_email` values are rejected.
+- **Tests of the tests:** ten planted mistakes were all caught. They were a public-policy block
+  off, listing allowed, the public grant widened to the bucket, deletes, any public file
+  writable, a wildcard action, CORS `*`, expiring `records/`, versioning off, and a broken TLS
+  deny.
+- **Built:**
+  - `infra/` holds `main.tf`, `s3.tf`, `iam.tf`, `variables.tf`, `outputs.tf`, the README guide
+    and a `terraform.tfvars.example`.
+  - Remote state goes in the T0c bucket, with S3-native locking.
+  - `.terraform.lock.hcl` carries hashes for Windows, Linux and macOS.
+  - A CI job, *Terraform*, runs fmt, validate and the mock tests, using setup-terraform v4.0.1
+    pinned to its SHA. A pre-commit `terraform fmt` hook was added.
+  - `tfplan` is gitignored.
+- **Versions (looked up 2026-11-18):** Terraform 1.17.2, `hashicorp/aws` 6.73.0.
+- **Cost (AWS Pricing API, us-east-1):** under $0.10 a month.
+
+#### Traps found (T3b)
+
+- **S3 Block Public Access is per bucket,** not per prefix, so "a public prefix" in a private
+  bucket means weakening the whole bucket (D-028).
+- **Terraform tests can't index a set with `[0]`.** Several S3 blocks (for example the SSE `rule`)
+  are sets, so use `one(...)`.
+- **Mocked data sources return random strings,** so policies built with `aws_iam_policy_document`
+  can't be asserted under `mock_provider`. Policies here are `jsonencode` of locals, with ARNs
+  built from names so they're known at plan time.
+- **A Python script inside a bash heredoc turned `"\\n"` into a real line break** in the file
+  it wrote. That's the global note's `\n` trap again. Fixed with the Edit tool.
+- **`notes/TOKENS.md` says the AirNow key goes to SSM "(T3b)"**, but #8 doesn't include it.
+  Putting a secret's value in Terraform would store it in the state. Proposal: a later task where
+  the owner writes the parameter with the CLI and Terraform manages only its name and permissions.
+
 ### Next
 
-- **T3 (#7):** PR, CI, merge on the owner's say-so.
+- **T3b (#8):** PR and CI. Owner: the first `plan` and `apply` (infra/README.md), then add the
+  `Terraform` check to `protect-main`. The agent verifies the result read-only.
 - **T2 (#6):** close once Monday's scheduled lock job opens its PR and CI passes on it.
-- **T3b (#8):** Terraform base (owner-action steps).
+- **2026-11-20:** milestone A due.
 - After CI is green on uv 0.13.9: delete `~/.local/bin/uv-0.7.20-backup/` (owner's OK).
 - **2026-11-20:** milestone A due. **2026-11-25:** skeleton checkpoint, D-014 review, delete the
   old AWS key and IAM user.

@@ -579,6 +579,28 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 - **Status:** Active. Revisit if Dependabot's bundled uv reaches our floor and we want native
   updates (a new D-entry). Security alerts for uv still come from the dependency graph.
 
+## D-028 · 2026-11-18 · Public JSON in its own bucket, not a prefix of the private one (refines D-012)
+
+- **Decision:**
+  - **Private bucket `pm25-forecast-data-65bc08`:** all four S3 Block Public Access settings on.
+  - **Public bucket `pm25-forecast-public-65bc08`:** derived JSON only.
+    - Anonymous `s3:GetObject` on objects, granted through the bucket policy.
+    - No listing, ACLs still blocked, and CORS limited to the Pages origin.
+  - The pipeline policy may put only `*.json` objects there.
+  - `infra/tests/storage.tftest.hcl` enforces all of this on every plan.
+- **Why:**
+  - Block Public Access is set per bucket. A public prefix inside the private bucket would need
+    the bucket-wide policy blocks off. Then only a policy statement would keep `raw/`, `records/`
+    and `models/` private, and one mistake could publish licensed or private data.
+  - With two buckets, the worst a misplaced key can do is fail to appear on the page. This follows
+    the owner's rule to keep private and public outputs apart.
+- **Facts:** The account has no account-level Block Public Access configuration (read-only
+  check, 2026-11-18), so a public-read bucket is possible. Adding an account-level block later
+  would break the page.
+- **Alternatives:** A public prefix in one bucket, as D-012 literally says. Rejected for the
+  risk above.
+- **Status:** Active. Owner's choice, 2026-11-18.
+
 ---
 
 ## Open questions (to settle, then move into a D-entry)

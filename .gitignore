@@ -39,6 +39,9 @@ mlartifacts/
 .terraform/
 *.tfstate
 *.tfstate.*
+# Saved plans can hold sensitive values.
+tfplan
+*.tfplan
 crash.log
 
 # Docs build output

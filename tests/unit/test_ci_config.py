@@ -127,6 +127,39 @@ def test_ci_scans_full_history_with_the_pre_commit_gitleaks_version() -> None:
     assert any(s.get("with", {}).get("fetch-depth") == 0 for s in checkouts)
 
 
+def _terraform_job() -> dict[Any, Any]:
+    jobs = [j for j in _load(CI)["jobs"].values() if j.get("name") == "Terraform"]
+    assert len(jobs) == 1, "ci.yml needs exactly one job named 'Terraform' (#8)"
+    job = jobs[0]
+    assert isinstance(job, dict)
+    return job
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "terraform fmt -check -recursive",
+        "terraform init -backend=false -input=false -lockfile=readonly",
+        "terraform validate",
+        "terraform test",
+    ],
+)
+def test_ci_checks_terraform_offline(command: str) -> None:
+    # Offline only: no backend, no AWS credentials in CI. The owner runs plan and apply (D-023).
+    runs = "\n".join(str(s.get("run", "")) for s in _terraform_job()["steps"])
+    assert command in runs
+
+
+def test_ci_terraform_version_matches_main_tf() -> None:
+    main_tf = (ROOT / "infra" / "main.tf").read_text(encoding="utf-8")
+    match = re.search(r'required_version = "~> (\d+\.\d+\.\d+)"', main_tf)
+    assert match, "required_version not found in infra/main.tf"
+    steps = _terraform_job()["steps"]
+    setup = [s for s in steps if str(s.get("uses", "")).startswith("hashicorp/setup-terraform@")]
+    assert len(setup) == 1
+    assert setup[0]["with"]["terraform_version"] == match.group(1)
+
+
 def test_ci_never_keeps_the_checkout_token() -> None:
     for path in _workflow_files():
         for job in _load(path)["jobs"].values():

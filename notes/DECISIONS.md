@@ -554,6 +554,31 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 - **Status:** Active. Revisit when moving to a newer Python (a new D-entry, and an image tag change
   in T8).
 
+## D-027 · 2026-11-18 · Python dependency updates: a weekly uv-lock job, not Dependabot (T2)
+
+- **Decision:**
+  - Dependabot handles **`github-actions` only**, grouped weekly with a 7-day cooldown.
+  - Python dependencies are upgraded by `.github/workflows/uv-lock-upgrade.yml`: weekly
+    `uv lock --upgrade` with the pinned uv (the `required-version` floor). It opens or refreshes
+    one PR on the fixed branch `deps/uv-lock-upgrade`.
+  - PRs opened with `GITHUB_TOKEN` don't trigger workflows, so the job then runs
+    `gh workflow run ci.yml --ref deps/uv-lock-upgrade` (`workflow_dispatch` is the documented
+    exception). The checks land on the PR's head commit. No extra credential is stored.
+  - `tests/unit/test_ci_config.py` enforces all of this.
+- **Evidence (2026-11-18):** The GitHub docs source (`github/docs`,
+  `data/reusables/dependabot/supported-package-managers.md`) lists `uv` for version and security
+  updates. `dependabot-core` regenerates `uv.lock` by running uv, and its `uv/Dockerfile` copies
+  **uv 0.13.7**. Our `[tool.uv] required-version = ">=0.13.9"` would make every Dependabot uv run
+  fail. This is inferred from uv's documented `required-version` behaviour, not observed.
+- **Options rejected:**
+  - Lowering the floor to Dependabot's uv: local, CI and Dependabot could resolve differently,
+    and the floor would follow Dependabot's release pace.
+  - A GitHub App or a PAT for CI on the bot PRs: both are extra credentials, and a PAT expires.
+- **Needs (owner, one-off):** Settings → Actions → General → "Allow GitHub Actions to create and
+  approve pull requests".
+- **Status:** Active. Revisit if Dependabot's bundled uv reaches our floor and we want native
+  updates (a new D-entry). Security alerts for uv still come from the dependency graph.
+
 ---
 
 ## Open questions (to settle, then move into a D-entry)

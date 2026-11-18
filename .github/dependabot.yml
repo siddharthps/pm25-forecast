@@ -1,0 +1,20 @@
+# Dependabot keeps the SHA-pinned GitHub Actions current (it updates the same-line version
+# comment too). Python dependencies are NOT here: Dependabot's bundled uv is older than the
+# pyproject required-version floor, so .github/workflows/uv-lock-upgrade.yml does them (D-027).
+# uv security alerts still come from the dependency graph.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"

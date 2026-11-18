@@ -47,8 +47,7 @@ jobs:
       - name: mypy (strict)
         run: uv run --frozen mypy
 
-      # Coverage is reported only for now; the 85% floor switches on with the first feature
-      # module (#6, SPEC).
+      # Fails below the 85% floor (pyproject [tool.coverage.report] fail_under; SPEC).
       - name: Core tests with coverage
         run: uv run --frozen pytest --cov --cov-report=term-missing
 

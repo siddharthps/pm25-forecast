@@ -8,7 +8,10 @@ license-files = ["LICENSE"]
 authors = [{ name = "Siddharth Puranam" }]
 # D-026: match the Python in Prefect's managed image (prefecthq/prefect:3-python3.12).
 requires-python = ">=3.12,<3.13"
-dependencies = []
+dependencies = [
+    "pydantic-settings>=2.16.3",
+    "tzdata>=2026.6",
+]
 
 [dependency-groups]
 dev = [
@@ -78,6 +81,12 @@ python_version = "3.12"
 strict = true
 files = ["src", "tests"]
 warn_unreachable = true
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_forbid_extra = true
+init_typed = true
+warn_required_dynamic_aliases = true
 
 [[tool.mypy.overrides]]
 module = "tests.*"
@@ -105,4 +114,6 @@ branch = true
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
-# The 85% floor (spec) is switched on in CI once the first feature module lands (#6, T2).
+# The spec's 85% floor, on since the first feature modules (config, timeutil; #7, T3).
+# tests/unit/test_ci_config.py fails if it is lowered.
+fail_under = 85

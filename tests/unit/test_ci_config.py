@@ -135,6 +135,12 @@ def test_ci_never_keeps_the_checkout_token() -> None:
                     assert step.get("with", {}).get("persist-credentials") is False, path.name
 
 
+def test_coverage_floor_is_at_least_85() -> None:
+    # SPEC: an 85% floor from the first feature module (#7, T3). Never lowered to get green.
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert pyproject["tool"]["coverage"]["report"]["fail_under"] >= 85
+
+
 def test_dependabot_updates_actions_but_not_python() -> None:
     # D-027: Python deps go through the scheduled `uv lock --upgrade` job, not Dependabot,
     # whose bundled uv is older than the pyproject floor.

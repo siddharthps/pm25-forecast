@@ -341,6 +341,16 @@ The 3 failing tests:
 - **Decisions (owner):** D-027 covers the weekly uv-lock job instead of Dependabot uv, with CI
   dispatched from the job rather than an App or PAT token.
 
+- **PR #39, CI on GitHub:**
+  - The first run passed both checks. gitleaks 8.30.1 scanned the PR's commit and found no leaks.
+  - Owner: turned on "Allow GitHub Actions to create and approve pull requests" (the API shows
+    `can_approve_pull_request_reviews: true`; the default token stays read-only). Then added
+    `Lint, types, tests` and `Secret scan` to `protect-main` (confirmed through the rules API).
+- **Red/green proof:**
+  - `3890557` added an unused `import os`. It was committed with `--no-verify`, the owner's OK for
+    that one commit only. CI failed on `F401` and the PR showed `BLOCKED`.
+  - The revert `87504bc` (hooks on, tree identical to `7d8eed7`) passed, and the PR showed `CLEAN`.
+
 #### Traps found (T2)
 
 - **Dependabot's bundled uv (0.13.7) is older than our `required-version` floor (0.13.9).** The
@@ -358,10 +368,8 @@ The 3 failing tests:
 
 ### Next
 
-- **T2 (#6):** open the PR, and wait for CI by PR number. Run the red/green lint proof.
-  - Owner: turn on "Allow GitHub Actions to create and approve pull requests", then add the two
-    checks to `protect-main`.
-  - Dispatch the lock job once to prove it.
+- **T2 (#6):** after the merge, dispatch `uv-lock-upgrade.yml` once to prove it: it opens or
+  refreshes its PR, and CI runs on it. The docs-job box waits for T11.
 - After CI is green on uv 0.13.9: delete `~/.local/bin/uv-0.7.20-backup/` (owner's OK).
 - **2026-11-20:** milestone A due. **2026-11-25:** skeleton checkpoint, D-014 review, delete the
   old AWS key and IAM user.

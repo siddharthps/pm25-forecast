@@ -1,0 +1,13 @@
+# Markdown style for notes/, tasks/, docs/ and the README.
+config:
+  default: true
+  MD013:            # line length: prose wraps at 100; tables and code are exempt
+    line_length: 100
+    tables: false
+    code_blocks: false
+  MD024:            # repeated headings are fine under different parents (e.g. "Traps found")
+    siblings_only: true
+  MD033: false      # allow inline HTML where docs need it
+ignores:
+  - ".claude/skills/**"   # third-party skills (D-020), linted upstream
+  - ".venv/**"

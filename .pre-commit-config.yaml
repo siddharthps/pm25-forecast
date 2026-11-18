@@ -1,0 +1,47 @@
+# Pre-commit hooks. Outside hook repos are pinned to commit SHAs (version in the comment)
+# via `pre-commit autoupdate --freeze`. Ruff and mypy run through `uv run`, so they use the
+# exact versions locked in uv.lock (one source of truth for local, pre-commit and CI).
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+      - id: trailing-whitespace
+        args: ["--markdown-linebreak-ext=md"]
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: 83d9cd684c87d95d656c1458ef04895a7f1cbd8e  # frozen: v8.30.1 (release commit; tagged off master, so autoupdate misses it)
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: c01a1853c19b175aee6a09f24e2ad9b748c485ad  # frozen: v0.24.1
+    hooks:
+      - id: markdownlint-cli2
+
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run --frozen ruff check --fix
+        language: system
+        types_or: [python, pyi]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --frozen ruff format
+        language: system
+        types_or: [python, pyi]
+      - id: mypy
+        name: mypy (strict)
+        entry: uv run --frozen mypy
+        language: system
+        types_or: [python, pyi]
+        pass_filenames: false

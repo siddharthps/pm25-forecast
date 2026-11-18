@@ -366,10 +366,63 @@ The 3 failing tests:
 - `uv lock --exclude-newer "7 days"` works, but writes `exclude-newer-span` into `uv.lock`. A
   cooldown would need to live in `pyproject.toml` (proposed as its own issue).
 
+### T2 after the merge
+
+- **PR #39 merged** (squash `a17d3dc`, noreply author). CI on `main` passed.
+- **Lock job dispatched by hand** (run 44397349095). It passed, but `uv.lock` was already current,
+  so only the no-change path ran: the push, PR and dispatch step was skipped. The PR path waits for
+  the first scheduled run (Mon 2026-11-23 06:17 UTC). #6 stays open until then; its other boxes
+  are ticked.
+- **The docs-job box moved from #6 to #18 (T11)**, merged into its link-checker box (owner's OK).
+- **Deleted `~/.local/bin/uv-0.7.20-backup/`:** the owner ran it, because the agent's `rm -rf`
+  was refused by the permission check. uv 0.13.9 still works.
+
+### T3 (#7) config and time rules, on branch `7-config`
+
+- **The checks came first:**
+  - `tests/property/test_time.py` checks against references built another way: stepping through
+    UTC hours, and the US DST law (second Sunday of March, first Sunday of November).
+  - It covers the issue time for any date 2009–2030, and local-day windows in the D-006 candidate
+    zones (Chicago, Denver, Los Angeles, Phoenix).
+  - An exhaustive 2009–2030 pass checks that day lengths are 23/24/25 hours exactly on the DST
+    dates.
+  - Naive datetimes are rejected.
+  - `tests/unit/test_config.py` checks that secrets stay hidden in `repr`, `str`, dumps, logs and
+    validation errors, and that settings fail fast when something is missing or empty.
+- **Built:**
+  - `timeutil.py`: `issue_time_utc`, `local_day_window_utc`, `ensure_utc`, `to_local`. The issue
+    rule is a frozen constant, not a setting (D-019).
+  - `config.py`: pydantic-settings, `SecretStr` for both keys *and* the AQS email (personal data),
+    `hide_input_in_errors`, frozen, and `get_settings()` cached with nothing read at import.
+  - `city_tz` is a setting (default Chicago) until T4 picks the city.
+  - New dependencies: `pydantic-settings`, `tzdata`. The pydantic mypy plugin is on. Hypothesis
+    runs derandomized by default; `--hypothesis-profile=explore` for a fresh search.
+- **Tests of the tests:** seven planted bugs were all caught. They were a fixed UTC offset, a
+  24-hour day, a datetime accepted as a date, naive input accepted, errors echoing input, the email
+  not secret, and an empty secret accepted. The explore profile (2,000 examples per test) found
+  nothing, so `tests/regressions/` stays empty.
+- **Result:** 58 tests pass in about 3 s, the property suite in 0.8 s, and coverage is 100%. The
+  85% floor is now on (`fail_under`, with a test against lowering it).
+
+#### Traps found (T3)
+
+- **Windows has no system time zone database.** `zoneinfo` needs the `tzdata` package. On Linux
+  the system copy wins, so the two can differ; the pinned `tzdata` fixes the DST rules in tests.
+- **`datetime` is a subclass of `date`**, so a `datetime` passed where a day is meant slips
+  through. Both day functions raise `TypeError`.
+- **PEP 495:** `==` between aware datetimes in different zones is False for a time in the repeated
+  (fold) hour. Compare `.timestamp()` instead.
+- **Pydantic validation errors echo input values** unless `hide_input_in_errors=True`. A key
+  pasted into the wrong variable would otherwise reach a log.
+- **To check in T5/T13:** I believe AQS hourly `time_local` is local *standard* time all year
+  (no DST), but that is from memory and must be verified against the AQS docs. If true, the AQS
+  local day differs from the civil local day for half the year.
+
 ### Next
 
-- **T2 (#6):** after the merge, dispatch `uv-lock-upgrade.yml` once to prove it: it opens or
-  refreshes its PR, and CI runs on it. The docs-job box waits for T11.
+- **T3 (#7):** PR, CI, merge on the owner's say-so.
+- **T2 (#6):** close once Monday's scheduled lock job opens its PR and CI passes on it.
+- **T3b (#8):** Terraform base (owner-action steps).
 - After CI is green on uv 0.13.9: delete `~/.local/bin/uv-0.7.20-backup/` (owner's OK).
 - **2026-11-20:** milestone A due. **2026-11-25:** skeleton checkpoint, D-014 review, delete the
   old AWS key and IAM user.

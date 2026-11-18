@@ -1,0 +1,87 @@
+# Weekly Python dependency upgrades (D-027). Dependabot's bundled uv is older than our
+# required-version floor, so this job runs `uv lock --upgrade` with the pinned uv and opens
+# (or refreshes) one PR. PRs opened with GITHUB_TOKEN don't trigger workflows, so it then
+# dispatches CI on the branch; the checks land on the PR's head commit.
+#
+# Idempotent: one fixed branch and at most one open PR. A rerun force-updates the branch and
+# reuses the PR; with no lockfile change it does nothing.
+#
+# Needs the repo setting: Settings → Actions → General → Workflow permissions →
+# "Allow GitHub Actions to create and approve pull requests".
+name: uv lock upgrade
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"  # Mondays 06:17 UTC (off the hour: GitHub's cron is busiest at :00)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uv-lock-upgrade
+  cancel-in-progress: false
+
+env:
+  BRANCH: deps/uv-lock-upgrade
+
+jobs:
+  upgrade:
+    name: Upgrade uv.lock
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write  # push the branch
+      pull-requests: write  # open or update the PR
+      actions: write  # dispatch CI on the branch
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
+        with:
+          version: "0.13.9"
+
+      - name: Upgrade the lockfile
+        run: uv lock --upgrade
+
+      - name: Check for changes
+        id: diff
+        run: |
+          if git diff --quiet -- uv.lock; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "uv.lock is already up to date." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push the branch, open or reuse the PR, dispatch CI
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          # gh acts as git's credential helper, so the token never goes in a URL or the config.
+          gh auth setup-git
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$BRANCH"
+          git commit --quiet -m "chore(deps): weekly uv lock --upgrade" -- uv.lock
+          git push --force origin "$BRANCH"
+          {
+            echo "## Changed packages"
+            echo
+            echo '```diff'
+            git diff HEAD~1 -- uv.lock | grep -E '^[-+](name|version) = ' || true
+            echo '```'
+          } > "$RUNNER_TEMP/body.md"
+          pr=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$pr" ]; then
+            gh pr create --base main --head "$BRANCH" \
+              --title "chore(deps): weekly uv lock --upgrade" --body-file "$RUNNER_TEMP/body.md"
+          else
+            gh pr edit "$pr" --body-file "$RUNNER_TEMP/body.md"
+          fi
+          gh workflow run ci.yml --ref "$BRANCH"
+          echo "Opened or updated the PR and dispatched CI on \`$BRANCH\`." >> "$GITHUB_STEP_SUMMARY"

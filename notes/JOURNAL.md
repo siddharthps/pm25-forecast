@@ -317,12 +317,59 @@ The 3 failing tests:
 - A slow `du` over a cache of many tiny files hit the 2-minute tool limit. Measure big folders
   once, or in the background.
 
+### T2 (#6) CI, on branch `6-ci` (started 14:41 CST)
+
+- **The check came first:** `tests/unit/test_ci_config.py` was written before the workflows and
+  failed 12 times. It checks:
+  - every action is pinned to a SHA with a same-line `# vX.Y.Z`;
+  - the token is read-only by default, and checkout doesn't keep credentials;
+  - uv in CI equals the pyproject floor;
+  - gitleaks in CI equals the pre-commit version, with a full-history checkout;
+  - each gate is present;
+  - Dependabot has no Python ecosystem;
+  - the lock job is scheduled and dispatches CI.
+- **Built:**
+  - `ci.yml` has two jobs:
+    - *Lint, types, tests:* `uv lock --check`, `uv sync --frozen`, Ruff, mypy, pytest with a
+      coverage report, and the other pre-commit hooks.
+    - *Secret scan:* gitleaks-action, with PR comments and artifact upload off.
+  - `uv-lock-upgrade.yml` and `dependabot.yml` follow D-027.
+  - Pins (looked up 2026-11-18): checkout v7.0.1, setup-uv v10.3.3, gitleaks-action v3.0.0
+    (personal account, so no licence). PyYAML and `types-pyyaml` were added to dev dependencies.
+- **Tests of the tests:** a planted unpinned action, uv version drift, and a Dependabot `uv` entry
+  each failed exactly one test. The files were restored from the index.
+- **Decisions (owner):** D-027 covers the weekly uv-lock job instead of Dependabot uv, with CI
+  dispatched from the job rather than an App or PAT token.
+
+- **PR #39, CI on GitHub:**
+  - The first run passed both checks. gitleaks 8.30.1 scanned the PR's commit and found no leaks.
+  - Owner: turned on "Allow GitHub Actions to create and approve pull requests" (the API shows
+    `can_approve_pull_request_reviews: true`; the default token stays read-only). Then added
+    `Lint, types, tests` and `Secret scan` to `protect-main` (confirmed through the rules API).
+- **Red/green proof:**
+  - `3890557` added an unused `import os`. It was committed with `--no-verify`, the owner's OK for
+    that one commit only. CI failed on `F401` and the PR showed `BLOCKED`.
+  - The revert `87504bc` (hooks on, tree identical to `7d8eed7`) passed, and the PR showed `CLEAN`.
+
+#### Traps found (T2)
+
+- **Dependabot's bundled uv (0.13.7) is older than our `required-version` floor (0.13.9).** The
+  docs table still says "v0.11". The truth is in `dependabot-core/uv/Dockerfile`.
+- **gitleaks' pre-commit hook scans only staged files**, so `pre-commit run --all-files` in CI
+  checks nothing for secrets. CI uses a separate history scan.
+- **PRs opened with `GITHUB_TOKEN` trigger no workflows** (except `workflow_dispatch`), so a bot PR
+  would never get its required checks.
+- **`ruff format --check .` formats Python blocks inside Markdown**, and it was already failing on
+  `main`: pre-commit runs it only on `.py` files, so nobody noticed. A vendored skill file (D-020)
+  failed. The fix is a formatter-only exclude for `.claude/skills/**`; our own docs are still
+  checked.
+- `uv lock --exclude-newer "7 days"` works, but writes `exclude-newer-span` into `uv.lock`. A
+  cooldown would need to live in `pyproject.toml` (proposed as its own issue).
+
 ### Next
 
-- **T2 (#6) CI** on branch `6-ci`: a GitHub Actions workflow running `uv sync --frozen`, Ruff,
-  mypy, pytest (+ coverage report) and gitleaks on every PR. Actions pinned to SHAs (looked up).
-  Dependabot for actions (and `uv` if GitHub supports it). Then add the required checks to the
-  `protect-main` ruleset.
+- **T2 (#6):** after the merge, dispatch `uv-lock-upgrade.yml` once to prove it: it opens or
+  refreshes its PR, and CI runs on it. The docs-job box waits for T11.
 - After CI is green on uv 0.13.9: delete `~/.local/bin/uv-0.7.20-backup/` (owner's OK).
 - **2026-11-20:** milestone A due. **2026-11-25:** skeleton checkpoint, D-014 review, delete the
   old AWS key and IAM user.

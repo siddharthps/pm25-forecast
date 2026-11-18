@@ -1,0 +1,78 @@
+# CI: every PR, every push to main, and on dispatch (the weekly lock-upgrade job dispatches it,
+# because PRs opened with GITHUB_TOKEN don't trigger workflows; D-027).
+# Rules kept by tests/unit/test_ci_config.py: actions pinned to SHAs with the version comment,
+# a read-only token, uv at the pyproject floor, and gitleaks at the pre-commit version.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint, types, tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
+        with:
+          version: "0.13.9"
+          enable-cache: true
+
+      - name: Lockfile matches pyproject.toml
+        run: uv lock --check
+
+      - name: Install exactly what uv.lock says
+        run: uv sync --frozen
+
+      - name: Ruff lint
+        run: uv run --frozen ruff check --output-format=github .
+
+      - name: Ruff format
+        run: uv run --frozen ruff format --check .
+
+      - name: mypy (strict)
+        run: uv run --frozen mypy
+
+      # Coverage is reported only for now; the 85% floor switches on with the first feature
+      # module (#6, SPEC).
+      - name: Core tests with coverage
+        run: uv run --frozen pytest --cov --cov-report=term-missing
+
+      # The remaining pre-commit hooks (markdownlint, YAML/TOML, whitespace, large files).
+      # Ruff and mypy ran above; gitleaks' hook scans only staged files, so the history scan
+      # is the gitleaks job below.
+      - name: Other pre-commit hooks
+        env:
+          SKIP: ruff-check,ruff-format,mypy,gitleaks
+        run: uv run --frozen pre-commit run --all-files --show-diff-on-failure
+
+  gitleaks:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0  # every commit in the PR or push, not just the tip
+          persist-credentials: false
+
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e  # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # reads the PR's commit range
+          GITLEAKS_VERSION: "8.30.1"  # same as .pre-commit-config.yaml
+          GITLEAKS_ENABLE_COMMENTS: "false"  # would need write access; the summary is enough
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"  # artifacts on a public repo are public

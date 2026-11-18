@@ -17,7 +17,9 @@ dev = [
     "pre-commit>=4.7.0",
     "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
+    "pyyaml>=6.0.3",
     "ruff>=0.17.5",
+    "types-pyyaml>=6.0.12.20261113",
 ]
 
 [build-system]
@@ -55,6 +57,11 @@ select = [
     "ARG",      # unused arguments
     "ERA",      # commented-out code
 ]
+
+[tool.ruff.format]
+# Ruff also formats Python code blocks inside Markdown. The vendored agent skills are upstream
+# files we don't edit (D-020), so the formatter skips them; our own docs are still checked.
+exclude = [".claude/skills/**"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = [

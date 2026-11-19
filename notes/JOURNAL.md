@@ -696,6 +696,32 @@ The 3 failing tests:
 - **T13's branch** was rebased onto `main` after #47 (only its own 4 commits replayed).
   `TRAINING_SITES` now comes from `observations/sites.py`, its one home.
 
+### T13 merged; end-of-day review (#49)
+
+- **PR #48 squash-merged** (`1f12367`) from `11-aqs-bulk-rebased`. #11 closed; all boxes on #10
+  (4) and #11 (3) are ticked.
+- **Git clean-up:**
+  - The pre-rebase `11-aqs-bulk` was deleted on GitHub (owner's OK). Only `main` remains.
+  - The T5 worktree had already gone (see the traps).
+- **End-of-day notes review (#49):**
+  - TOKENS gained the AQS key row, and the AirNow row now says the code uses the keyless files.
+  - SPEC: the target points to D-032, and the folder layout is current.
+  - Status lines updated: D-004, D-005, D-031.
+  - `CLAUDE.md`: the script and live-test commands, "run from the project folder", dry runs
+    unless `--apply`, the owner's push rule and "never force-push".
+
+#### Traps found (merges)
+
+- **A stacked branch after a squash merge** still carries the base branch's original commits.
+  Rebase it onto `main` (`git rebase --onto origin/main <old base> <branch>`) so only its own
+  commits are replayed.
+- **Force-pushing a rebased branch is refused** by the permission check as destructive. Push the
+  rebased work under a new branch name, open the PR from that, and delete the old branch only
+  with the owner's OK.
+- **`gh pr merge --delete-branch` also removed the git worktree** that had the branch checked out.
+  Nothing was lost because everything was committed and pushed first. Commit and push before any
+  clean-up.
+
 ### Next
 
 - **For T12a (#12):** "AirNow IDs that don't match AQS" is a validation check (T5's box). The

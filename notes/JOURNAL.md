@@ -671,15 +671,39 @@ The 3 failing tests:
 - **AQS's method table is over 10 MB,** too large for the fetch agent. It was downloaded with
   curl and parsed locally.
 
+### T5 merged; T13 download done and verified
+
+- **PR #47 squash-merged** (`66519c6`); #10 closed. A box was added to #12 (T12a) for the AirNow
+  ID-mismatch check and the sourced per-method bounds.
+- **The download finished** (owner's run): `done: 175 part(s) fetched, 1190097 hourly rows`.
+- **Read-only verification** downloaded every part and recomputed its sha256. Only the
+  `method_code` column was read, never the measurements.
+  - **180 of 180** parts in the manifest, none missing or extra. 181 objects under the prefix
+    (the parts plus the manifest).
+  - **0 checksum mismatches** and **0 row-count mismatches** (file vs manifest).
+  - **Methods:** 182 (789,807 rows), 170 (328,607), 181 (75,611), 638 (23,323). **No unverified
+    codes** (D-032).
+  - **Total: 1,217,348 hourly rows.** That equals this run's 1,190,097 plus the first run's
+    27,251 (0 + 5,572 + 8,149 + 5,681 + 7,849), so nothing was duplicated or lost.
+  - 2 readings flagged outside the crude range, kept (D-031). 29 empty parts, from monitor-years
+    before a monitor existed.
+  - **Final flags:** the 170 parts for 2009–2025 are final; the 10 for 2026 aren't. A dry run
+    afterwards planned exactly those 10.
+  - **Rows per year:** 2009 0 · 2010 16,256 · 2011 41,418 · 2012 57,285 · 2013 67,292 ·
+    2014 68,040 · 2015 72,177 · 2016 84,294 · 2017 83,398 · 2018 84,482 · 2019 84,462 ·
+    2020 84,392 · 2021 84,177 · 2022 84,060 · 2023 83,518 · 2024 85,556 · 2025 84,130 ·
+    2026 52,411 (partial).
+- **T13's branch** was rebased onto `main` after #47 (only its own 4 commits replayed).
+  `TRAINING_SITES` now comes from `observations/sites.py`, its one home.
+
 ### Next
 
-- **T5 (#10):** PR, CI and merge (rebase not needed; squash is fine).
-- **T13 (#11):** when the download finishes, verify read-only that the manifest has 180 parts and
-  the checksums match, and put the row-count summary here. Then the PR. It's stacked on #10:
-  `aqs_bulk` should import `TRAINING_SITES` from `observations/sites.py` after #10 merges.
 - **For T12a (#12):** "AirNow IDs that don't match AQS" is a validation check (T5's box). The
   per-method AQS ranges in `sites.py` are the sourced bounds (D-031, D-032).
-- **Milestone B:** #42 and #43.
+- **Milestone B:**
+  - T6 (#13), the persistence forecast and its at-most-once record;
+  - T12a (#12);
+  - #42 and #43.
 - **T2 (#6):** close once Monday's scheduled lock job opens its PR and CI passes on it.
 - **2026-11-20:** milestone A due. **2026-11-25:** skeleton checkpoint, D-014 review, delete the
   old AWS key and IAM user.

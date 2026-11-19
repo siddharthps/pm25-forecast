@@ -482,6 +482,10 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - 18:00 with today's partial data: needs hourly AQS history and exact partial-day matching.
   - Forecasting today instead of tomorrow: rejected because it isn't next-day.
 - **Status:** Active. **Frozen:** the T3 property tests hard-code it.
+  - *2026-11-19, kept for Phoenix (owner, D-030):* the issue time follows the publisher's clock
+    (the author is in Chicago), not the forecast city's. Phoenix's D−1 ends at 07:00 UTC, and the
+    issue is 11:00 or 12:00 UTC, so there's a 4–5 hour margin. Nothing leaks, and the data is
+    complete.
 
 ---
 
@@ -683,9 +687,39 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 
 ---
 
+## D-030 · 2026-11-19 · The city is Phoenix (settles Q-6, by the frozen D-006 check)
+
+- **Decision:** AirWatch forecasts the **Phoenix-Mesa-Scottsdale, AZ** metro area (CBSA
+  **38060**). `city_tz` is `America/Phoenix` (no daylight saving time).
+- **Why:** it is the only candidate that passed every frozen D-006 rule. The run was
+  `scripts/city_check.py` on 2026-11-19, 03:19–03:34 UTC, with the AirNow site list of the same
+  day. The rules and all their clarifications were committed first (`4390340` … `0570c91`).
+
+  | City | CBSA | Qualifying monitors | Bad-air share | Good 2025 | Weather | Result |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | Chicago | 16980 | 3 | 0.44% | 3 | yes | fails: monitors, bad-air share, 2025 |
+  | Salt Lake City | 41620 | 4 | 1.22% | 4 | yes | fails: monitors, 2025 |
+  | Los Angeles | 31080 | 1 | 1.50% | 1 | yes | fails: monitors, 2025 |
+  | **Phoenix** | 38060 | **10** | 0.57% | **10** | yes | **passes** |
+
+- **What limited the others (descriptive only; no rule was changed):** few sites have ≥ 8 good
+  years of *hourly* 88101 data. Many hourly regulatory instruments in Chicago, Salt Lake City and
+  Los Angeles began reporting in 2016 or later. Phoenix's went hourly in 2010–2012.
+- **Consequences:**
+  - The issue time stays 06:00 America/Chicago (D-019, frozen; see its Status).
+  - Training labels come from Phoenix's 10 qualifying monitors (AQS site IDs): 040130019,
+    040131003, 040131004, 040132001, 040134003, 040134005, 040139812, 040139997, 040210001,
+    040213015. That's eight in Maricopa County (013) and two in Pinal County (021).
+  - The public page credits the Arizona and Maricopa County agencies (D-025).
+- **Alternatives:** none. The choice rule was fixed in advance. Chicago, the default, would have
+  won only if it passed.
+- **Status:** Active.
+
+---
+
 ## Open questions (to settle, then move into a D-entry)
 
-- **Q-6:** Which city? *(settled by the D-006 data check in T4)*
 - Further open items are listed in [SPEC.md](SPEC.md) § Open Questions.
 
-Closed: Q-1 → D-020. Q-2, Q-3, Q-5 → D-003. Q-4 → D-003 and D-011.
+Closed: Q-6 → D-030 (Phoenix, by the D-006 check). Q-1 → D-020. Q-2, Q-3, Q-5 → D-003.
+Q-4 → D-003 and D-011.

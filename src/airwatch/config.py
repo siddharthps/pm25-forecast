@@ -32,6 +32,7 @@ def _zone(value: object) -> ZoneInfo:
 Zone = Annotated[ZoneInfo, BeforeValidator(_zone)]
 Secret = Annotated[SecretStr, Field(min_length=1)]
 AwsRegion = Annotated[str, StringConstraints(pattern=r"^[a-z]{2}(-[a-z]+)+-\d$")]
+Cbsa = Annotated[str, StringConstraints(pattern=r"^\d{5}$")]
 
 
 class Settings(BaseSettings):
@@ -56,9 +57,11 @@ class Settings(BaseSettings):
     aws_profile: str | None = None
     aws_region: AwsRegion = "us-east-1"
 
-    # The chosen metro area's zone, for local calendar days (D-005). Chicago until T4 (D-006)
-    # settles the city. The issue time's zone is fixed separately (timeutil.ISSUE_TZ, D-019).
-    city_tz: Zone = ZoneInfo("America/Chicago")
+    # The forecast city (D-030: Phoenix, chosen by the frozen D-006 check). Its zone sets local
+    # calendar days (D-005). The issue time's zone is separate and frozen (timeutil.ISSUE_TZ,
+    # America/Chicago, D-019).
+    city_tz: Zone = ZoneInfo("America/Phoenix")
+    city_cbsa: Cbsa = "38060"
 
 
 @lru_cache(maxsize=1)

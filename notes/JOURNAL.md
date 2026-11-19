@@ -518,10 +518,85 @@ The 3 failing tests:
   - TOKENS no longer says the AirNow key goes to SSM in T3b.
   - `CLAUDE.md` now asks that Status lines are updated in the same PR.
 
+- **PR #45 merged** (squash `d067c06`). #44 closed. A box was added to #18: one home for the
+  dev commands once the README gets a Development section, with `CLAUDE.md` importing it via
+  `@path`.
+
+## 2026-11-18/19: T4 (#9) city data check, on branch `9-city-check` (CST evening)
+
+- **The rules came first, each decided by the owner, one at a time:**
+  - candidates: Chicago, Salt Lake City, Los Angeles, Phoenix;
+  - the thresholds;
+  - Chicago first if it passes.
+- **Frozen in D-006 and pushed** as `4390340` (GitHub: 2026-11-19 02:55:54 UTC) before any
+  candidate data was fetched.
+- **Owner action:** AQS API signup. The keys are in `.env` (presence checked, never values).
+  The key was verified by asking AQS (`list/cbsas`, status Success, 1,006 rows).
+- **Clarifications, each committed before scoring** (`6acd4c3`, `af22a99`, `0570c91`):
+  - **AirNow must be Active** (owner). The site list also carries inactive sites.
+  - **Field mapping,** checked on Charlotte (not a candidate): hourly instrument =
+    `sample_duration_code "1"`, and `observation_count` is the hours.
+  - **Pinned CBSA codes.** AQS lists LA twice (31080 and 31100). Census 2009 and 2013 lists
+    show the same two counties, renumbered in 2013, so 31080 is used, with a per-year fallback
+    to 31100 (not needed in the end).
+  - **The weather-check centre** is the mean position of the monitors.
+  - **"Concurred Events Excluded":** the first live run stopped on this unknown label, as
+    designed. Each such row pairs with an "Events Included" twin (20,857 pairs, labels only),
+    so it is dropped.
+- **Built:**
+  - `observations/metadata.py` holds the rules as pure functions, plus `fetch_json`.
+  - `scripts/city_check.py` handles I/O: 6 s AQS pacing, a gitignored cache, and 2025
+    stripped before caching.
+  - The tests use the recorded Charlotte fixture and hand-built rows.
+  - 15 planted bugs were all caught, after one survivor led to `strip_values` plus a refusal of
+    unstripped 2025 rows.
+- **Result** (2026-11-19, 03:19–03:34 UTC):
+
+  | City | Qualifying monitors | Bad-air share | Good 2025 | Passes |
+  | --- | --- | --- | --- | --- |
+  | Chicago | 3 | 0.44% | 3 | no |
+  | Salt Lake City | 4 | 1.22% | 4 | no |
+  | Los Angeles | 1 | 1.50% | 1 | no |
+  | **Phoenix** | **10** | 0.57% | **10** | **yes** |
+
+  **Phoenix chosen (D-030).**
+- **Bug hunt (descriptive):**
+  - AirNow matching worked: 18 of 19 Chicago hourly sites and 12 of 14 Phoenix sites were
+    active.
+  - The binding rule was ≥ 8 good years of *hourly* 88101 data. Elsewhere, many hourly
+    instruments started in 2016 or later; Phoenix's started in 2010–2012.
+- **Owner:** keep D-019's 06:00 America/Chicago for Phoenix. The issue time follows the
+  publisher's clock. Phoenix's D−1 ends at 07:00 UTC and the issue is at 11:00/12:00 UTC.
+- **Config:** `city_tz = America/Phoenix`, `city_cbsa = 38060`, and `.env.example` updated. The
+  owner's `.env` needs `CITY_TZ` changed, because a value in `.env` overrides the default.
+
+### Traps found (T4)
+
+- **`httpx` logs every request URL at INFO.** AQS takes credentials as query parameters, so the
+  key would have been logged. A test caught it; the httpx and httpcore loggers are now held at
+  WARNING.
+- **AQS's public test account** (`test@aqs.api`) ran out of its daily quota on its first use.
+- **The first `urllib` request failed with `URLError`;** an immediate rerun succeeded. Real code
+  retries with backoff (`fetch_json`).
+- **The Census API now requires a key.** Its published delineation files were used instead.
+- **AQS lists retired CBSA codes alongside current ones** (LA 31080 and 31100), so matching by
+  name prefix is unsafe. Pin the codes.
+- **An unknown label stopping the run was the right behaviour.** Guessing would have
+  double-counted 20,857 instrument-days.
+- **I wrote `fetch_json` before its tests,** against the check-first rule. Its tests came
+  straight after and caught the logging leak.
+- **I miscounted Phoenix's counties** (9/1 instead of 8/2) when writing D-030. It was caught by
+  recounting with code before committing.
+
 ### Next
 
-- **Milestone B next: T4 (#9), the city data check (D-006).** It needs OQ-5 (final thresholds)
-  frozen before any data is looked at. Also in B: #42 (mutmut) and #43 (uv-lock job tests).
+- **T4 (#9):** PR, CI and merge. The owner sets `CITY_TZ=America/Phoenix` and
+  `CITY_CBSA=38060` in `.env`.
+- **Milestone B:**
+  - **T5 (#10)** observations skeleton: Phoenix's 10 monitors, and OQ-8, the AQS daily-record
+    rules;
+  - **T13 (#11)** AQS bulk download, the slowest task, so start it early;
+  - #42 and #43.
 - **T2 (#6):** close once Monday's scheduled lock job opens its PR and CI passes on it.
 - **2026-11-20:** milestone A due. **2026-11-25:** skeleton checkpoint, D-014 review, delete the
   old AWS key and IAM user.

@@ -33,6 +33,7 @@ Zone = Annotated[ZoneInfo, BeforeValidator(_zone)]
 Secret = Annotated[SecretStr, Field(min_length=1)]
 AwsRegion = Annotated[str, StringConstraints(pattern=r"^[a-z]{2}(-[a-z]+)+-\d$")]
 Cbsa = Annotated[str, StringConstraints(pattern=r"^\d{5}$")]
+BucketName = Annotated[str, StringConstraints(pattern=r"^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$")]
 
 
 class Settings(BaseSettings):
@@ -62,6 +63,9 @@ class Settings(BaseSettings):
     # America/Chicago, D-019).
     city_tz: Zone = ZoneInfo("America/Phoenix")
     city_cbsa: Cbsa = "38060"
+
+    # The private data bucket from T3b (Terraform output `private_bucket`; D-028). Never public.
+    data_bucket: BucketName = "pm25-forecast-data-65bc08"
 
 
 @lru_cache(maxsize=1)

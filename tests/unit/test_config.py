@@ -21,7 +21,7 @@ REQUIRED_ENV = {"AIRNOW_API_KEY": AIRNOW, "AQS_API_KEY": AQS_KEY, "AQS_EMAIL": A
 @pytest.fixture
 def env(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
     """A clean environment with only the required variables, and no .env file read."""
-    for name in [*REQUIRED_ENV, "AWS_PROFILE", "AWS_REGION", "CITY_TZ", "CITY_CBSA"]:
+    for name in [*REQUIRED_ENV, "AWS_PROFILE", "AWS_REGION", "CITY_TZ", "CITY_CBSA", "DATA_BUCKET"]:
         monkeypatch.delenv(name, raising=False)
     for name, value in REQUIRED_ENV.items():
         monkeypatch.setenv(name, value)
@@ -43,6 +43,8 @@ def test_reads_the_environment() -> None:
     # D-030: Phoenix, chosen by the frozen D-006 city check.
     assert s.city_tz == ZoneInfo("America/Phoenix")
     assert s.city_cbsa == "38060"
+    # T3b output: the private data bucket (D-028).
+    assert s.data_bucket == "pm25-forecast-data-65bc08"
 
 
 @pytest.mark.usefixtures("env")
@@ -120,7 +122,7 @@ def test_importing_config_reads_nothing(
     monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
 ) -> None:
     # No import-time side effects: with no variables set, importing must still succeed.
-    for name in [*REQUIRED_ENV, "AWS_PROFILE", "AWS_REGION", "CITY_TZ", "CITY_CBSA"]:
+    for name in [*REQUIRED_ENV, "AWS_PROFILE", "AWS_REGION", "CITY_TZ", "CITY_CBSA", "DATA_BUCKET"]:
         monkeypatch.delenv(name, raising=False)
     monkeypatch.chdir(tmp_path)  # and no .env file in reach
     importlib.reload(config)

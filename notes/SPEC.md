@@ -245,7 +245,9 @@ Every task states its check before its code. The checks:
   - Open files whose saved outputs contain test-period results.
   - Change an evaluation choice after seeing results, or add a model variant after the first CV
     result.
-  - Loosen a failing check instead of fixing its cause.
+  - Loosen a failing check instead of fixing its cause. (Scoping one check away from files the
+    project doesn't own, such as the vendored skills, is not loosening; it needs a D-entry, as in
+    D-029.)
   - Run production from two places.
   - Publish raw or licensed data publicly.
 

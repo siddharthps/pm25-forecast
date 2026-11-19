@@ -25,9 +25,14 @@ uv sync --frozen                       # install exactly what uv.lock says
 uv run ruff check . && uv run ruff format --check .
 uv run mypy                            # strict; config in pyproject.toml
 uv run pytest                          # fast offline core suite (-m slow / -m live are opt-in)
-uv run pre-commit run --all-files      # every hook, including gitleaks and markdownlint
+uv run pytest tests/property --hypothesis-profile=explore   # fresh random search (default is derandomized)
+uv run pre-commit run --all-files      # every hook, including gitleaks, markdownlint, terraform fmt
+terraform -chdir=infra test            # infra safety rules on the plan, mock AWS provider, offline
 aws sso login --profile pm25           # AWS access (never use long-lived keys)
 ```
+
+Infrastructure lives in `infra/`. The owner runs `plan` and `apply`, following
+[infra/README.md](infra/README.md). CI never has AWS credentials.
 
 ## Rules that bite (details in SPEC § Boundaries and the owner's global CLAUDE.md)
 
@@ -38,3 +43,5 @@ aws sso login --profile pm25           # AWS access (never use long-lived keys)
 - Never read 2025 test-period results before the freeze (D-008); never change a **Frozen**
   decision.
 - Look up versions (PyPI, `gh api …/releases`); never write them from memory.
+- Fix a failing check's cause; never loosen it. The only exception is scoping one check away from
+  files we don't own (vendored, generated), recorded as a D-entry (D-029).

@@ -39,6 +39,12 @@ repos:
         entry: uv run --frozen ruff format
         language: system
         types_or: [python, pyi]
+      - id: terraform-fmt
+        name: terraform fmt
+        entry: terraform fmt -check -diff -recursive infra
+        language: system
+        files: ^infra/.*\.(tf|tftest\.hcl)$
+        pass_filenames: false
       - id: mypy
         name: mypy (strict)
         entry: uv run --frozen mypy

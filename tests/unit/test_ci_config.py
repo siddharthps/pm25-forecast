@@ -127,6 +127,61 @@ def test_ci_scans_full_history_with_the_pre_commit_gitleaks_version() -> None:
     assert any(s.get("with", {}).get("fetch-depth") == 0 for s in checkouts)
 
 
+def _terraform_job() -> dict[Any, Any]:
+    jobs = [j for j in _load(CI)["jobs"].values() if j.get("name") == "Terraform"]
+    assert len(jobs) == 1, "ci.yml needs exactly one job named 'Terraform' (#8)"
+    job = jobs[0]
+    assert isinstance(job, dict)
+    return job
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "terraform fmt -check -recursive",
+        "terraform init -backend=false -input=false -lockfile=readonly",
+        "terraform validate",
+        "terraform test",
+    ],
+)
+def test_ci_checks_terraform_offline(command: str) -> None:
+    # Offline only: no backend, no AWS credentials in CI. The owner runs plan and apply (D-023).
+    runs = "\n".join(str(s.get("run", "")) for s in _terraform_job()["steps"])
+    assert command in runs
+
+
+def test_ci_terraform_version_matches_main_tf() -> None:
+    main_tf = (ROOT / "infra" / "main.tf").read_text(encoding="utf-8")
+    match = re.search(r'required_version = "~> (\d+\.\d+\.\d+)"', main_tf)
+    assert match, "required_version not found in infra/main.tf"
+    steps = _terraform_job()["steps"]
+    setup = [s for s in steps if str(s.get("uses", "")).startswith("hashicorp/setup-terraform@")]
+    assert len(setup) == 1
+    assert setup[0]["with"]["terraform_version"] == match.group(1)
+
+
+def test_every_skipped_pre_commit_hook_is_checked_elsewhere_in_ci() -> None:
+    # A hook skipped in CI's pre-commit step must be covered by its own CI step, or a check
+    # would silently vanish from CI.
+    covered_by = {
+        "ruff-check": "uv run --frozen ruff check",
+        "ruff-format": "uv run --frozen ruff format --check",
+        "mypy": "uv run --frozen mypy",
+        "terraform-fmt": "terraform fmt -check -recursive",
+        "gitleaks": "gitleaks/gitleaks-action@",
+    }
+    ci = _load(CI)
+    steps = [s for job in ci["jobs"].values() for s in job.get("steps", [])]
+    skip_steps = [s for s in steps if "SKIP" in s.get("env", {})]
+    assert len(skip_steps) == 1
+    skipped = set(skip_steps[0]["env"]["SKIP"].split(","))
+    unknown = skipped - covered_by.keys()
+    assert not unknown, f"skipped in CI with no known replacement: {sorted(unknown)}"
+    text = CI.read_text(encoding="utf-8")
+    for hook in skipped:
+        assert covered_by[hook] in text, f"{hook} is skipped but nothing else in CI runs it"
+
+
 def test_ci_never_keeps_the_checkout_token() -> None:
     for path in _workflow_files():
         for job in _load(path)["jobs"].values():

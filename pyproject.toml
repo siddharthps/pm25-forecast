@@ -9,6 +9,7 @@ authors = [{ name = "Siddharth Puranam" }]
 # D-026: match the Python in Prefect's managed image (prefecthq/prefect:3-python3.12).
 requires-python = ">=3.12,<3.13"
 dependencies = [
+    "httpx>=0.28.1",
     "pydantic-settings>=2.16.3",
     "tzdata>=2026.6",
 ]
@@ -80,7 +81,7 @@ exclude = [".claude/skills/**"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-files = ["src", "tests"]
+files = ["src", "tests", "scripts"]
 warn_unreachable = true
 plugins = ["pydantic.mypy"]
 

@@ -169,6 +169,17 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
     instrument" is an AQS daily-summary row with `sample_duration_code = "1"` ("1 HOUR"), and its
     `observation_count` is the number of hours reported that day. The `24-HR BLK AVG` rows (code
     `X`) are AQS's derived per-standard summaries and aren't counted again.
+  - *2026-11-18, CBSA codes:* the candidates are pinned to the current OMB codes **Chicago 16980,
+    Salt Lake City 41620, Los Angeles 31080, Phoenix 38060**. Each is checked against AQS's
+    `list/cbsas` name.
+    - AQS's list also carries **31100** "Los Angeles-Long Beach-Santa Ana, CA". Census's
+      December 2009 delineation (`list1.txt`) shows 31100 made of Los Angeles and Orange
+      counties. Since February 2013, the same two counties are 31080 "Los Angeles-Long
+      Beach-Anaheim" (Census Feb 2013 `list1.xls`; BLS OEWS area definitions, May 2025).
+    - It's the same area renumbered, so 31080 is used. If an LA year returns no rows under 31080,
+      that year is fetched under 31100, and the fallback is recorded in the result.
+  - *2026-11-18, weather "centre":* the CBSA's centre for the weather check is the mean position
+    of its PM2.5 monitors in the AQS rows (AQS's CBSA list carries no coordinates).
 - **Status:** Active. Criteria **Frozen** (above). Settles Q-6 once the check has run.
 
 ---

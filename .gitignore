@@ -52,3 +52,6 @@ site_build/
 Thumbs.db
 .idea/
 .vscode/
+
+# Local data downloads (raw data stays private: never committed)
+data/

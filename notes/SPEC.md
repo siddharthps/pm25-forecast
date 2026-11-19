@@ -303,8 +303,6 @@ V1 is done when all of the following hold. Each is checkable.
   example, a local SQLite tracking store on the owner's PC plus S3 artifacts, with the daily flow
   loading the *promoted* model from S3 through a pinned pointer file (no MLflow server needed at
   forecast time), or a hosted free MLflow. To check: current hosted options and limits.
-- **OQ-5 · City-check thresholds (D-006):** confirm the final numbers before the check runs, then
-  freeze them (T4).
 - **OQ-8 · AQS daily-record rules:** verify from the AQS docs which daily records count
   (sample duration, pollutant standard, POCs) before building `observations/aqs.py` (T5).
 
@@ -313,5 +311,6 @@ Closed after approval (recorded as D-entries, no change to V1's requirements):
 - OQ-1 → D-004 and D-025 (AirNow limits and history, then the data-use rules; T0a);
 - OQ-3 → D-018 (Terraform);
 - OQ-4 → D-026 (Python 3.12; T1);
+- OQ-5 → D-006 (city-check criteria frozen; T4);
 - OQ-6 → D-019 (06:00 confirmed);
 - OQ-7 → D-020 (skills in the repo).

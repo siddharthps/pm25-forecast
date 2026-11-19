@@ -54,7 +54,7 @@ DEFAULT_CITY = "Chicago"
 # Exceptional-event days are kept (D-006): AQS gives such days twice, with the event data
 # included and excluded. Any other value is new to us, so the check stops instead of guessing.
 KEEP_EVENTS = frozenset({"No Events", "Events Included"})
-DROP_EVENTS = frozenset({"Events Excluded"})
+DROP_EVENTS = frozenset({"Events Excluded", "Concurred Events Excluded"})
 
 # Every field of an AQS daily summary that carries a PM value (stripped from 2025 rows).
 VALUE_FIELDS = frozenset({"arithmetic_mean", "first_max_value", "first_max_hour", "aqi"})

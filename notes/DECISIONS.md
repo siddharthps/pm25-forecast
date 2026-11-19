@@ -178,6 +178,12 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
       Beach-Anaheim" (Census Feb 2013 `list1.xls`; BLS OEWS area definitions, May 2025).
     - It's the same area renumbered, so 31080 is used. If an LA year returns no rows under 31080,
       that year is fetched under 31100, and the fallback is recorded in the result.
+  - *2026-11-19, a new event label (no scoring had happened):* the first live run stopped, as
+    designed, on the unknown `event_type` "Concurred Events Excluded" in Chicago's data.
+    - Every such hourly row has an "Events Included" twin for the same instrument-day (20,857
+      pairs; labels counted, no values read).
+    - So it's an *excluded* version and is dropped. The included version is kept, as the frozen
+      rule says. Any other new label still stops the check.
   - *2026-11-18, weather "centre":* the CBSA's centre for the weather check is the mean position
     of its PM2.5 monitors in the AQS rows (AQS's CBSA list carries no coordinates).
 - **Status:** Active. Criteria **Frozen** (above). Settles Q-6 once the check has run.

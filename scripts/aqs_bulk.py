@@ -1,5 +1,6 @@
 """AQS bulk history download (T13, #11): Phoenix's training sites, 2009 to today, into private S3.
 
+    cd ~/code/pm25-forecast                      # always run from the project folder
     uv run python scripts/aqs_bulk.py            # dry run: shows the plan, writes nothing
     uv run python scripts/aqs_bulk.py --apply    # fetch from AQS and upload to the private bucket
 

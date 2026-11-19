@@ -32,7 +32,8 @@ The total is **under $0.10 a month**, well inside the $5 budget alarm (success c
 
 ## First apply: step by step (owner)
 
-PowerShell, from the repo root. **In bash** (Git Bash, or the `!` prefix in Claude Code), use
+PowerShell, from the repo root (`cd ~/code/pm25-forecast` first: every command assumes it).
+**In bash** (Git Bash, or the `!` prefix in Claude Code), use
 `cp` instead of `Copy-Item`, and put the profile in front of each command, because each `!`
 command may start a fresh shell:
 

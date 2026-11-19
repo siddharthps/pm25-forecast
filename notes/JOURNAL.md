@@ -499,10 +499,29 @@ The 3 failing tests:
   - Anonymous requests got 403 for listing the private bucket, listing the public bucket, and
     plain HTTP to the public bucket.
 
+### T3b wrap-up and the milestone A notes review (#44)
+
+- **The owner added `Terraform` as a third required check** on `protect-main` (confirmed through
+  the rules API). `infra/tfplan` was deleted.
+- **PR #41 merged** (squash `3d125e9`, noreply author). #8 was closed with all five boxes ticked
+  and a summary comment.
+- **The owner asked when the notes should be revisited.** The rules agreed:
+  - DECISIONS is append-only: a change is a new D-entry that supersedes or refines the old one,
+    and Status lines are kept current.
+  - The spec is living, but a requirement change needs the owner's approval and a D-entry.
+  - Frozen decisions never change once results exist.
+  - Review at checkpoints, not continuously.
+- **The review found only housekeeping (#44):**
+  - OQ-1 and OQ-4 were closed in the SPEC and in `tasks/plan.md`.
+  - SPEC § Commands now points to `CLAUDE.md` (there is no Makefile).
+  - The Status lines of D-005, D-012 and D-018 are current.
+  - TOKENS no longer says the AirNow key goes to SSM in T3b.
+  - `CLAUDE.md` now asks that Status lines are updated in the same PR.
+
 ### Next
 
-- **T3b (#8):** PR #41 is green, and the apply is done and verified. Owner: add the `Terraform`
-  check to `protect-main` and delete `infra/tfplan`. Then merge #41 and tick #8's boxes.
+- **Milestone B next: T4 (#9), the city data check (D-006).** It needs OQ-5 (final thresholds)
+  frozen before any data is looked at. Also in B: #42 (mutmut) and #43 (uv-lock job tests).
 - **T2 (#6):** close once Monday's scheduled lock job opens its PR and CI passes on it.
 - **2026-11-20:** milestone A due. **2026-11-25:** skeleton checkpoint, D-014 review, delete the
   old AWS key and IAM user.

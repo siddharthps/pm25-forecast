@@ -107,8 +107,10 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - City-wide mean: rejected because it drifts with the monitor set.
   - AQI-category classification: rejected because it loses information and the classes are badly
     imbalanced.
-- **Status:** Active. Still to settle in the spec: the local-day boundary and time zone, the minimum
-  hourly completeness for a valid daily mean, and how to treat co-located instruments (POCs).
+- **Status:** Active. Settled since:
+  - SPEC § Key definitions sets a valid day at ≥ 18 of 24 hours, with POCs averaged per hour.
+  - The local-day zone is the `city_tz` setting (T3, #7), fixed when T4 picks the city.
+  - Still open: AQS's daily-record rules (SPEC OQ-8, T5).
 
 ---
 
@@ -285,7 +287,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - S3 + CloudFront: more setup, and more ways to misconfigure a public bucket.
   - Streamlit Community Cloud: free apps sleep, so a slow wake-up for interviewers, and hosting
     terms change.
-- **Status:** Active. Attribution must appear on the page: EPA AirNow and AQS, Open-Meteo
+- **Status:** Active, **refined by D-028**: the public JSON lives in its own bucket, not a prefix of
+  the private one. Attribution must appear on the page: EPA AirNow and AQS, Open-Meteo
   (CC BY 4.0) and CAMS.
 
 ---
@@ -405,7 +408,10 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 - **Alternatives:**
   - AWS CDK in Python: AWS-only, needs a bootstrap stack and adds Node.
   - Console steps: not reproducible, and drift goes unnoticed.
-- **Status:** Active. Terraform isn't installed yet; installing it is part of T0c.
+- **Status:** Active.
+  - Terraform 1.17.2 was installed in T0c (checksum and signature verified).
+  - The first resources were applied in T3b (#8, PR #41): `hashicorp/aws` 6.73.0, with state in
+    `pm25-forecast-tfstate-65bc08`.
 
 ---
 

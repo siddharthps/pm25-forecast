@@ -42,6 +42,9 @@ Infrastructure lives in `infra/`. The owner runs `plan` and `apply`, following
   or URLs that get logged.
 - Never read 2025 test-period results before the freeze (D-008); never change a **Frozen**
   decision.
+- Decisions are append-only: to change one, add a new D-entry that supersedes or refines it.
+  When a task settles, refines or overtakes a D-entry or an open question, update its **Status**
+  line (and the OQ list) in the same PR.
 - Look up versions (PyPI, `gh api …/releases`); never write them from memory.
 - Fix a failing check's cause; never loosen it. The only exception is scoping one check away from
   files we don't own (vendored, generated), recorded as a D-entry (D-029).

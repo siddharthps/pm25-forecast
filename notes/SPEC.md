@@ -303,8 +303,6 @@ V1 is done when all of the following hold. Each is checkable.
   example, a local SQLite tracking store on the owner's PC plus S3 artifacts, with the daily flow
   loading the *promoted* model from S3 through a pinned pointer file (no MLflow server needed at
   forecast time), or a hosted free MLflow. To check: current hosted options and limits.
-- **OQ-8 · AQS daily-record rules:** verify from the AQS docs which daily records count
-  (sample duration, pollutant standard, POCs) before building `observations/aqs.py` (T5).
 
 Closed after approval (recorded as D-entries, no change to V1's requirements):
 
@@ -313,4 +311,5 @@ Closed after approval (recorded as D-entries, no change to V1's requirements):
 - OQ-4 → D-026 (Python 3.12; T1);
 - OQ-5 → D-006 (city-check criteria frozen; T4);
 - OQ-6 → D-019 (06:00 confirmed);
-- OQ-7 → D-020 (skills in the repo).
+- OQ-7 → D-020 (skills in the repo);
+- OQ-8 → D-032 (labels from AQS hourly continuous FEMs, our own daily rule; T5).

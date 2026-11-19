@@ -740,6 +740,35 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 
 ---
 
+## D-032 · 2026-11-19 · Labels and live inputs come from the same kind of instrument (settles OQ-8)
+
+- **Decision:**
+  - Training labels are built from AQS **hourly** `sampleData` (parameter 88101, sample
+    duration 1 hour), averaged into daily means by our own rule: POCs per hour first, then
+    ≥ 18 of 24 hours of the city's local day.
+  - AQS's own daily summary records (and their sample-duration and pollutant-standard
+    variants) are **not used for labels**, so OQ-8's question about which daily records count
+    doesn't arise.
+- **Checked against AQS's method table** (`methods_all.html`, parameter 88101, 2026-11-19).
+  The training sites' hourly instruments use four methods, all **Continuous** and **FEM**:
+  - 170: Met One BAM-1020 (EQPM-0308-170);
+  - 181: Thermo TEOM 1400/1405 FDMS (EQPM-0609-181);
+  - 182: Thermo TEOM 1405-DF FDMS (EQPM-0609-182);
+  - 638: Teledyne T640X (EQPM-0516-238).
+  - AirNow reports continuous monitors, and the same sites (`AQSID` = AQS site ID). So labels
+    and live inputs measure the same thing.
+  - The codes and their AQS valid ranges are in `observations/sites.py`.
+  - `unverified_methods` flags any other code before training. A new instrument type is
+    checked, never assumed.
+- **For T12 (D-031):** AQS's per-method valid ranges are the *sourced* bounds:
+  - 170: −10 to 975;
+  - 181 and 182: −10 to 5,000;
+  - 638: 0 to 10,000.
+  - The 2014 fireworks hour (1,167) came from method 181, so it's inside its instrument's range.
+- **Status:** Active.
+
+---
+
 ## Open questions (to settle, then move into a D-entry)
 
 - Further open items are listed in [SPEC.md](SPEC.md) § Open Questions.

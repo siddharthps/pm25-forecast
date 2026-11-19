@@ -588,15 +588,98 @@ The 3 failing tests:
 - **I miscounted Phoenix's counties** (9/1 instead of 8/2) when writing D-030. It was caught by
   recounting with code before committing.
 
+### T4 wrap-up
+
+- **PR #46 rebase-merged** (03:48 UTC); #9 closed with all 3 boxes ticked.
+- **Rebase merging re-creates commits, so the IDs on `main` differ from this entry's.** The author
+  times are kept, and PR #46 keeps the originals:
+
+  | Branch | `main` | What |
+  | --- | --- | --- |
+  | `4390340` | `6f5648d` | the freeze |
+  | `6acd4c3` | `196d4ff` | clarifications |
+  | `af22a99` | `b7625b6` | the checker |
+  | `0570c91` | `daed361` | the event label |
+  | `0a81102` | `17816b8` | the result |
+
+- **Owner:** `.env` now has `CITY_TZ` and `CITY_CBSA`; the names were checked, and Phoenix and
+  38060 load. Commits and pushes to task branches no longer need asking; PRs, merges and issue
+  edits still do.
+
+## 2026-11-19: T5 (#10) observations skeleton and T13 (#11) bulk download (CST night)
+
+- **Order:** T13 needs T5's AQS client, so T5's AQS side came first.
+  - `11-aqs-bulk` is stacked on `10-observations`.
+  - While the owner's download ran from the main folder, T5 continued in a **git worktree**
+    (`~/code/pm25-forecast-t5`) so the running script's files weren't changed underneath it.
+- **AQS (T5):**
+  - `aqs.py` holds `sampleData/bySite` per site-year and keeps only hourly 88101 in µg/m³.
+  - Times come from the GMT fields. **AQS `time_local` is local *standard* time:** on the
+    Charlotte recording, 00:00 local was 05:00 UTC in June (EDT is UTC−4). For Phoenix (no DST)
+    it doesn't matter.
+  - `available_at_utc` is the end of the last-change day.
+  - Daily means average POCs per hour, then require ≥ 18 hours of the city's day.
+- **The shared schema** (`schema.py`): typed columns and UTC-aware times. After D-031 it
+  checks structure only.
+- **T13:**
+  - `aqs_bulk.py` writes one Parquet file per site-year under `raw/aqs/hourly/`, with a manifest
+    in S3 as the durable record.
+  - Data is written before its entry. Reruns fetch only missing or unfinished parts, and the
+    current year is refreshed.
+  - The script is a dry run by default.
+  - Tests use moto plus a fake AQS fetch: interrupted runs, crashes between writes, and a
+    failed data write that's never recorded. 9 planted bugs were all caught, including the
+    write order.
+- **The owner ran the download (D-023).**
+  - The dry run planned 180 parts. The first `--apply` stopped at part 6 on **1,167 µg/m³ at
+    07:00 UTC on 2014-01-01**: midnight in Phoenix on New Year's, i.e. fireworks. That's a real
+    reading.
+  - **D-031 (owner):** raw data is stored as received, and out-of-range readings are counted,
+    not blocked.
+  - The rerun started at **175 parts**, which proves the resume worked. At 04:30 UTC: 67 parts,
+    470,354 rows, 2 flagged.
+- **AirNow (T5):** `airnow.py` reads the public `HourlyAQObs` files (no key). Checked on a real
+  file:
+  - `PM25` is the raw hourly value, identical to the `HourlyData` product for all 10 sites.
+  - `ValidDate`/`ValidTime` are UTC, and `AQSID` is the AQS site ID.
+  - Rows are kept only if PM2.5 has a value, is flagged measured, is in UG/M3 and has a 9-digit
+    AQS ID. Every other row is counted by reason.
+  - `available_at_utc` is the file's Last-Modified: the hour-01 file was published at 04:21 UTC.
+- **The live check** (`-m live`, counts only): 2026-11-17, Phoenix: 24 files, 231 of 240
+  training-site hours, **10 of 10 sites** with a valid daily mean.
+- **OQ-8 → D-032.** Labels come from AQS hourly data with our own daily rule, so AQS daily records
+  aren't used. The training sites' methods (170, 181, 182, 638) are all **Continuous FEM** per
+  AQS's `methods_all.html`. AQS's per-method valid ranges are the sourced bounds T12 needs: the
+  fireworks hour's method 181 allows up to 5,000.
+
+### Traps found (T5/T13)
+
+- **A guessed plausibility bound blocked real data** (fireworks). Bounds must be sourced, and
+  raw ingestion must not judge values (D-031).
+- **~30% of AirNow PM2.5 rows have 12-character or lettered IDs** (temporary, tribal,
+  international). The structural schema check refused the whole file on the first live run; they
+  are now counted as `not_an_aqs_site_id`.
+- **Some AirNow rows say `PM25_Measured = 1` with an empty value.** The parser checks both.
+- **A git worktree has no `.env`,** so `get_settings()` fails fast there. The live check ran with
+  dummy keys, since AirNow files need none.
+- **Python one-liners in bash heredocs mangled `\n` and `\d` again,** three times this session.
+  Files are written with the file tools from now on, as the global rule says.
+- **The AWS SSO session expired** between the Terraform apply and the dry run. The script now says
+  `run aws sso login --profile pm25` (exit 3) instead of printing botocore's traceback.
+- **Commands must run from the project folder.** From `~`, `scripts/…` isn't found and uv picks a
+  general Python.
+- **AQS's method table is over 10 MB,** too large for the fetch agent. It was downloaded with
+  curl and parsed locally.
+
 ### Next
 
-- **T4 (#9):** PR, CI and merge. The owner sets `CITY_TZ=America/Phoenix` and
-  `CITY_CBSA=38060` in `.env`.
-- **Milestone B:**
-  - **T5 (#10)** observations skeleton: Phoenix's 10 monitors, and OQ-8, the AQS daily-record
-    rules;
-  - **T13 (#11)** AQS bulk download, the slowest task, so start it early;
-  - #42 and #43.
+- **T5 (#10):** PR, CI and merge (rebase not needed; squash is fine).
+- **T13 (#11):** when the download finishes, verify read-only that the manifest has 180 parts and
+  the checksums match, and put the row-count summary here. Then the PR. It's stacked on #10:
+  `aqs_bulk` should import `TRAINING_SITES` from `observations/sites.py` after #10 merges.
+- **For T12a (#12):** "AirNow IDs that don't match AQS" is a validation check (T5's box). The
+  per-method AQS ranges in `sites.py` are the sourced bounds (D-031, D-032).
+- **Milestone B:** #42 and #43.
 - **T2 (#6):** close once Monday's scheduled lock job opens its PR and CI passes on it.
 - **2026-11-20:** milestone A due. **2026-11-25:** skeleton checkpoint, D-014 review, delete the
   old AWS key and IAM user.

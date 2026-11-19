@@ -52,8 +52,9 @@ module in the order validation → features → training → monitoring → site
   forecast run most recently published before 06:00 local.
 - **Target:** the mean of the hourly PM2.5 values at a monitor (µg/m³) over local calendar day
   **D+1**. A day is valid only with **≥ 18 of 24 hours** present (75%). One series per AQS site ×
-  parameter 88101; co-located instruments (POCs) are averaged per hour first. *(The AQS daily-record
-  rules, such as sample duration and pollutant standard, are to be verified against the AQS docs.)*
+  parameter 88101; co-located instruments (POCs) are averaged per hour first. Labels are built
+  from AQS's *hourly* data with this rule, not from AQS's daily summary records, and only from
+  continuous FEM instruments (D-032).
 - **Training labels** come from AQS. **Live labels** come from AirNow; the AQS re-score follows
   later (D-004).
 - **Weather lead mapping:** for target day D+1 issued at 06:00 on day D, weather values valid
@@ -125,7 +126,8 @@ pm25-forecast/                 new public repo (D-002, D-017); package name `air
 ├── src/airwatch/
 │   ├── config.py              typed settings; the only place that reads the environment
 │   ├── timeutil.py            UTC/local conversion, issue-time rules (single home)
-│   ├── observations/          aqs.py, airnow.py, schema.py
+│   ├── observations/          aqs.py, airnow.py, schema.py, sites.py (D-030 sites, D-032 methods),
+│   │                          metadata.py (city check, HTTP retries), aqs_bulk.py (T13)
 │   ├── weather/               openmeteo.py, cams.py
 │   ├── validation/            checks.py (whole problem classes), report.py
 │   ├── features/              build.py (as-of-issue-time feature rows)
@@ -133,6 +135,8 @@ pm25-forecast/                 new public repo (D-002, D-017); package name `air
 │   ├── forecast/              run.py, record.py (conditional write), publish.py
 │   ├── monitoring/            score.py, drift.py, flags.py
 │   └── flows/                 Prefect flows (thin wrappers that call the modules above)
+├── scripts/                   manual tools: city_check.py (reads only), aqs_bulk.py (dry run unless --apply)
+├── data/                      local cache of downloads (gitignored; raw data never committed)
 ├── infra/                     Terraform (D-018) + watchdog Lambda source
 ├── site/                      static page (HTML/JS/CSS)
 ├── tests/

@@ -28,16 +28,25 @@ uv run pytest                          # fast offline core suite (-m slow / -m l
 uv run pytest tests/property --hypothesis-profile=explore   # fresh random search (default is derandomized)
 uv run pre-commit run --all-files      # every hook, including gitleaks, markdownlint, terraform fmt
 terraform -chdir=infra test            # infra safety rules on the plan, mock AWS provider, offline
-aws sso login --profile pm25           # AWS access (never use long-lived keys)
+aws sso login --profile pm25           # AWS access (never use long-lived keys); lasts 8 hours
+uv run pytest -m live -o log_cli=true --log-cli-level=INFO   # opt-in real-API checks, counts only
+AWS_PROFILE=pm25 uv run python scripts/aqs_bulk.py           # AQS history to S3: dry run; --apply acts
+uv run python scripts/city_check.py    # the frozen D-006 city check (reads only; cached in data/)
 ```
+
+Run every command from the project folder (`cd ~/code/pm25-forecast`). Scripts that change
+anything outside this PC are dry runs unless given `--apply`. Keys live in the gitignored `.env`
+(names in [.env.example](.env.example); register in [notes/TOKENS.md](notes/TOKENS.md)).
 
 Infrastructure lives in `infra/`. The owner runs `plan` and `apply`, following
 [infra/README.md](infra/README.md). CI never has AWS credentials.
 
 ## Rules that bite (details in SPEC § Boundaries and the owner's global CLAUDE.md)
 
-- Commit, push, open or merge PRs, create issues, or change anything outside this PC **only when
-  the owner asks**. Branch per issue (`<issue>-<slug>`), never commit to `main`.
+- Committing and pushing to a task branch is fine without asking (owner, 2026-11-19). Open or
+  merge PRs, create or edit issues, or change anything else outside this PC **only when the owner
+  asks**. Branch per issue (`<issue>-<slug>`), never commit to `main`, never force-push: push
+  rebased work under a new branch name instead.
 - Write the check before the code. Use timezone-aware UTC everywhere. Credentials never go in logs
   or URLs that get logged.
 - Never read 2025 test-period results before the freeze (D-008); never change a **Frozen**

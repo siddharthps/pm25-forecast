@@ -89,6 +89,10 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - **Overlap for measuring the gap:** AirNow files from 2019-05-28 against AQS, which gives about
     6.5 years.
 - **Status:** Active. Display obligations from the Data Use Guidelines → D-025.
+  - *2026-11-19 (T5):* the live input uses the **hourly file product**, which needs no key and
+    carries `AQSID`. The planned API history check wasn't needed, so the API window is still
+    unconfirmed. Checked on a real file: `PM25` is the raw hourly value, times are UTC, and each
+    file is published about three hours after its hour (see `observations/airnow.py`).
 
 ---
 
@@ -110,7 +114,7 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 - **Status:** Active. Settled since:
   - SPEC § Key definitions sets a valid day at ≥ 18 of 24 hours, with POCs averaged per hour.
   - The local-day zone is the `city_tz` setting (T3, #7), fixed when T4 picks the city.
-  - Still open: AQS's daily-record rules (SPEC OQ-8, T5).
+  - AQS's daily-record rules: settled by D-032 (labels from hourly data with this rule; T5).
 
 ---
 
@@ -736,7 +740,7 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 - **Alternatives (rejected):**
   - Raise the bound and keep blocking: still a guess, and the next real extreme stops the run.
   - Drop out-of-range hours at download: loses real events from the raw copy permanently.
-- **Status:** Active. Owner's choice, 2026-11-19.
+- **Status:** Active. Owner's choice, 2026-11-19. The sourced per-method bounds are in D-032.
 
 ---
 

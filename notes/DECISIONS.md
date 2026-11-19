@@ -130,7 +130,36 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 - **Alternatives:**
   - Keep Chicago without checking: coverage problems could surface after code depends on it.
   - Pick another city on reasoning alone.
-- **Status:** Active. Settles Q-6 once the check has run.
+- **Frozen criteria (owner-approved 2026-11-18, T4 #9, committed before any candidate data was
+  fetched):**
+  - **Candidates:** the CBSAs (metro areas) of Chicago, Salt Lake City, Los Angeles and Phoenix.
+    AQS's `list/cbsas` gives the codes. The rest of the lists isn't candidate data.
+  - **Data:** AQS parameter 88101 (PM2.5, local conditions), **continuous hourly instruments only**
+    (sample duration 1 hour). Days flagged as exceptional events (for example wildfire smoke) are
+    **kept**.
+  - **Monitor:** one AQS site; co-located instruments (POCs) at that site count as one monitor.
+  - **Valid day:** at least one hourly instrument at the site reported **≥ 18 of 24 hours** that
+    day (local day, as AQS daily summaries are).
+  - **Good year:** **≥ 75%** of that calendar year's days are valid days.
+  - **Qualifying monitor:** all three of these hold.
+    - It has **≥ 8 good years** in 2009–2024.
+    - **2024** is one of them.
+    - Its AQS site ID appears for PM2.5 in AirNow's monitoring-site list on the day the check runs.
+  - **A city passes** if it meets all four rules below.
+    1. **≥ 5 qualifying monitors.**
+    2. **Bad-air share ≥ 0.5%.** That is, ≥ 0.5% of valid monitor-days in 2009–2024 at the
+       qualifying monitors have a daily mean **above 35.0 µg/m³**, the 24-hour primary NAAQS
+       (EPA NAAQS table, read 2026-11-18). A site's daily mean is the mean of its instruments'
+       daily means.
+    3. **Test year present:** **≥ 5** qualifying monitors have **2025** as a good year. Only day
+       counts are used. 2025 PM values are dropped as they are read, and never stored, printed or
+       scored (D-008).
+    4. **Weather coverage:** one request each to Open-Meteo and CAMS at the CBSA's centre returns
+       data.
+  - **Choice:** **Chicago, if it passes.** Otherwise, the passing city with the most qualifying
+    monitors. Ties are broken by the higher bad-air share. If no city passes, stop and bring the
+    scored table to the owner (no rule is relaxed silently).
+- **Status:** Active. Criteria **Frozen** (above). Settles Q-6 once the check has run.
 
 ---
 

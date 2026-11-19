@@ -243,6 +243,27 @@ def test_a_year_with_no_data_is_recorded_as_done_with_zero_rows(store: S3Store) 
     assert (SITES[0], 2024) not in again.calls
 
 
+def test_out_of_range_readings_are_stored_and_counted(
+    store: S3Store, caplog: pytest.LogCaptureFixture
+) -> None:
+    # D-031: a real extreme (1,167 at New Year's midnight 2014, fireworks) is kept and counted.
+    def with_spike(site: str, year: int) -> list[dict[str, Any]]:
+        rows = fake_rows(site, year)
+        rows[0]["sample_measurement"] = 1167.0
+        return rows
+
+    with caplog.at_level(logging.INFO):
+        run(store, with_spike)
+    entry = manifest(store)["parts"][Part(SITES[0], 2024).key]
+    assert entry["outside_crude_range"] == 1
+    assert entry["rows"] == 2
+    raw = store.get(entry["key"])
+    assert raw is not None
+    assert pd.read_parquet(io.BytesIO(raw))["value_ug_m3"].max() == 1167.0  # kept as received
+    assert "1 outside crude range" in caplog.text
+    assert "1167" not in caplog.text  # the count is logged, the value isn't
+
+
 def test_training_sites_are_exactly_d030s() -> None:
     decisions = (Path(__file__).resolve().parents[3] / "notes" / "DECISIONS.md").read_text(
         encoding="utf-8"

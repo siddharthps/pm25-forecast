@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any
 import pandas as pd
 
 from airwatch.observations.aqs import parse_sample_rows
+from airwatch.observations.schema import count_outside_crude_range
 
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client
@@ -144,6 +145,7 @@ def run_download(  # noqa: PLR0913  (each argument is an injected edge: store, f
     total_rows = 0
     for i, part in enumerate(parts, start=1):
         df = parse_sample_rows(fetch(part.site_id, part.year))
+        flagged = count_outside_crude_range(df)
         data = _parquet_bytes(df)
         store.put(part.key, data)  # 1. the data
         manifest["parts"][part.key] = {  # 2. then the record that it is done
@@ -151,11 +153,20 @@ def run_download(  # noqa: PLR0913  (each argument is an injected edge: store, f
             "site_id": part.site_id,
             "year": part.year,
             "rows": len(df),
+            "outside_crude_range": flagged,  # counted, never dropped (D-031)
             "sha256": hashlib.sha256(data).hexdigest(),
             "fetched_at_utc": now().isoformat(),
             "final": part.year < today.year,
         }
         store.put(MANIFEST_KEY, json.dumps(manifest, indent=1, sort_keys=True).encode("utf-8"))
         total_rows += len(df)
-        log.info("[%d/%d] site %s, %d: %d rows", i, len(parts), part.site_id, part.year, len(df))
+        log.info(
+            "[%d/%d] site %s, %d: %d rows, %d outside crude range",
+            i,
+            len(parts),
+            part.site_id,
+            part.year,
+            len(df),
+            flagged,
+        )
     return Summary(fetched=len(parts), rows=total_rows)

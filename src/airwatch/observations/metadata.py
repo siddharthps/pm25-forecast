@@ -28,6 +28,7 @@ __all__ = [
     "SiteDay",
     "choose_city",
     "fetch_json",
+    "fetch_response",
     "good_years",
     "parse_airnow_active_pm25",
     "score_city",
@@ -251,15 +252,15 @@ def _quiet_http_loggers() -> None:
         logging.getLogger(name).setLevel(logging.WARNING)
 
 
-def fetch_json(
+def fetch_response(
     client: httpx.Client,
     url: str,
-    params: Mapping[str, str],
+    params: Mapping[str, str] | None = None,
     *,
     attempts: int = 4,
     backoff_s: float = 5.0,
-) -> Any:
-    """GET JSON, retrying network errors, 429 and 5xx. Never logs the URL or the params.
+) -> httpx.Response:
+    """GET with retries on network errors, 429 and 5xx. Never logs the URL or the params.
 
     AQS takes credentials as query parameters, so failures are reported by type and status only.
     httpx and httpcore log every request URL at INFO/DEBUG; those loggers are held at WARNING so
@@ -270,7 +271,7 @@ def fetch_json(
         try:
             response = client.get(url, params=params)
             response.raise_for_status()
-            return response.json()
+            return response
         except (httpx.TransportError, httpx.HTTPStatusError) as exc:
             status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else "-"
             if not _retryable(exc) or attempt == attempts:
@@ -279,3 +280,15 @@ def fetch_json(
             log.warning("attempt %d failed (%s, %s); retrying", attempt, type(exc).__name__, status)
             time.sleep(backoff_s * attempt)
     raise AssertionError("unreachable")  # pragma: no cover
+
+
+def fetch_json(
+    client: httpx.Client,
+    url: str,
+    params: Mapping[str, str],
+    *,
+    attempts: int = 4,
+    backoff_s: float = 5.0,
+) -> Any:
+    """`fetch_response`, decoded as JSON."""
+    return fetch_response(client, url, params, attempts=attempts, backoff_s=backoff_s).json()

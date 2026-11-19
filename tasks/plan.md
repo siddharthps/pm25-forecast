@@ -199,10 +199,9 @@ owner asks.
 
 ## Open questions
 
-- Settled since the spec: OQ-3 → D-018 (Terraform), OQ-6 → D-019 (06:00, D+1), OQ-7 → D-020
-  (skills in the repo).
-- Still open, each with a home: **OQ-2** (MLflow backend) → T17 · **OQ-4** (Python version) → T1
-  · **OQ-5** (city thresholds) → T4 · **OQ-8** (AQS daily rules) → T5 · the v1 S3 buckets →
-  listed in T0c, decided in T30.
+- Settled since the spec: OQ-1 → D-004 and D-025 (AirNow, T0a), OQ-3 → D-018 (Terraform), OQ-4 →
+  D-026 (Python 3.12, T1), OQ-6 → D-019 (06:00, D+1), OQ-7 → D-020 (skills in the repo).
+- Still open, each with a home: **OQ-2** (MLflow backend) → T17 · **OQ-5** (city thresholds) →
+  T4 · **OQ-8** (AQS daily rules) → T5 · the v1 S3 buckets → listed in T0c, decided in T30.
 - The skill's shared `references/definition-of-done.md` wasn't installed with the skills; ours is
   above. Worth noting for the skills trial (D-001).

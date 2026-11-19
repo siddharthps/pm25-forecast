@@ -71,7 +71,7 @@ comment.
 
 | Concern | Choice |
 | --- | --- |
-| Language | Python, at the version the Prefect Managed image uses (Open Question OQ-4) |
+| Language | Python 3.12, the version the Prefect Managed image uses (D-026) |
 | Packaging | `uv`, `pyproject.toml`, `uv.lock`; no `requirements.txt` |
 | Orchestration | Prefect 3 + Prefect Cloud Hobby, Prefect Managed work pool (D-011) |
 | Tracking and registry | MLflow; backend per OQ-2 |
@@ -96,7 +96,8 @@ confirmed when added (pydantic-settings, httpx, pyarrow, SSM Parameter Store).
 
 ## Commands
 
-They will be defined in `pyproject.toml` and the `Makefile` during setup. These are the targets:
+The commands that work today live in [CLAUDE.md § Commands](../CLAUDE.md#commands), their one
+home. Below are the target commands, which become real as each module lands:
 
 ```bash
 uv sync --frozen                         # install exactly what the lockfile says
@@ -298,19 +299,19 @@ V1 is done when all of the following hold. Each is checkable.
 
 ## Open Questions
 
-- **OQ-1 · AirNow account (owner action):** create a free AirNow API account, then read the
-  per-endpoint rate limits, the history window, the file-product history and the Data Use
-  Guidelines (behind the login). This feeds D-004.
 - **OQ-2 · MLflow backend:** with no always-on server, where do runs and the registry live? For
   example, a local SQLite tracking store on the owner's PC plus S3 artifacts, with the daily flow
   loading the *promoted* model from S3 through a pinned pointer file (no MLflow server needed at
   forecast time), or a hosted free MLflow. To check: current hosted options and limits.
-- **OQ-4 · Python version:** match the Python in the official Prefect image used by Managed pools.
-  To check when the repo is set up (T1).
 - **OQ-5 · City-check thresholds (D-006):** confirm the final numbers before the check runs, then
   freeze them (T4).
 - **OQ-8 · AQS daily-record rules:** verify from the AQS docs which daily records count
   (sample duration, pollutant standard, POCs) before building `observations/aqs.py` (T5).
 
-Closed after approval (recorded as D-entries, no change to V1's requirements): OQ-3 → D-018
-(Terraform), OQ-6 → D-019 (06:00 confirmed), OQ-7 → D-020 (skills in the repo).
+Closed after approval (recorded as D-entries, no change to V1's requirements):
+
+- OQ-1 → D-004 and D-025 (AirNow limits and history, then the data-use rules; T0a);
+- OQ-3 → D-018 (Terraform);
+- OQ-4 → D-026 (Python 3.12; T1);
+- OQ-6 → D-019 (06:00 confirmed);
+- OQ-7 → D-020 (skills in the repo).

@@ -32,7 +32,6 @@ if TYPE_CHECKING:
 __all__ = [
     "MANIFEST_KEY",
     "PREFIX",
-    "TRAINING_SITES",
     "Part",
     "S3Store",
     "Summary",
@@ -45,20 +44,6 @@ log = logging.getLogger(__name__)
 
 PREFIX = "raw/aqs/hourly/"
 MANIFEST_KEY = PREFIX + "manifest.json"
-
-# D-030: Phoenix's 10 qualifying monitors (AQS site IDs). A test checks this matches D-030.
-TRAINING_SITES = (
-    "040130019",
-    "040131003",
-    "040131004",
-    "040132001",
-    "040134003",
-    "040134005",
-    "040139812",
-    "040139997",
-    "040210001",
-    "040213015",
-)
 
 
 @dataclass(frozen=True, order=True)

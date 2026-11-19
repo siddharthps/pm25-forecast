@@ -11,7 +11,6 @@ import re
 from collections import Counter
 from collections.abc import Callable, Iterator
 from datetime import UTC, date, datetime, timedelta
-from pathlib import Path
 from typing import Any
 
 import boto3
@@ -21,7 +20,6 @@ from moto import mock_aws
 
 from airwatch.observations.aqs_bulk import (
     MANIFEST_KEY,
-    TRAINING_SITES,
     Part,
     S3Store,
     plan_parts,
@@ -262,14 +260,3 @@ def test_out_of_range_readings_are_stored_and_counted(
     assert pd.read_parquet(io.BytesIO(raw))["value_ug_m3"].max() == 1167.0  # kept as received
     assert "1 outside crude range" in caplog.text
     assert "1167" not in caplog.text  # the count is logged, the value isn't
-
-
-def test_training_sites_are_exactly_d030s() -> None:
-    decisions = (Path(__file__).resolve().parents[3] / "notes" / "DECISIONS.md").read_text(
-        encoding="utf-8"
-    )
-    block = decisions[decisions.index("## D-030") :]
-    block = block[: block.index("\n## ", 5)]
-    ids = re.findall(r"\b04\d{7}\b", block)
-    assert tuple(sorted(set(ids))) == TRAINING_SITES
-    assert len(TRAINING_SITES) == 10

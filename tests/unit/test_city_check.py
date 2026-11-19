@@ -115,6 +115,17 @@ def test_exceptional_event_days_are_kept_once() -> None:
     assert day.mean == pytest.approx(80.0)
 
 
+def test_concurred_excluded_twin_is_dropped_and_the_included_day_kept() -> None:
+    # Seen in Chicago's AQS data: every "Concurred Events Excluded" row has an "Events Included"
+    # twin for the same instrument-day (D-006 clarification).
+    rows = [
+        row(event="Events Included", mean=80.0),
+        row(event="Concurred Events Excluded", mean=12.0),
+    ]
+    (day,) = site_days(rows, keep_values=True).values()
+    assert day.mean == pytest.approx(80.0)
+
+
 def test_an_unknown_event_type_stops_the_check() -> None:
     with pytest.raises(ValueError, match="event_type"):
         site_days([row(event="Something New")], keep_values=True)

@@ -75,6 +75,16 @@ def test_a_value_not_flagged_as_measured_is_dropped_and_counted() -> None:
     assert dropped["not_measured"] == 1
 
 
+@pytest.mark.parametrize("site_id", ["031AZE010001", "124000050314", "AB1234567"])
+def test_monitors_without_an_aqs_site_id_are_dropped_and_counted(site_id: str) -> None:
+    # Seen live: ~30% of PM2.5 rows carry 12-character or lettered IDs (temporary, tribal or
+    # international monitors). They can never map to an AQS site, so they're counted, not fatal.
+    edited = with_rows({"040130019": {"AQSID": site_id}})
+    df, dropped = parse_hourly_aqobs(edited, PUBLISHED)
+    assert site_id not in set(df["site_id"])
+    assert dropped["not_an_aqs_site_id"] == 1
+
+
 def test_other_units_are_dropped_and_counted() -> None:
     edited = with_rows({"040130019": {"PM25_Unit": "PPB"}})
     df, dropped = parse_hourly_aqobs(edited, PUBLISHED)

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import csv
 import io
+import re
 from collections import Counter
 from collections.abc import Iterable
 from datetime import UTC, date, datetime, timedelta
@@ -37,6 +38,7 @@ __all__ = [
 
 FILES_BASE = "https://files.airnowtech.org/airnow/"
 UNIT = "UG/M3"
+AQS_SITE_ID = re.compile(r"\d{9}")  # state (2) + county (3) + site (4)
 
 
 def _require_aware(dt: datetime, name: str) -> None:
@@ -74,6 +76,8 @@ def parse_hourly_aqobs(text: str, published_utc: datetime) -> tuple[pd.DataFrame
             dropped["not_measured"] += 1
         elif r.get("PM25_Unit") != UNIT:
             dropped["unit_not_ug_m3"] += 1
+        elif not AQS_SITE_ID.fullmatch(r.get("AQSID", "")):
+            dropped["not_an_aqs_site_id"] += 1  # temporary, tribal or international monitors
         else:
             kept.append(r)
 

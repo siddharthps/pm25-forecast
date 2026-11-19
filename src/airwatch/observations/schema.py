@@ -2,15 +2,16 @@
 
 One row per instrument-hour. Every timestamp is timezone-aware UTC; every row carries
 `available_at_utc`, the earliest moment the value could have been known (SPEC § Code Style).
-The skeleton's validation is crude on purpose (schema and a plausible range); the full
-data-quality checks come in T12.
+Validation here is structural only and blocks on any violation. Values are never judged here:
+raw data is kept as received, and readings outside a crude range are only counted (D-031). The
+data-quality rules, with sourced bounds, come in T12.
 """
 
 from __future__ import annotations
 
 import pandas as pd
 
-__all__ = ["HOURLY_COLUMNS", "PLAUSIBLE_UG_M3", "validate_hourly"]
+__all__ = ["CRUDE_RANGE_UG_M3", "HOURLY_COLUMNS", "count_outside_crude_range", "validate_hourly"]
 
 # column -> pandas dtype (as a string, compared with str(dtype))
 HOURLY_COLUMNS: dict[str, str] = {
@@ -24,9 +25,10 @@ HOURLY_COLUMNS: dict[str, str] = {
     "available_at_utc": "datetime64[us, UTC]",
 }
 
-# Crude skeleton bounds. Continuous monitors can read slightly below zero; the highest hourly
-# PM2.5 values in US wildfire smoke are in the hundreds. Outside this, a row is an error.
-PLAUSIBLE_UG_M3 = (-10.0, 1000.0)
+# A crude, *unsourced* range used only to count readings worth a look (D-031). It is not a
+# validity rule: real hours exceed it (1,167 at midnight on New Year's 2014 in Phoenix, from
+# fireworks). T12 replaces it with sourced bounds and decides how such hours are treated.
+CRUDE_RANGE_UG_M3 = (-10.0, 1000.0)
 
 
 def validate_hourly(df: pd.DataFrame) -> None:
@@ -42,9 +44,11 @@ def validate_hourly(df: pd.DataFrame) -> None:
             raise ValueError(f"{col}: dtype {df[col].dtype}, expected {dtype}")
     if not df["site_id"].str.fullmatch(r"\d{9}").all():
         raise ValueError("site_id must be 9 digits")
-    lo, hi = PLAUSIBLE_UG_M3
-    bad = df[(df["value_ug_m3"] < lo) | (df["value_ug_m3"] > hi)]
-    if len(bad):
-        raise ValueError(f"{len(bad)} value(s) outside the plausible range {PLAUSIBLE_UG_M3}")
     if (df["available_at_utc"] <= df["time_utc"]).any():
         raise ValueError("available_at_utc must be after time_utc")
+
+
+def count_outside_crude_range(df: pd.DataFrame) -> int:
+    """How many readings fall outside CRUDE_RANGE_UG_M3. Counted and reported; never dropped."""
+    lo, hi = CRUDE_RANGE_UG_M3
+    return int(((df["value_ug_m3"] < lo) | (df["value_ug_m3"] > hi)).sum())

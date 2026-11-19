@@ -23,7 +23,11 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from airwatch.observations.aqs import daily_means, fetch_site_year, parse_sample_rows
-from airwatch.observations.schema import HOURLY_COLUMNS, validate_hourly
+from airwatch.observations.schema import (
+    HOURLY_COLUMNS,
+    count_outside_crude_range,
+    validate_hourly,
+)
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "aqs"
 PHOENIX = ZoneInfo("America/Phoenix")
@@ -151,10 +155,22 @@ def test_schema_rejects_missing_columns() -> None:
         validate_hourly(df)
 
 
-@pytest.mark.parametrize("value", [-10.1, 1000.1])
-def test_schema_rejects_implausible_values(value: float) -> None:
-    with pytest.raises(ValueError, match="plausible"):
-        validate_hourly(parse_sample_rows([hour(datetime(2024, 1, 1, tzinfo=UTC), value=value)]))
+@pytest.mark.parametrize("value", [-10.1, 1167.0, 5000.0])
+def test_out_of_range_values_are_kept_and_counted_not_rejected(value: float) -> None:
+    # D-031: raw data is stored as received. A reading outside the crude range (for example
+    # 1,167 at midnight on New Year's 2014 in Phoenix: fireworks) is counted, never dropped or
+    # blocked here. T12 decides its treatment with a sourced bound.
+    t = datetime(2024, 1, 1, tzinfo=UTC)
+    df = parse_sample_rows([hour(t, value=value), hour(t + timedelta(hours=1), value=8.0)])
+    validate_hourly(df)
+    assert len(df) == 2
+    assert count_outside_crude_range(df) == 1
+
+
+def test_values_inside_the_crude_range_are_not_counted() -> None:
+    t = datetime(2024, 1, 1, tzinfo=UTC)
+    df = parse_sample_rows([hour(t, value=-10.0), hour(t + timedelta(hours=1), value=1000.0)])
+    assert count_outside_crude_range(df) == 0
 
 
 # --- daily means ----------------------------------------------------------------------------

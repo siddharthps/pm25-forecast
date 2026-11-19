@@ -717,6 +717,29 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 
 ---
 
+## D-031 · 2026-11-19 · Raw data is stored as received; out-of-range readings are counted, not blocked
+
+- **Decision:**
+  - Downloads (`raw/`) keep every reading as received.
+  - `validate_hourly` blocks only on *structural* problems: columns, types, UTC times, site
+    IDs, and "available after measured".
+  - Readings outside a crude, unsourced range (−10 to 1,000 µg/m³) are **counted**, in each
+    part's manifest entry and its log line, and never dropped or blocked at ingestion.
+  - T12 sets sourced bounds and decides how such hours are treated.
+- **Why:** The first bulk run stopped on 1,167 µg/m³ at site 040130019, at 07:00 UTC on
+  2014-01-01. That's midnight in Phoenix on New Year's, almost certainly fireworks. It's a real
+  event, and my guessed 1,000 limit would have blocked it.
+  - Judging data belongs downstream of a faithful raw copy, so every quality decision is
+    visible and repeatable.
+  - This fixes the check's cause (a guessed bound in the wrong place). It doesn't loosen it:
+    the count is still reported, and T12 still decides.
+- **Alternatives (rejected):**
+  - Raise the bound and keep blocking: still a guess, and the next real extreme stops the run.
+  - Drop out-of-range hours at download: loses real events from the raw copy permanently.
+- **Status:** Active. Owner's choice, 2026-11-19.
+
+---
+
 ## Open questions (to settle, then move into a D-entry)
 
 - Further open items are listed in [SPEC.md](SPEC.md) § Open Questions.

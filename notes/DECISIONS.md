@@ -159,6 +159,16 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - **Choice:** **Chicago, if it passes.** Otherwise, the passing city with the most qualifying
     monitors. Ties are broken by the higher bad-air share. If no city passes, stop and bring the
     scored table to the owner (no rule is relaxed silently).
+- **Clarifications (made before any candidate was scored; each committed before the scoring
+  script ran):**
+  - *2026-11-18, owner:* "appears for PM2.5 in AirNow's monitoring-site list" means a row in
+    `Monitoring_Site_Locations_V2.dat` with `Parameter = PM2.5` and **`Status = Active`**, matched
+    on `AQSID` (the 9-digit state + county + site code). The list also carries inactive sites,
+    and D-006's draft said "active in both".
+  - *2026-11-18, field mapping (checked on Charlotte, CBSA 16740, not a candidate):* an "hourly
+    instrument" is an AQS daily-summary row with `sample_duration_code = "1"` ("1 HOUR"), and its
+    `observation_count` is the number of hours reported that day. The `24-HR BLK AVG` rows (code
+    `X`) are AQS's derived per-standard summaries and aren't counted again.
 - **Status:** Active. Criteria **Frozen** (above). Settles Q-6 once the check has run.
 
 ---

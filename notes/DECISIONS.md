@@ -259,7 +259,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - RMSE with persistence only.
   - MAE with persistence only: rejected because it drops the CAMS comparison, which is the most
     convincing bar to beat.
-- **Status:** Active. **Frozen.**
+- **Status:** Active. **Frozen.** Persistence on a thin day (a monitor without a valid D−1 is
+  skipped and listed, never filled from an older day): D-034.
 - **Clarification (2026-11-18, before any result was seen; no change to the decision):**
   **Persistence** means *the forecast for D+1 equals the last complete day's observed mean, which
   is D−1*. At the 06:00 issue time (D-019), day D is not yet observed, so using D would leak. In
@@ -326,8 +327,9 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - AWS runs the job and Prefect observes: rejected because it needs a second execution path for
     the backup and more setup.
   - Two full triggers where the first wins: rejected because the code would run in two places.
-- **Status:** Active. Settles Q-4b. To verify during build: how S3 conditional writes behave, and
-  how a Lambda calls the Prefect API (key stored in SSM Parameter Store as a SecureString).
+- **Status:** Active. Settles Q-4b. S3 conditional writes: verified against AWS's docs and on real
+  S3 in T6, recorded in D-034. Still to verify (T9): how a Lambda calls the Prefect API (key stored
+  in SSM Parameter Store as a SecureString).
 
 ---
 
@@ -349,7 +351,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
     terms change.
 - **Status:** Active, **refined by D-028**: the public JSON lives in its own bucket, not a prefix of
   the private one. Attribution must appear on the page: EPA AirNow and AQS, Open-Meteo
-  (CC BY 4.0) and CAMS.
+  (CC BY 4.0) and CAMS. The public files' contents (`latest.json`, `history.json`), the page and
+  its go-live gate: D-036.
 
 ---
 
@@ -607,6 +610,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   "production ML done properly" story.
 - **Status:** Active. Added to T7's "done when" list. The AQI rules, the colours' one home and
   the go-live gate are in D-036.
+  *2026-11-20:* obligation 6 is met. The owner emailed the signed form, and AirNow's
+  reply is in D-039.
 
 ---
 
@@ -954,6 +959,7 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - **Checked by screenshot** in headless Edge at desktop width and in a 360 px frame. A
     plain 390 px window looked clipped only because headless Edge has a minimum window width.
 - **Status:** Active. Owner's choices, 2026-11-19. Refines D-025 (where the colours live).
+  *2026-11-20:* the go-live gate is met (D-039).
 
 ---
 
@@ -1054,6 +1060,28 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
     at all, not a hunt for rare edge cases. This predates D-035, where the owner declined fewer
     property examples in general. It stays as it was and is recorded here.
 - **Status:** Active. Recorded from the code, 2026-11-20 (#55).
+
+---
+
+## D-039 · 2026-11-20 · AirNow's reply: the go-live gate is met (#14)
+
+- **Decision:** the page may go public with the D-025 credits and labels as built. The owner
+  emailed the signed Data Use Guidelines form to `dmc@airnowtech.org` (D-025, obligation 6),
+  and AirNow replied.
+- **The reply, as the owner summarised it (2026-11-20):**
+  - AirNow data is U.S. government public-domain information.
+  - Emailing beforehand is an administrative courtesy, so AirNow can track outside
+    integrations and share data-handling advice. It is not a licence step, and it doesn't
+    block a non-commercial student or portfolio project.
+  - They may follow up in a couple of weeks, or may not.
+- **Still open:** the email also asked whether AirNow tells the three reporting agencies, or
+  whether the owner should. The reply as summarised doesn't answer that. The page already
+  credits the agencies first (D-025, obligation 3). If AirNow's follow-up asks for more, it
+  gets a new D-entry.
+- **Why:** D-036's gate was "after emailing the form and waiting for any reply". The reply
+  came, and it says the email was never a blocker.
+- **Status:** Active. Owner's decision, 2026-11-20. Meets the gate in D-036 and obligation 6
+  in D-025.
 
 ---
 

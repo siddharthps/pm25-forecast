@@ -126,23 +126,27 @@ pm25-forecast/                 new public repo (D-002, D-017); package name `air
 ├── src/airwatch/
 │   ├── config.py              typed settings; the only place that reads the environment
 │   ├── timeutil.py            UTC/local conversion, issue-time rules (single home)
+│   ├── aqi.py                 EPA's AQI rules and colours (single home; D-036)
+│   ├── storage.py             S3 get/put/list and create-only-if-absent (D-034)
 │   ├── observations/          aqs.py, airnow.py, schema.py, sites.py (D-030 sites, D-032 methods),
 │   │                          metadata.py (city check, HTTP retries), aqs_bulk.py (T13)
 │   ├── weather/               openmeteo.py, cams.py
 │   ├── validation/            checks.py (whole problem classes), report.py
 │   ├── features/              build.py (as-of-issue-time feature rows)
 │   ├── training/              split.py, baselines.py, models/, cv.py, final_test.py, registry.py
-│   ├── forecast/              run.py, record.py (conditional write), publish.py
+│   ├── forecast/              run.py, record.py (conditional write), publish.py, schemas/ (D-036)
 │   ├── monitoring/            score.py, drift.py, flags.py
 │   └── flows/                 Prefect flows (thin wrappers that call the modules above)
 ├── scripts/                   manual tools: city_check.py (reads only), aqs_bulk.py (dry run unless --apply)
 ├── data/                      local cache of downloads (gitignored; raw data never committed)
 ├── infra/                     Terraform (D-018) + watchdog Lambda source
 ├── site/                      static page (HTML/JS/CSS; deployed only after the go-live switch, D-036)
+├── biome.json, .nvmrc         Biome lint/format for the page's JS and CSS; Node version for its tests
 ├── tests/
 │   ├── unit/                  one file per module
 │   ├── property/              Hypothesis: leakage, time and DST, per-group, idempotency
 │   ├── integration/           moto S3, frozen clock, fake APIs (recorded fixtures)
+│   ├── site/                  the page's JavaScript tests (node --test)
 │   └── regressions/           shrunk failing cases saved from Hypothesis
 ├── notes/                     INTENT, SPEC, DECISIONS, JOURNAL (moved from the old repo)
 ├── docs/                      the published write-up (Zensical); numbers read from results.json
@@ -208,6 +212,8 @@ Every task states its check before its code. The checks:
 | Per-monitor work stays per-monitor | Hypothesis: shuffling or changing other monitors' data cannot change a monitor's per-monitor features |
 | Time is right, including around DST | Hypothesis: `issue_time_utc` and the day boundaries match a simple reference across DST changes (March and November) |
 | At most one publish | Integration (moto + frozen clock): running the daily flow twice, or after any single step fails, writes ≤ 1 record and ≤ 1 public JSON per date. The watchdog never triggers when the record exists. |
+| Nothing private goes public | Unit: every public payload must pass a strict JSON schema (no field outside the list) and a secret scan before upload; a refusal writes nothing (D-036) |
+| The page keeps AirNow's terms | Unit: D-025's labels, notice, link and credits are checked on the page's text; no AQI colour is typed into the site (D-036) |
 | No duplicate or rescaled features | Unit test: no two feature columns are identical or exact linear rescalings of each other |
 | Test set read once | `final_test.py` refuses to run without a freeze flag and writes a one-time marker; CI fails if test-period metrics appear anywhere else |
 | Prose matches results | CI: every number in `docs/` resolves to `results/results.json` (Zensical macros or extra-data); none is typed by hand |
@@ -221,8 +227,9 @@ Every task states its check before its code. The checks:
   Every surviving mutant is either killed by a new test or explained in the journal.
 - **Coverage:** ≥ 85% line coverage on `src/airwatch` (excluding `flows/`), enforced in CI as a
   floor. It is a floor, not the goal; placeholder tests like v1's `assert True` are banned.
-- **Speed:** the core suite is offline and seeded, runs in under 30 seconds, and starts no Prefect
-  server.
+- **Speed:** the core suite is offline and seeded, runs in under 30 seconds on 4 parallel workers
+  (D-035), and starts no Prefect server.
+- **The page's JavaScript** is tested with `node --test` and linted by Biome, both in CI (D-036).
 
 ---
 

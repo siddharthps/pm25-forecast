@@ -54,6 +54,9 @@ Infrastructure lives in `infra/`. The owner runs `plan` and `apply`, following
   or URLs that get logged.
 - Never read 2025 test-period results before the freeze (D-008); never change a **Frozen**
   decision.
+- Nothing goes public before go-live: never set `PAGES_GO_LIVE` or start a Pages deploy unless
+  the owner asks (D-025, D-036). An agent-started `forecast.run --publish` also needs the owner's
+  OK (it writes the real record and the public bucket); the scheduled run (T8) doesn't.
 - Decisions are append-only: to change one, add a new D-entry that supersedes or refines it.
   When a task settles, refines or overtakes a D-entry or an open question, update its **Status**
   line (and the OQ list) in the same PR.

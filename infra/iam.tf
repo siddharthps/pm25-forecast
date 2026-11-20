@@ -1,5 +1,6 @@
 # The pipeline's permissions (#8; D-024). Only the policy is defined here: who it's attached to
-# (a role assumed without keys, or a narrow rotated-key user) is decided in T8.
+# (a role assumed without keys, or a narrow rotated-key user) was decided in T8: the keyless
+# Prefect run role in prefect.tf (D-040).
 #
 # Least privilege: read and write on the private prefixes, put *.json on the public bucket,
 # no deletes anywhere (overwrites create versions, so history is never lost).

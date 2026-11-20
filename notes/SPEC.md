@@ -73,7 +73,7 @@ comment.
 | Concern | Choice |
 | --- | --- |
 | Language | Python 3.12, the version the Prefect Managed image uses (D-026) |
-| Packaging | `uv`, `pyproject.toml`, `uv.lock`; no `requirements.txt` |
+| Packaging | `uv`, `pyproject.toml`, `uv.lock`. The only `requirements` file is exported from `uv.lock` for the Prefect run (`requirements/prefect-run.txt`, D-040) |
 | Orchestration | Prefect 3 + Prefect Cloud Hobby, Prefect Managed work pool (D-011) |
 | Tracking and registry | MLflow; backend per OQ-2 |
 | Models | scikit-learn (Ridge, RF), XGBoost, LightGBM, PyTorch (LSTM, TCN), all on CPU |
@@ -112,7 +112,7 @@ uv run python -m airwatch.validation.report --source all     # data-quality repo
 uv run python -m airwatch.training.cv --variant lightgbm      # one variant, CV only
 uv run python -m airwatch.training.final_test                 # reads the 2025 test ONCE (guarded)
 uv run python -m airwatch.forecast.run --target-day 2026-11-25    # a dry run; --publish acts (D-034)
-uv run prefect deploy --all              # deploy flows to Prefect Cloud
+uv run prefect --no-prompt deploy --all  # deploy flows to Prefect Cloud (prefect.yaml; D-040)
 uv run zensical build                    # build the docs (exact command confirmed at setup)
 ```
 
@@ -142,6 +142,8 @@ pm25-forecast/                 new public repo (D-002, D-017); package name `air
 ├── infra/                     Terraform (D-018) + watchdog Lambda source
 ├── site/                      static page (HTML/JS/CSS; deployed only after the go-live switch, D-036)
 ├── biome.json, .nvmrc         Biome lint/format for the page's JS and CSS; Node version for its tests
+├── prefect.yaml               the Prefect deployment: schedule, image, pull steps (D-040)
+├── requirements/              prefect-run.txt, exported from uv.lock for the Prefect run (D-040)
 ├── tests/
 │   ├── unit/                  one file per module
 │   ├── property/              Hypothesis: leakage, time and DST, per-group, idempotency

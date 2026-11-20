@@ -48,9 +48,9 @@ class Settings(BaseSettings):
         arbitrary_types_allowed=True,
     )
 
-    airnow_api_key: Secret
-    aqs_email: Secret
-    aqs_api_key: Secret
+    airnow_api_key: Secret | None = None
+    aqs_email: Secret | None = None
+    aqs_api_key: Secret | None = None
 
     aws_profile: str | None = None
     aws_region: AwsRegion = "us-east-1"
@@ -60,6 +60,15 @@ class Settings(BaseSettings):
 
     data_bucket: BucketName = "pm25-forecast-data-65bc08"
     public_bucket: BucketName = "pm25-forecast-public-65bc08"
+
+    def aqs_credentials(self) -> dict[str, str]:
+        """The AQS email and key for the scripts that call AQS; fails clearly if either is unset."""
+        if self.aqs_email is None or self.aqs_api_key is None:
+            raise RuntimeError("AQS_EMAIL and AQS_API_KEY must both be set to call AQS")
+        return {
+            "email": self.aqs_email.get_secret_value(),
+            "key": self.aqs_api_key.get_secret_value(),
+        }
 
 
 @lru_cache(maxsize=1)

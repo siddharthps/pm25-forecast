@@ -3,3 +3,6 @@
 
 # Your email for alerts (SNS, from T9). Treated as sensitive: never printed in plan output.
 alert_email = "you@example.com"
+
+# Your Prefect Cloud account ID (a UUID, not secret): the Prefect run role trusts only it (T8).
+prefect_account_id = "00000000-0000-0000-0000-000000000000"

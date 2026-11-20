@@ -17,3 +17,8 @@ output "pipeline_policy_arn" {
   description = "IAM policy to attach to the pipeline's identity in T8 (D-024)."
   value       = aws_iam_policy.pipeline.arn
 }
+
+output "prefect_run_role_arn" {
+  description = "Role ARN to enter in the managed work pool's Federated Identity settings (T8)."
+  value       = aws_iam_role.prefect_run.arn
+}

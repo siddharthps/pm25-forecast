@@ -64,11 +64,7 @@ class Aqs:
     """AQS client: credentials from settings, polite pacing, cached responses."""
 
     def __init__(self, client: httpx.Client) -> None:
-        s = get_settings()
-        self._auth = {
-            "email": s.aqs_email.get_secret_value(),
-            "key": s.aqs_api_key.get_secret_value(),
-        }
+        self._auth = get_settings().aqs_credentials()
         self._client = client
         self._last = 0.0
 

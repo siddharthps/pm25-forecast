@@ -11,7 +11,8 @@ and `terraform test` with a mock AWS provider. **CI never has AWS credentials.**
 | Private bucket `pm25-forecast-data-65bc08` | `raw/`, `records/`, `models/`, `reports/`. All four public-access blocks on, ACLs off, versioned, SSE-S3, TLS only |
 | Lifecycle on the private bucket | Superseded versions under `raw/` expire after 30 days. `records/`, `models/` and `reports/` keep every version. Failed multipart uploads are cleaned up after 7 days |
 | Public bucket `pm25-forecast-public-65bc08` | Derived JSON for the page only (D-012, D-028). Anonymous `GetObject` on objects, no listing, ACLs still blocked, CORS for `https://siddharthps.github.io` only, TLS only, versioned (old versions expire after 30 days) |
-| IAM policy `pm25-forecast-pipeline` | Read/write on the private prefixes, put `*.json` on the public bucket, **no deletes**. Attached to the pipeline's identity in T8 (D-024) |
+| IAM policy `pm25-forecast-pipeline` | Read/write on the private prefixes, put `*.json` on the public bucket, **no deletes**. Attached to the Prefect run role (T8) |
+| OIDC provider `api.prefect.cloud/oidc-provider` and role `pm25-forecast-prefect-run` (T8, #15) | Keyless AWS access for Prefect Managed runs: web identity federation, trusted only for our Prefect account and the `prefect-cloud` audience, 1-hour sessions, only the pipeline policy (D-040). Free |
 
 State lives in `s3://pm25-forecast-tfstate-65bc08/pm25-forecast/base.tfstate` (created in T0c),
 with S3-native locking.

@@ -13,5 +13,9 @@ never by printing it. Dates are America/Chicago.
 | v1 IAM user `air-quality-mlops-user`, key …XZ53 (2025) | **Retired**: deactivated 2026-11-18 (last used 2025-08-04) | The old repo's `.env` and the CLI `default` profile, both now dead | **Delete the key and the user on 2026-11-25** if nothing broke | n/a | 2026-11-18 |
 | Prefect Cloud API key `pm25-forecast-cli` | Prefect CLI login and deployments (workspace `pm25-forecast`, Hobby plan) | Owner's password manager; later a Prefect CLI profile on this PC (T8) | **Expires 2027-02-28**. Renew a week before (reminder: 2027-02-21) | Prefect Cloud → profile → API Keys → create a new key, `prefect cloud login`, then delete the old key | 2026-11-18 |
 
-To add as they're created: pipeline AWS access (D-024, T8), the
-watchdog's Prefect key in SSM (T9), the GitHub fine-grained token for flag issues (T24).
+**The Prefect run holds no credential (D-040).** Its AWS access is the role `pm25-forecast-prefect-run`,
+assumed through Prefect Cloud's OIDC provider, with temporary credentials that Prefect injects. No key
+to store, expire or rotate. AirNow's hourly files need no key.
+
+To add as they're created: the watchdog's Prefect key in SSM (T9), the GitHub fine-grained token for
+flag issues (T24).

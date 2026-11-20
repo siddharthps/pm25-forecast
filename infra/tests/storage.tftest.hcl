@@ -4,7 +4,8 @@
 mock_provider "aws" {}
 
 variables {
-  alert_email = "owner@example.invalid"
+  alert_email        = "owner@example.invalid"
+  prefect_account_id = "1d2c3b4a-5f6e-4a7b-8c9d-0e1f2a3b4c5d"
 }
 
 run "private_bucket_can_never_be_public" {

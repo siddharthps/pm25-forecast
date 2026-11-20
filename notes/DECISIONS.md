@@ -580,6 +580,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - Routing writes through API Gateway + Lambda: an extra API to build and secure, for a small
     gain.
 - **Status:** Active.
+  *2026-11-20 (T8, D-040):* settled as **keyless**. Prefect Managed supports AWS web identity
+  federation, so the run assumes `pm25-forecast-prefect-run` and no key exists.
 
 ---
 
@@ -630,6 +632,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   upgrade a deliberate change.
 - **Status:** Active. Revisit when moving to a newer Python (a new D-entry, and an image tag change
   in T8).
+  *2026-11-20 (T8, D-040):* the pin is in `prefect.yaml` (`image:`), checked by a test against
+  `.python-version`.
 
 ## D-027 · 2026-11-18 · Python dependency updates: a weekly uv-lock job, not Dependabot (T2)
 
@@ -1082,6 +1086,52 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   came, and it says the email was never a blocker.
 - **Status:** Active. Owner's decision, 2026-11-20. Meets the gate in D-036 and obligation 6
   in D-025.
+
+---
+
+## D-040 · 2026-11-20 · The Prefect daily deployment (T8, #15)
+
+- **AWS access: keyless** (settles D-024). Prefect Cloud is an OIDC identity provider, and a
+  managed run can assume an AWS role through `AssumeRoleWithWebIdentity`. Prefect then injects
+  temporary credentials ("Federated Identity" on the work pool; Prefect's guide
+  `managed-aws-federated-identity`, read 2026-11-20).
+  - `infra/prefect.tf` adds the OIDC provider and the role `pm25-forecast-prefect-run`, with
+    only the T3b pipeline policy and sessions of up to 1 hour.
+  - The trust is `StringEquals` on the `prefect-cloud` audience and `prefect:account:<our
+    account ID>`. Prefect's token names the account, not a workspace or deployment, so any run
+    in our account could assume the role. The account holds only this project.
+- **No secrets in the run at all.** AirNow's hourly files are public, and the AWS credentials
+  are injected. The AirNow API key and the AQS email and key are now optional settings:
+  `Settings.aqs_credentials()` fails clearly in the two scripts that need them. A Secret block
+  was rejected as unneeded. Templating one into `job_variables` was also ruled out, because the
+  value would be resolved at deploy time and stored with the deployment.
+- **Code and dependencies** (owner's choice: lock-exact):
+  - Each run clones `main` from the public repo. Prefect documents no way to pin a commit, and
+    `main` changes only through CI-gated PRs.
+  - It installs `requirements/prefect-run.txt`, exported from `uv.lock` with hashes, then our
+    package with `--no-deps`. A test fails if the file drifts from the lock, and the weekly
+    lock job regenerates it in the same commit.
+  - The image is pinned to `prefecthq/prefect:3-python3.12` (D-026).
+- **Dry run unless scheduled:** the flow defaults to `publish=False`. Only the 06:00
+  America/Chicago schedule passes `publish: true` (D-019), so a manual run from the UI or CLI
+  writes no record and no public file.
+- **Thin flow:** `airwatch.flows.daily` reads the settings and its run ID and scheduled start,
+  then calls `airwatch.forecast.job.daily_job`. The job and every rule it relies on are tested
+  without Prefect. The flow has no retries, because a failed day is the watchdog's to handle
+  (D-011).
+- **Compute minutes** (owner's choice: a ledger now, email in T9):
+  - Prefect bills from container start-up to teardown, rounded up, and documents no usage API.
+  - Each run files its estimate once, under its run ID, in
+    `reports/compute/month=YYYY-MM/` (UTC months). The estimate runs from the scheduled start
+    to the end of the run, rounded up, plus 1 minute of teardown.
+  - The month's total is logged, with a warning above 300 of the free 500 minutes. A dry run is
+    counted too, since it uses the same minutes. The ledger is written even when the forecast
+    fails.
+  - The email at 300 moves to T9, which builds the SNS path anyway. Until then, the estimate is
+    checked against Prefect's usage page by hand.
+- **Deployments used:** 1 of the Hobby plan's 5 (a test caps `prefect.yaml` at 5).
+- **Status:** Active. Owner's choices, 2026-11-20. The first deploy is the owner's
+  (`notes/guides/T8-PREFECT.md`, D-023).
 
 ---
 

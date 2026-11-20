@@ -259,7 +259,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - RMSE with persistence only.
   - MAE with persistence only: rejected because it drops the CAMS comparison, which is the most
     convincing bar to beat.
-- **Status:** Active. **Frozen.**
+- **Status:** Active. **Frozen.** Persistence on a thin day (a monitor without a valid D−1 is
+  skipped and listed, never filled from an older day): D-034.
 - **Clarification (2026-11-18, before any result was seen; no change to the decision):**
   **Persistence** means *the forecast for D+1 equals the last complete day's observed mean, which
   is D−1*. At the 06:00 issue time (D-019), day D is not yet observed, so using D would leak. In
@@ -326,8 +327,9 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - AWS runs the job and Prefect observes: rejected because it needs a second execution path for
     the backup and more setup.
   - Two full triggers where the first wins: rejected because the code would run in two places.
-- **Status:** Active. Settles Q-4b. To verify during build: how S3 conditional writes behave, and
-  how a Lambda calls the Prefect API (key stored in SSM Parameter Store as a SecureString).
+- **Status:** Active. Settles Q-4b. S3 conditional writes: verified against AWS's docs and on real
+  S3 in T6, recorded in D-034. Still to verify (T9): how a Lambda calls the Prefect API (key stored
+  in SSM Parameter Store as a SecureString).
 
 ---
 
@@ -349,7 +351,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
     terms change.
 - **Status:** Active, **refined by D-028**: the public JSON lives in its own bucket, not a prefix of
   the private one. Attribution must appear on the page: EPA AirNow and AQS, Open-Meteo
-  (CC BY 4.0) and CAMS.
+  (CC BY 4.0) and CAMS. The public files' contents (`latest.json`, `history.json`), the page and
+  its go-live gate: D-036.
 
 ---
 

@@ -9,9 +9,18 @@ data-quality rules, with sourced bounds, come in T12.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 import pandas as pd
 
-__all__ = ["CRUDE_RANGE_UG_M3", "HOURLY_COLUMNS", "count_outside_crude_range", "validate_hourly"]
+__all__ = [
+    "CRUDE_RANGE_UG_M3",
+    "HOURLY_COLUMNS",
+    "concat_hourly",
+    "count_outside_crude_range",
+    "empty_hourly",
+    "validate_hourly",
+]
 
 # column -> pandas dtype (as a string, compared with str(dtype))
 HOURLY_COLUMNS: dict[str, str] = {
@@ -46,6 +55,19 @@ def validate_hourly(df: pd.DataFrame) -> None:
         raise ValueError("site_id must be 9 digits")
     if (df["available_at_utc"] <= df["time_utc"]).any():
         raise ValueError("available_at_utc must be after time_utc")
+
+
+def empty_hourly() -> pd.DataFrame:
+    """A frame with the hourly schema and no rows."""
+    return pd.DataFrame({c: pd.Series(dtype=t) for c, t in HOURLY_COLUMNS.items()})
+
+
+def concat_hourly(frames: Iterable[pd.DataFrame]) -> pd.DataFrame:
+    """Stack hourly frames, skipping empty ones (pandas warns on those); never fewer columns."""
+    parts = [f for f in frames if len(f)]
+    if not parts:
+        return empty_hourly()
+    return pd.concat(parts, ignore_index=True).astype(HOURLY_COLUMNS)
 
 
 def count_outside_crude_range(df: pd.DataFrame) -> int:

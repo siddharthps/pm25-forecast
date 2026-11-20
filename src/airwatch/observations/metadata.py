@@ -25,6 +25,7 @@ __all__ = [
     "HISTORY_YEARS",
     "TEST_YEAR",
     "CityScore",
+    "FetchError",
     "SiteDay",
     "choose_city",
     "fetch_json",
@@ -252,6 +253,14 @@ def _quiet_http_loggers() -> None:
         logging.getLogger(name).setLevel(logging.WARNING)
 
 
+class FetchError(RuntimeError):
+    """A request that failed for good. Carries the HTTP status (None for a network error)."""
+
+    def __init__(self, message: str, status: int | None) -> None:
+        super().__init__(message)
+        self.status = status
+
+
 def fetch_response(
     client: httpx.Client,
     url: str,
@@ -273,10 +282,11 @@ def fetch_response(
             response.raise_for_status()
             return response
         except (httpx.TransportError, httpx.HTTPStatusError) as exc:
-            status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else "-"
+            code = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
+            status = "-" if code is None else code
             if not _retryable(exc) or attempt == attempts:
                 msg = f"request failed after {attempt} attempt(s): {type(exc).__name__}, {status}"
-                raise RuntimeError(msg) from None
+                raise FetchError(msg, code) from None
             log.warning("attempt %d failed (%s, %s); retrying", attempt, type(exc).__name__, status)
             time.sleep(backoff_s * attempt)
     raise AssertionError("unreachable")  # pragma: no cover

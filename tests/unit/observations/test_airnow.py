@@ -18,13 +18,16 @@ import pytest
 
 from airwatch.observations.airnow import (
     fetch_hour,
+    fetch_local_day,
     hourly_file_url,
     hours_for_local_day,
     keep_sites,
     parse_hourly_aqobs,
 )
+from airwatch.observations.metadata import FetchError
 from airwatch.observations.schema import validate_hourly
 from airwatch.observations.sites import TRAINING_SITES
+from tests.unit.observations.airnow_fakes import day_transport, file_for_hour
 
 FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "airnow" / "HourlyAQObs_2026111901.dat"
 PUBLISHED = datetime(2026, 11, 19, 4, 21, 33, tzinfo=UTC)  # the file's Last-Modified
@@ -166,3 +169,35 @@ def test_fetching_logs_no_url_query(caplog: pytest.LogCaptureFixture) -> None:
     assert published == PUBLISHED
     assert body == text()
     assert "files.airnowtech.org" not in caplog.text
+
+
+def test_a_local_day_is_fetched_hour_by_hour_for_the_training_sites() -> None:
+    with httpx.Client(transport=day_transport()) as c:
+        df, drops = fetch_local_day(c, date(2026, 11, 18), PHOENIX, TRAINING_SITES)
+    validate_hourly(df)
+    assert len(df) == 24 * len(TRAINING_SITES)
+    assert df["time_utc"].min() == pd.Timestamp("2026-11-18 07:00", tz=UTC)
+    assert df["time_utc"].max() == pd.Timestamp("2026-11-19 06:00", tz=UTC)
+    assert not df.duplicated(["site_id", "time_utc"]).any()
+    # every other monitor in the file is counted, per hour, never silently ignored
+    one_file, one_drops = parse_hourly_aqobs(
+        file_for_hour(datetime(2026, 11, 18, 7, tzinfo=UTC)), PUBLISHED
+    )
+    assert drops["unmatched_site"] == 24 * (len(one_file) - len(TRAINING_SITES))
+    for reason, n in one_drops.items():
+        assert drops[reason] == 24 * n
+
+
+def test_a_missing_hourly_file_is_counted_not_fatal() -> None:
+    with httpx.Client(transport=day_transport(missing=frozenset({10, 11}))) as c:
+        df, drops = fetch_local_day(c, date(2026, 11, 18), PHOENIX, TRAINING_SITES)
+    assert drops["file_missing"] == 2
+    assert df["time_utc"].nunique() == 22
+
+
+def test_any_other_fetch_failure_stops_the_day() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(403)  # not retryable, and not "not published yet"
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as c, pytest.raises(FetchError):
+        fetch_local_day(c, date(2026, 11, 18), PHOENIX, TRAINING_SITES)

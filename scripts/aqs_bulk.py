@@ -25,6 +25,7 @@ import httpx
 from airwatch.config import get_settings
 from airwatch.observations.aqs import fetch_site_year
 from airwatch.observations.aqs_bulk import (
+    FIRST_YEAR,
     S3Store,
     load_manifest,
     plan_parts,
@@ -32,7 +33,6 @@ from airwatch.observations.aqs_bulk import (
 )
 from airwatch.observations.sites import TRAINING_SITES
 
-FIRST_YEAR = 2009  # D-008: the development period starts here
 AQS_PAUSE_S = 6.0  # AQS terms: <= 10 requests a minute, a 5-second pause between requests
 
 log = logging.getLogger("aqs_bulk")

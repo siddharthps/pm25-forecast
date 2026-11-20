@@ -7,8 +7,8 @@ Dates are America/Chicago.
 **Tracker:** GitHub Issues on
 [siddharthps/pm25-forecast](https://github.com/siddharthps/pm25-forecast/issues), created
 2026-11-18. There are 36 issues (#1–#36) with 4 milestones, and each issue holds its task's "Done
-when" boxes. [todo.md](todo.md) maps T-numbers to issue numbers. This file and `notes/` move into
-the repo in T1 (#5).
+when" boxes. [todo.md](todo.md) maps T-numbers to issue numbers. This file and `notes/` moved into
+the repo in T1 (#5). The ticks below follow GitHub; the issues are the source of truth.
 
 ## Overview
 
@@ -25,13 +25,13 @@ delivery path was built last and its bugs surfaced three days before the deadlin
 | --- | --- |
 | Repo | New public repo; the old one made private (D-002) |
 | Data | AQS history + AirNow live, with the gap measured (D-004); per-monitor next-day mean (D-005) |
-| City | Declared data check; Chicago wins ties (D-006). **The skeleton is built on Chicago as a config value**, so the check doesn't block it. |
+| City | Declared data check (D-006): **Phoenix** won (D-030), with its 10 monitors and their instrument types (D-032) |
 | Weather | Observed for training, forecasts as issued for test and live (D-007) |
 | Evaluation | Develop on 2009–2024 with rolling CV, test on 2025 read once, then live (D-008); MAE + 3 baselines (D-009); 6 frozen variants (D-010) |
-| Runtime | Prefect Cloud Managed + EventBridge→Lambda watchdog, S3 conditional write (D-011); issue 06:00 local for D+1 (D-019); AWS access keyless or a rotated narrow key (D-024) |
+| Runtime | Prefect Cloud Managed + EventBridge→Lambda watchdog, S3 conditional write (D-011, verified in D-034); issue 06:00 Chicago for D+1 (D-019); AWS access keyless or a rotated narrow key (D-024) |
 | Infra and repo | Terraform (D-018); `siddharthps/pm25-forecast` (D-017); skills in the repo (D-020) |
-| Ways of working | Validation split T12a/T12b (D-021); light write-up rules (D-022); owner drives each new tool first (D-023) |
-| Page | GitHub Pages + public S3 JSON (D-012) |
+| Ways of working | Validation split T12a/T12b (D-021, rules in D-033); light write-up rules (D-022); owner drives each new tool first (D-023); tests in parallel (D-035) |
+| Page | GitHub Pages + public JSON in its own bucket (D-012, D-028); AQI per EPA's TAD, schema-checked files, a go-live gate (D-036) |
 | Monitoring | Daily scoring, weekly drift, retraining by hand (D-013) |
 | Scaffold and docs | uv src layout (D-015); Zensical + a separate link checker (D-016) |
 
@@ -74,29 +74,34 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
 
 ### Phase 1: Foundation (week 1)
 
-- [ ] T1: Day-zero scaffold and quality gates
-- [ ] T2: CI on GitHub Actions (SHA-pinned)
-- [ ] T3: Typed config + time rules, with DST property tests
-- [ ] T3b: Terraform base: versioned private data bucket, public JSON prefix, pipeline IAM
-  · *owner runs the first apply*
+- [x] T1: Day-zero scaffold and quality gates (merged #37, 2026-11-18)
+- [ ] T2: CI on GitHub Actions (SHA-pinned) (merged #39, 2026-11-18; #6 closes once the 11-23
+  lock-job PR passes CI)
+- [x] T3: Typed config + time rules, with DST property tests (merged #40, 2026-11-18)
+- [x] T3b: Terraform base: versioned private data bucket, public JSON bucket (D-028), pipeline IAM
+  · *owner runs the first apply* (merged #41, 2026-11-18)
 
 ### Checkpoint A: Foundation (target 2026-11-20)
 
-- [ ] `uv sync --frozen`, lint, `mypy --strict` and the core tests pass locally and in CI on a PR
-- [ ] Secret scan runs in CI; the noreply email is verified on the first commit
-- [ ] Owner reviews before the skeleton begins
+- [x] `uv sync --frozen`, lint, `mypy --strict` and the core tests pass locally and in CI on a PR
+- [x] Secret scan runs in CI; the noreply email is verified on the first commit
+- [x] Owner reviews before the skeleton begins (the milestone A notes review, #44/#45)
 
 ### Phase 2: Walking skeleton (week 1, target 2026-11-25)
 
-- [ ] T4: City data check (D-006), **first**: freeze the thresholds, score the candidates, write
-  a D-entry
-- [ ] T5: Observations skeleton: AirNow live + AQS client, daily means, AirNow↔AQS site mapping,
-  matching instrument types
-- [ ] T13: AQS bulk history download, started as soon as T4 and T5 allow (runs in the background)
-- [ ] T12a: Validation module + report, first 3 problem classes, on AirNow and AQS (D-021)
-- [ ] T6: Persistence forecast + at-most-once durable record
-- [ ] T7: Public JSON + static page on GitHub Pages
-- [ ] T8: Prefect daily deployment (Managed pool, 06:00 local)
+- [x] T4: City data check (D-006), **first**: freeze the thresholds, score the candidates, write
+  a D-entry (merged #46, 2026-11-18; Phoenix, D-030)
+- [x] T5: Observations skeleton: AirNow live + AQS client, daily means, AirNow↔AQS site mapping,
+  matching instrument types (merged #47, 2026-11-18)
+- [x] T13: AQS bulk history download, started as soon as T4 and T5 allow (runs in the background)
+  (merged #48, 2026-11-18; 1,217,348 rows)
+- [x] T12a: Validation module + report, first 3 problem classes, on AirNow and AQS (D-021) (merged
+  #51, 2026-11-19)
+- [x] T6: Persistence forecast + at-most-once durable record (merged #53, 2026-11-19; first real
+  record for 2026-11-20)
+- [ ] T7: Public JSON + static page on GitHub Pages (merged #54, 2026-11-19; **go-live pending**:
+  the AirNow form, then `PAGES_GO_LIVE`)
+- [ ] T8: Prefect daily deployment (Managed pool, 06:00 Chicago)
 - [ ] T9: Watchdog: EventBridge → Lambda → Prefect API / SNS, in Terraform (D-018)
 - [ ] T10: Daily scoring of yesterday's forecast
 - [ ] T11: Bottom line + outline + style sheet (Vale), docs stub, `results.json` number check,
@@ -135,7 +140,8 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
 ### Phase 4: Freeze and delivery (to 2026-12-23, then live criteria)
 
 - [ ] T27: Final test, read once (guarded) → `results.json`
-- [ ] T28: Write-up: README + docs chapters from `results.json`; how v2 fixes v1's mistakes, in prose
+- [ ] T28: Write-up: README + docs chapters from `results.json`; how v2 fixes v1's mistakes, in
+  prose
 - [ ] T29: Live acceptance: 14 consecutive days + a deliberate watchdog drill
 - [ ] T30: Retire v1: make the old repo private (D-002) · *owner approves*
 
@@ -173,6 +179,7 @@ The skill's shared `definition-of-done.md` wasn't installed, so this is ours, fr
 | Zensical beta breaks the build | Low | Pin the exact version; written fallback (D-016) |
 | Training/serving skew larger than expected | Med | It's measured (T22) and reported, not hidden |
 | Time-zone or DST bugs in the issue time | High | One `timeutil` home + property tests in T3, before any data code |
+| AirNow rewrites hourly files for ~7.7 h after the hour (found in T6) | Med | Strict issue-time cut: rows published after 06:00 are dropped and counted; a property test proves they can't change a forecast (D-034) |
 | Double publish on retry or watchdog | High | S3 conditional write + an idempotency test that fails at each step in turn (T6, T9) |
 | Accidental test peek | High | `final_test.py` guard + a CI check that no test-period metrics appear elsewhere (T16, T27) |
 | AirNow monitors don't map cleanly to AQS sites | High | Explicit site mapping in T5; unmatched monitors excluded and counted; a validation check |

@@ -1,5 +1,6 @@
 """The Prefect flow is a thin wrapper: it passes its inputs to the job and nothing else."""
 
+import logging
 from datetime import UTC, date, datetime
 from types import SimpleNamespace
 from typing import Any
@@ -51,3 +52,12 @@ def test_publish_and_target_day_pass_straight_through(calls: list[dict[str, Any]
 def test_the_flow_has_no_retries_of_its_own() -> None:
     """Retries are the watchdog's job (D-011); a retry here would spend minutes on a bad day."""
     assert daily.daily_forecast.retries in (0, None)
+
+
+@pytest.mark.usefixtures("calls")
+def test_our_info_logs_reach_prefect(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Prefect attaches its handler to `airwatch` but sets no level, so INFO was dropped (#68)."""
+    logger = logging.getLogger("airwatch")
+    monkeypatch.setattr(logger, "level", logging.NOTSET)
+    daily.daily_forecast.fn()
+    assert logger.level == logging.INFO

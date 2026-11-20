@@ -976,3 +976,37 @@ A detour before go-live, at the owner's request. Go-live (#14) resumes on `14-go
 - PR for #55 when the owner asks. Then back to go-live on `14-go-live` (its journal "Next"
   section). Expect a small conflict in `notes/JOURNAL.md` and `notes/DECISIONS.md` when the two
   branches meet.
+
+## 2026-11-20: go-live (#14), on branch `14-go-live` (CST, about 12:45 to 13:00)
+
+- **AirNow replied** to the signed form (owner's summary): the data is public domain, and the
+  email is a courtesy, not a licence step. Recorded as D-039 (D-037 and D-038 are taken by PR
+  #60). The question of who tells the three reporting agencies is still unanswered. The page
+  credits them first.
+- **First forecast for a day still ahead:** `forecast.run --target-day 2026-11-21 --publish`
+  (owner's OK). It recorded once with 10 monitors and wrote `latest.json` v2 and `history.json`
+  (11-21 and 11-20). The run was after 06:00 Chicago, so the issue-time cut (D-034) decided what
+  it could see.
+- **Checked before the switch:** both public files return 200, and the bucket's CORS allows
+  `https://siddharthps.github.io`.
+- **`PAGES_GO_LIVE=true`** (repository variable, 18:53 UTC), then the Pages workflow was
+  dispatched on `main` (run 44797001271). Both jobs succeeded.
+- **Live:** `https://siddharthps.github.io/pm25-forecast/` returns 200 with the three
+  "Preliminary, not validated" labels, the experimental-forecast notice and the partners link.
+  Rendered in headless Edge, it shows "Forecast for Saturday, 21 November 2026", AQI 55,
+  Moderate. Only the page's files are deployed (`README.md` returns 404).
+
+### Traps found
+
+- **S3 serves the JSON as `binary/octet-stream`.** That's harmless, because the page uses
+  `fetch().json()`, which ignores the content type. Worth a `Content-Type` on upload if
+  anything else ever reads these files.
+
+### Next
+
+- **The page goes stale after 11-21** until T8 (#15), the Prefect daily deployment, runs every
+  morning. That's the next task.
+- PR #60 (comment audit) merged. These go-live docs were replayed onto the new `main` as
+  branch `14-go-live-docs` (no force-push), with the two append-only conflicts in `JOURNAL.md`
+  resolved by keeping both sides in date order. #14 closes with that PR.
+- Then T9 (#16), T10 (#17), T11 (#18) before checkpoint B on 11-25.

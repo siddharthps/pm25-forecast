@@ -24,7 +24,7 @@ line** (2026-12-16) · **D: Complete**.
 | T13 | [#11](https://github.com/siddharthps/pm25-forecast/issues/11) | AQS bulk history download | B | closed |
 | T12a | [#12](https://github.com/siddharthps/pm25-forecast/issues/12) | Validation module, first three problem classes | B | closed |
 | T6 | [#13](https://github.com/siddharthps/pm25-forecast/issues/13) | Persistence forecast and at-most-once durable record | B | closed |
-| T7 | [#14](https://github.com/siddharthps/pm25-forecast/issues/14) | Public JSON and static page | B | open: merged (#54); go-live pending (AirNow form, then `PAGES_GO_LIVE`) |
+| T7 | [#14](https://github.com/siddharthps/pm25-forecast/issues/14) | Public JSON and static page | B | open: merged (#54); **live 2026-11-20** (D-039); closes with this branch's PR |
 | T8 | [#15](https://github.com/siddharthps/pm25-forecast/issues/15) | Prefect daily deployment | B | open |
 | T9 | [#16](https://github.com/siddharthps/pm25-forecast/issues/16) | Watchdog (EventBridge → Lambda → Prefect / SNS) | B | open |
 | T10 | [#17](https://github.com/siddharthps/pm25-forecast/issues/17) | Daily scoring | B | open |

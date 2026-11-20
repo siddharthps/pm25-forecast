@@ -99,8 +99,8 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
   #51, 2026-11-19)
 - [x] T6: Persistence forecast + at-most-once durable record (merged #53, 2026-11-19; first real
   record for 2026-11-20)
-- [ ] T7: Public JSON + static page on GitHub Pages (merged #54, 2026-11-19; **go-live pending**:
-  the AirNow form, then `PAGES_GO_LIVE`)
+- [ ] T7: Public JSON + static page on GitHub Pages (merged #54, 2026-11-19; **live 2026-11-20**,
+  D-039)
 - [ ] T8: Prefect daily deployment (Managed pool, 06:00 Chicago)
 - [ ] T9: Watchdog: EventBridge → Lambda → Prefect API / SNS, in Terraform (D-018)
 - [ ] T10: Daily scoring of yesterday's forecast

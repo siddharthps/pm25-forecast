@@ -98,7 +98,7 @@ def test_dependencies_come_from_the_lock_export_then_the_package_alone() -> None
         {"directory": "{{ clone.directory }}", "requirements_file": "requirements/prefect-run.txt"}
     ]
     scripts = _steps("prefect.deployments.steps.run_shell_script")
-    assert [s["script"] for s in scripts] == ["pip install --no-deps {{ clone.directory }}"]
+    assert scripts == [{"directory": "{{ clone.directory }}", "script": "pip install --no-deps ."}]
     names = [next(iter(step)) for step in _config()["pull"]]
     assert names == [
         "prefect.deployments.steps.git_clone",
@@ -162,3 +162,11 @@ def test_the_image_pins_the_projects_python() -> None:
 def test_a_hung_run_is_stopped_within_30_minutes() -> None:
     """The pool's default is 24 h: one hung run could burn ~1,440 of the 500 free minutes (#63)."""
     assert _daily()["work_pool"]["job_variables"]["timeout"] <= 1800
+
+
+def test_pip_never_gets_a_bare_template_value() -> None:
+    """`{{ clone.directory }}` is a bare folder name, which pip reads as a PyPI package (#66)."""
+    scripts = _steps("prefect.deployments.steps.run_shell_script")
+    for step in scripts:
+        for word in step["script"].split():
+            assert not word.startswith("{{"), f"pip target {word!r} would be read as a package name"

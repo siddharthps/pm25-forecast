@@ -13,8 +13,11 @@ pull:
   - prefect.deployments.steps.pip_install_requirements:
       directory: "{{ clone.directory }}"
       requirements_file: requirements/prefect-run.txt
+  # Run inside the clone: {{ clone.directory }} is a bare folder name, which pip would read
+  # as a PyPI package (#66).
   - prefect.deployments.steps.run_shell_script:
-      script: pip install --no-deps {{ clone.directory }}
+      directory: "{{ clone.directory }}"
+      script: pip install --no-deps .
 
 deployments:
   - name: daily-forecast

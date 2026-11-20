@@ -4,7 +4,7 @@ One row per instrument-hour. Every timestamp is timezone-aware UTC; every row ca
 `available_at_utc`, the earliest moment the value could have been known (SPEC § Code Style).
 Validation here is structural only and blocks on any violation. Values are never judged here:
 raw data is kept as received, and readings outside a crude range are only counted (D-031). The
-data-quality rules, with sourced bounds, come in T12.
+data-quality rules, with sourced bounds, are in `airwatch.validation` (D-033).
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ HOURLY_COLUMNS: dict[str, str] = {
 
 # A crude, *unsourced* range used only to count readings worth a look (D-031). It is not a
 # validity rule: real hours exceed it (1,167 at midnight on New Year's 2014 in Phoenix, from
-# fireworks). T12 replaces it with sourced bounds and decides how such hours are treated.
+# fireworks). Validation judges values with sourced per-method bounds instead (D-033).
 CRUDE_RANGE_UG_M3 = (-10.0, 1000.0)
 
 

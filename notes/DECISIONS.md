@@ -524,7 +524,7 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 - **Why:** This is the owner's own rule: validation is its own first module, run on every source
   from the start. In a previous project, bad records surfaced one at a time, the last one in the
   final rebuild. Cost: about +2 hours in week 1.
-- **Status:** Active.
+- **Status:** Active. T12a's rules and severities: D-033.
 
 ---
 
@@ -740,7 +740,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 - **Alternatives (rejected):**
   - Raise the bound and keep blocking: still a guess, and the next real extreme stops the run.
   - Drop out-of-range hours at download: loses real events from the raw copy permanently.
-- **Status:** Active. Owner's choice, 2026-11-19. The sourced per-method bounds are in D-032.
+- **Status:** Active. Owner's choice, 2026-11-19. The sourced per-method bounds are in D-032;
+  how out-of-range hours are treated is settled in D-033 (excluded and counted).
 
 ---
 
@@ -770,6 +771,47 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - 638: 0 to 10,000.
   - The 2014 fireworks hour (1,167) came from method 181, so it's inside its instrument's range.
 - **Status:** Active.
+
+---
+
+## D-033 · 2026-11-19 · Validation rules for the skeleton (T12a)
+
+- **Decision:** what each rule does, set before any real data was checked:
+
+  | Class | Rule | Severity | Effect on the rows |
+  | --- | --- | --- | --- |
+  | Duplicates | the same (source, site, POC, hour) twice | hard | run stops |
+  | Implausible values | a method with no sourced range (D-032) | hard | run stops; excluded |
+  | Implausible values | outside the method's AQS valid range | warn | **excluded and counted** |
+  | Implausible values | negative but inside the range | info | kept (instrument noise) |
+  | Implausible values | 12+ identical hourly values in a row, one instrument | warn | kept |
+  | Coverage gaps | a local site-month with < 75% of its hours usable | warn | none |
+  | Coverage gaps | a listed site with no rows at all | warn | none |
+  | AirNow IDs | the reader's drop counts (not an AQS ID, unmatched site, other) | info | none |
+
+  - **Hard** stops the run: the daily flow writes no record (T6 wires this).
+  - **Warn** is reported and the run goes on. **Info** is counted for the record.
+  - AirNow rows carry no method, so they get the widest verified range (−10 to 10,000).
+  - Coverage is judged on usable hours, with co-located instruments counted once per hour.
+    History starts each site at its first reading and covers the final years only (2009 to
+    the start of the current year). The daily flow expects the whole day.
+  - Reports hold counts, sites and times, never a measurement. So a report covering 2025 says
+    nothing about the test period's values (D-008).
+- **Why:**
+  - **Out-of-range hours are excluded (owner's choice):** AQS says the instrument can't
+    measure outside its range, so such a reading is a fault. One faulty hour shouldn't stop the
+    day, but it shouldn't skew the average either. The raw copy keeps it (D-031).
+  - **The flat-line rule is a judgement (owner's choice):** no published EPA threshold was
+    found. Half a day of identical values is very unusual, and warn-only makes a false alarm
+    free. T12b can tighten it.
+  - **75%** is the SPEC's daily rule (18 of 24 hours), applied per month.
+  - **Duplicates are hard** because a repeated hour means a pipeline or source fault, and it
+    would silently double-weight that hour in a daily mean.
+- **Alternatives (rejected by the owner):**
+  - out-of-range hours: keep them and only warn, or block the run;
+  - flat lines: 6+ hours, or 24+ hours with exclusion.
+- **Status:** Active. Owner's choices, 2026-11-19. Refines D-021 and settles D-031's "how such
+  hours are treated".
 
 ---
 

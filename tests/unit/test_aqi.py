@@ -36,20 +36,20 @@ def test_pm25_is_truncated_not_rounded(raw: float, truncated: float) -> None:
     ("pm25", "aqi"),
     [
         (0.0, 0),
-        (9.0, 50),  # top of Good
-        (9.1, 51),  # bottom of Moderate
+        pytest.param(9.0, 50, id="top of Good"),
+        pytest.param(9.1, 51, id="bottom of Moderate"),
         (35.4, 100),
-        (35.5, 101),  # bottom of Unhealthy for Sensitive Groups
-        (35.9, 102),  # the TAD's own worked example (p. 15)
+        pytest.param(35.5, 101, id="bottom of Unhealthy for Sensitive Groups"),
+        pytest.param(35.9, 102, id="the TAD's worked example, p. 15"),
         (55.4, 150),
         (55.5, 151),
         (125.4, 200),
         (125.5, 201),
         (225.4, 300),
         (225.5, 301),
-        (325.4, 500),  # footnote 4: the AQI 500 concentration
-        (425.4, 699),  # above 500: Equation 1 on the 301-500 segment, extended
-        (9.09, 50),  # truncated to 9.0 first
+        pytest.param(325.4, 500, id="footnote 4: the AQI 500 concentration"),
+        pytest.param(425.4, 699, id="above 500: the 301-500 segment, extended"),
+        pytest.param(9.09, 50, id="truncated to 9.0 first"),
     ],
 )
 def test_pm25_to_aqi_follows_table_6(pm25: float, aqi: int) -> None:
@@ -57,14 +57,11 @@ def test_pm25_to_aqi_follows_table_6(pm25: float, aqi: int) -> None:
 
 
 def test_half_points_round_up_as_in_the_tad() -> None:
-    # The TAD's ozone example (p. 15) rounds 125.5 to 126.
     assert round_index(125.5) == 126
     assert round_index(125.4999) == 125
 
 
 def test_a_negative_mean_reads_as_zero() -> None:
-    # Daily means can dip just below zero (instrument noise, D-033). The TAD has no rule for
-    # it; the AQI starts at 0, so it reads as 0 (D-036).
     assert pm25_aqi(-0.4) == 0
 
 
@@ -131,4 +128,4 @@ def test_the_scale_table_for_the_page_lists_all_six_categories_in_order() -> Non
         "color": "#00e400",
         "text_color": "#000000",
     }
-    assert scale[-1]["high"] == 500  # the top of the scale on the page (TAD footnote 4)
+    assert scale[-1]["high"] == 500

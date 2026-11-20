@@ -48,25 +48,17 @@ class Settings(BaseSettings):
         arbitrary_types_allowed=True,
     )
 
-    # EPA AirNow API (live observations).
     airnow_api_key: Secret
-    # EPA AQS Data Mart API (validated history): registered email plus key.
     aqs_email: Secret
     aqs_api_key: Secret
 
-    # AWS: no keys here. Locally an SSO profile; in the cloud the runtime's own credentials.
     aws_profile: str | None = None
     aws_region: AwsRegion = "us-east-1"
 
-    # The forecast city (D-030: Phoenix, chosen by the frozen D-006 check). Its zone sets local
-    # calendar days (D-005). The issue time's zone is separate and frozen (timeutil.ISSUE_TZ,
-    # America/Chicago, D-019).
     city_tz: Zone = ZoneInfo("America/Phoenix")
     city_cbsa: Cbsa = "38060"
 
-    # The private data bucket from T3b (Terraform output `private_bucket`; D-028). Never public.
     data_bucket: BucketName = "pm25-forecast-data-65bc08"
-    # The public bucket (Terraform output `public_bucket`; D-028): derived JSON for the page only.
     public_bucket: BucketName = "pm25-forecast-public-65bc08"
 
 

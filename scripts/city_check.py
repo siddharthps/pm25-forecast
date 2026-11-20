@@ -43,23 +43,21 @@ OPEN_METEO = {
     "weather": ("https://archive-api.open-meteo.com/v1/archive", "temperature_2m"),
     "cams": ("https://air-quality-api.open-meteo.com/v1/air-quality", "pm2_5"),
 }
-# D-006 (frozen) and its CBSA-code clarification: current OMB codes, checked against AQS names.
 CANDIDATES = {
     "Chicago": "16980",
     "Salt Lake City": "41620",
     "Los Angeles": "31080",
     "Phoenix": "38060",
 }
-# Same counties under the pre-2013 code; used for a year only if 31080 returns no rows.
 FALLBACK_CODES = {"Los Angeles": "31100"}
-AQS_PAUSE_S = 6.0  # AQS terms: <= 10 requests a minute and a 5-second pause between requests
+AQS_PAUSE_S = 6.0
 
 
 def _write_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(data), encoding="utf-8")
-    tmp.replace(path)  # atomic: a crash never leaves a half-written cache file
+    tmp.replace(path)
 
 
 class Aqs:

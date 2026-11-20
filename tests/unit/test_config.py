@@ -40,10 +40,8 @@ def test_reads_the_environment() -> None:
     assert s.aqs_api_key.get_secret_value() == AQS_KEY
     assert s.aqs_email.get_secret_value() == AQS_EMAIL
     assert s.aws_region == "us-east-1"
-    # D-030: Phoenix, chosen by the frozen D-006 city check.
     assert s.city_tz == ZoneInfo("America/Phoenix")
     assert s.city_cbsa == "38060"
-    # T3b output: the private data bucket (D-028).
     assert s.data_bucket == "pm25-forecast-data-65bc08"
     assert s.public_bucket == "pm25-forecast-public-65bc08"
 
@@ -78,8 +76,7 @@ def test_an_empty_secret_fails_without_echoing_any_secret(
 
 
 def test_an_invalid_value_error_hides_the_input(env: pytest.MonkeyPatch) -> None:
-    # Validation errors normally echo the input; settings errors must not (a key pasted into the
-    # wrong variable would otherwise end up in a log).
+    """A key pasted into the wrong variable must not reach a log through the error."""
     env.setenv("CITY_TZ", AIRNOW)
     with pytest.raises(ValidationError) as info:
         _settings()
@@ -104,14 +101,14 @@ def test_city_cbsa_must_be_five_digits(env: pytest.MonkeyPatch, bad: str) -> Non
 @pytest.mark.usefixtures("env")
 def test_city_tz_rejects_a_non_string() -> None:
     with pytest.raises(ValidationError):
-        Settings(_env_file=None, city_tz=-6)  # type: ignore[arg-type]  # the point: wrong type
+        Settings(_env_file=None, city_tz=-6)  # type: ignore[arg-type]
 
 
 @pytest.mark.usefixtures("env")
 def test_settings_are_frozen() -> None:
     s = _settings()
     with pytest.raises(ValidationError):
-        s.aws_region = "eu-west-1"  # type: ignore[misc]  # the point: frozen at runtime too
+        s.aws_region = "eu-west-1"  # type: ignore[misc]
 
 
 @pytest.mark.usefixtures("env")
@@ -122,9 +119,9 @@ def test_get_settings_is_cached() -> None:
 def test_importing_config_reads_nothing(
     monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path
 ) -> None:
-    # No import-time side effects: with no variables set, importing must still succeed.
+    """No import-time side effects: with no variables set, importing must still succeed."""
     for name in [*REQUIRED_ENV, "AWS_PROFILE", "AWS_REGION", "CITY_TZ", "CITY_CBSA", "DATA_BUCKET"]:
         monkeypatch.delenv(name, raising=False)
-    monkeypatch.chdir(tmp_path)  # and no .env file in reach
+    monkeypatch.chdir(tmp_path)
     importlib.reload(config)
     assert not hasattr(config, "settings")

@@ -21,7 +21,6 @@ from airwatch.timeutil import (
 )
 
 CHICAGO = ZoneInfo("America/Chicago")
-# D-006 candidate metro areas: Chicago, Salt Lake City, Los Angeles, Phoenix (no DST).
 CANDIDATE_TZS = [CHICAGO, ZoneInfo("America/Denver"), ZoneInfo("America/Los_Angeles")]
 PHOENIX = ZoneInfo("America/Phoenix")
 ALL_TZS = [*CANDIDATE_TZS, PHOENIX]
@@ -38,7 +37,7 @@ def _nth_sunday(year: int, month: int, n: int) -> date:
 
 
 def _us_dst_start(year: int) -> date:
-    return _nth_sunday(year, 3, 2)  # Energy Policy Act of 2005, in force from 2007
+    return _nth_sunday(year, 3, 2)
 
 
 def _us_dst_end(year: int) -> date:
@@ -62,17 +61,14 @@ DST_EXAMPLES = [
 ]
 
 
-# --- issue time -----------------------------------------------------------------------------
-
-
 @given(target=days)
 @example(target=_us_dst_start(2025))
 @example(target=_us_dst_start(2025) + timedelta(days=1))
 @example(target=_us_dst_end(2025))
 @example(target=_us_dst_end(2025) + timedelta(days=1))
 def test_issue_time_is_six_local_on_the_day_before(target: date) -> None:
+    """The reference: the one whole UTC hour whose Chicago reading is 06:00 the day before."""
     issued = issue_time_utc(target)
-    # Reference: the one whole UTC hour around D whose Chicago wall-clock reading is D 06:00.
     day_before = target - timedelta(days=1)
     matches = [
         t
@@ -84,28 +80,25 @@ def test_issue_time_is_six_local_on_the_day_before(target: date) -> None:
 
 
 def test_issue_rule_is_the_frozen_one() -> None:
-    # D-019 is frozen: 06:00 America/Chicago. Changing it must be a deliberate, visible edit.
     assert ISSUE_TZ == CHICAGO
     assert ISSUE_HOUR_LOCAL == 6
 
 
 def test_issue_time_known_values() -> None:
-    # Hand-checked anchors: CST is UTC-6, CDT is UTC-5.
-    assert issue_time_utc(date(2025, 1, 16)) == datetime(2025, 1, 15, 12, tzinfo=UTC)
-    assert issue_time_utc(date(2025, 7, 5)) == datetime(2025, 7, 4, 11, tzinfo=UTC)
-    # DST starts 2025-03-09 at 02:00: issuing at 06:00 that morning is already CDT.
-    assert issue_time_utc(date(2025, 3, 10)) == datetime(2025, 3, 9, 11, tzinfo=UTC)
-    # DST ends 2025-11-02 at 02:00: issuing at 06:00 that morning is already CST.
-    assert issue_time_utc(date(2025, 11, 3)) == datetime(2025, 11, 2, 12, tzinfo=UTC)
+    """Hand-checked anchors: CST is UTC-6, CDT is UTC-5."""
+    assert issue_time_utc(date(2025, 1, 16)) == datetime(2025, 1, 15, 12, tzinfo=UTC), "CST"
+    assert issue_time_utc(date(2025, 7, 5)) == datetime(2025, 7, 4, 11, tzinfo=UTC), "CDT"
+    assert issue_time_utc(date(2025, 3, 10)) == datetime(2025, 3, 9, 11, tzinfo=UTC), (
+        "DST starts 2025-03-09 at 02:00, so 06:00 that morning is already CDT"
+    )
+    assert issue_time_utc(date(2025, 11, 3)) == datetime(2025, 11, 2, 12, tzinfo=UTC), (
+        "DST ends 2025-11-02 at 02:00, so 06:00 that morning is already CST"
+    )
 
 
 def test_issue_time_rejects_a_datetime() -> None:
-    # datetime is a subclass of date; passing one is almost always a bug about which day is meant.
     with pytest.raises(TypeError):
         issue_time_utc(datetime(2025, 1, 16, tzinfo=UTC))
-
-
-# --- local-day windows ----------------------------------------------------------------------
 
 
 @given(day=days, tz=zones)
@@ -120,13 +113,12 @@ def test_local_day_window_matches_the_reference(day: date, tz: ZoneInfo) -> None
 
 @given(day=days, tz=zones)
 def test_consecutive_local_days_tile_time(day: date, tz: ZoneInfo) -> None:
-    # No gap and no overlap: one day's end is the next day's start.
     assert local_day_window_utc(day, tz)[1] == local_day_window_utc(day + timedelta(days=1), tz)[0]
 
 
 @pytest.mark.parametrize("tz", ALL_TZS, ids=str)
 def test_day_length_is_23_24_or_25_hours_exactly_on_dst_dates(tz: ZoneInfo) -> None:
-    # Exhaustive over 2009-2030 (about 8,000 days per zone), against the US DST law.
+    """Exhaustive over 2009-2030 (about 8,000 days per zone), against the US DST law."""
     starts = {_us_dst_start(y) for y in range(FIRST.year, LAST.year + 1)}
     ends = {_us_dst_end(y) for y in range(FIRST.year, LAST.year + 1)}
     observes_dst = tz != PHOENIX
@@ -148,9 +140,6 @@ def test_local_day_window_rejects_a_datetime() -> None:
         local_day_window_utc(datetime(2025, 1, 16, tzinfo=UTC), CHICAGO)
 
 
-# --- naive datetimes are rejected everywhere --------------------------------------------------
-
-# Hypothesis takes naive bounds; `timezones=` decides whether the examples are aware.
 LO = datetime(2009, 1, 1)  # noqa: DTZ001
 HI = datetime(2030, 12, 31)  # noqa: DTZ001
 naive = st.datetimes(min_value=LO, max_value=HI)
@@ -174,11 +163,11 @@ def test_to_local_rejects_naive(dt: datetime, tz: ZoneInfo) -> None:
 
 
 @given(dt=aware)
-@example(dt=datetime(2025, 11, 2, 1, 30, fold=1, tzinfo=CHICAGO))  # the repeated hour, 2nd pass
+@example(dt=datetime(2025, 11, 2, 1, 30, fold=1, tzinfo=CHICAGO))
 def test_ensure_utc_keeps_the_instant(dt: datetime) -> None:
+    """The pinned example is the repeated hour's second pass, when DST ends."""
     out = ensure_utc(dt)
     assert out.tzinfo is UTC
-    # Compare as POSIX instants: PEP 495 makes `==` False across zones for a time in the fold.
     assert out.timestamp() == dt.timestamp()
 
 
@@ -191,6 +180,5 @@ def test_to_local_round_trips(dt: datetime, tz: ZoneInfo) -> None:
 
 @pytest.mark.parametrize("day", DST_EXAMPLES, ids=str)
 def test_dst_days_are_in_range(day: date) -> None:
-    # Guards the guards: the DST examples above must fall inside the tested range.
-    assert FIRST <= day <= LAST
+    assert FIRST <= day <= LAST, "guards the guards: a DST example outside the range"
     assert day.weekday() == 6

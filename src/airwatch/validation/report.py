@@ -55,10 +55,7 @@ log = logging.getLogger(__name__)
 
 REPORT_VERSION = 1
 REPORT_DIR = Path("data/reports/validation")
-MARKDOWN_ITEM_CAP = 20  # the JSON keeps every item; the Markdown shows the first few per rule
-
-
-# --- the report ----------------------------------------------------------------------------
+MARKDOWN_ITEM_CAP = 20
 
 
 def build_report(
@@ -155,9 +152,6 @@ def save_report(report: dict[str, Any], out_dir: Path) -> tuple[Path, Path]:
     return json_path, md_path
 
 
-# --- loading the sources (read-only) -------------------------------------------------------
-
-
 def load_aqs_bulk(store: S3Store) -> tuple[pd.DataFrame, int]:
     """Every part the manifest lists, stacked; and how many parts. Checks each part's row count."""
     raw = store.get(MANIFEST_KEY)
@@ -183,9 +177,6 @@ def _aqs_window(today: date, tz: ZoneInfo) -> Window:
     start = local_day_window_utc(date(FIRST_YEAR, 1, 1), tz)[0]
     end = local_day_window_utc(date(today.year, 1, 1), tz)[0]
     return Window(start, end)
-
-
-# --- command line --------------------------------------------------------------------------
 
 
 def _summarise(source: str, result: ValidationResult, paths: tuple[Path, Path]) -> None:

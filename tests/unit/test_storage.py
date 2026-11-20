@@ -50,7 +50,7 @@ def test_create_writes_once_and_refuses_the_second_time(s3: Any) -> None:
     assert store.create_if_absent("records/x.json", b"first") is True
     assert store.create_if_absent("records/x.json", b"second") is False
     assert store.get("records/x.json") == b"first"
-    assert versions(s3, "records/x.json") == 1  # the refused write left no version behind
+    assert versions(s3, "records/x.json") == 1
 
 
 class Flaky:
@@ -93,7 +93,7 @@ def test_other_errors_are_not_mistaken_for_an_existing_record(s3: Any) -> None:
 
 def test_list_keys_returns_every_key_under_a_prefix_past_one_page(s3: Any) -> None:
     store = S3Store(s3, BUCKET)
-    for i in range(1005):  # more than one 1,000-key page
+    for i in range(1005):
         store.put(f"records/forecast_date=d{i:04d}/forecast.json", b"{}")
     store.put("reports/other.json", b"{}")
     keys = store.list_keys("records/")

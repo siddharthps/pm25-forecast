@@ -30,7 +30,7 @@ from airwatch.observations.sites import TRAINING_SITES
 from tests.unit.observations.airnow_fakes import day_transport, file_for_hour
 
 FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "airnow" / "HourlyAQObs_2026111901.dat"
-PUBLISHED = datetime(2026, 11, 19, 4, 21, 33, tzinfo=UTC)  # the file's Last-Modified
+PUBLISHED = datetime(2026, 11, 19, 4, 21, 33, tzinfo=UTC)
 PHOENIX = ZoneInfo("America/Phoenix")
 
 
@@ -53,11 +53,11 @@ def with_rows(edit: dict[str, dict[str, str]]) -> str:
 def test_recorded_file_parses_to_the_schema() -> None:
     df, dropped = parse_hourly_aqobs(text(), PUBLISHED)
     validate_hourly(df)
-    assert len(df) == 14  # the rows with a measured PM2.5 value in UG/M3
+    assert len(df) == 14
     assert (df["source"] == "airnow").all()
     assert (df["time_utc"] == pd.Timestamp("2026-11-19 01:00", tz="UTC")).all()
     assert (df["available_at_utc"] == pd.Timestamp(PUBLISHED)).all()
-    assert sum(dropped.values()) == 57 - 14  # every other row is accounted for
+    assert sum(dropped.values()) == 57 - 14
 
 
 def test_values_match_the_recording() -> None:
@@ -72,7 +72,7 @@ def test_rows_without_a_measured_value_are_dropped_and_counted() -> None:
 
 
 def test_a_value_not_flagged_as_measured_is_dropped_and_counted() -> None:
-    edited = with_rows({"040130019": {"PM25_Measured": "0"}})  # value present, flag says no
+    edited = with_rows({"040130019": {"PM25_Measured": "0"}})
     df, dropped = parse_hourly_aqobs(edited, PUBLISHED)
     assert "040130019" not in set(df["site_id"])
     assert dropped["not_measured"] == 1
@@ -80,8 +80,6 @@ def test_a_value_not_flagged_as_measured_is_dropped_and_counted() -> None:
 
 @pytest.mark.parametrize("site_id", ["031AZE010001", "124000050314", "AB1234567"])
 def test_monitors_without_an_aqs_site_id_are_dropped_and_counted(site_id: str) -> None:
-    # Seen live: ~30% of PM2.5 rows carry 12-character or lettered IDs (temporary, tribal or
-    # international monitors). They can never map to an AQS site, so they're counted, not fatal.
     edited = with_rows({"040130019": {"AQSID": site_id}})
     df, dropped = parse_hourly_aqobs(edited, PUBLISHED)
     assert site_id not in set(df["site_id"])
@@ -115,14 +113,11 @@ def test_naive_published_time_is_refused() -> None:
         parse_hourly_aqobs(text(), datetime(2026, 11, 19, 4, 21))  # noqa: DTZ001
 
 
-# --- mapping AirNow monitors to the AQS training sites -------------------------------------
-
-
 def test_all_training_sites_are_in_the_recording() -> None:
     df, _ = parse_hourly_aqobs(text(), PUBLISHED)
     kept, unmatched = keep_sites(df, TRAINING_SITES)
     assert set(kept["site_id"]) == set(TRAINING_SITES)
-    assert unmatched == len(df) - len(kept)  # every other AirNow monitor is counted
+    assert unmatched == len(df) - len(kept)
 
 
 def test_unmatched_monitors_are_excluded() -> None:
@@ -130,9 +125,6 @@ def test_unmatched_monitors_are_excluded() -> None:
     kept, unmatched = keep_sites(df, ("040130019",))
     assert set(kept["site_id"]) == {"040130019"}
     assert unmatched == len(df) - 1
-
-
-# --- which files make up a local day --------------------------------------------------------
 
 
 def test_a_phoenix_day_is_24_files_from_07_utc() -> None:
@@ -179,7 +171,6 @@ def test_a_local_day_is_fetched_hour_by_hour_for_the_training_sites() -> None:
     assert df["time_utc"].min() == pd.Timestamp("2026-11-18 07:00", tz=UTC)
     assert df["time_utc"].max() == pd.Timestamp("2026-11-19 06:00", tz=UTC)
     assert not df.duplicated(["site_id", "time_utc"]).any()
-    # every other monitor in the file is counted, per hour, never silently ignored
     one_file, one_drops = parse_hourly_aqobs(
         file_for_hour(datetime(2026, 11, 18, 7, tzinfo=UTC)), PUBLISHED
     )
@@ -197,7 +188,7 @@ def test_a_missing_hourly_file_is_counted_not_fatal() -> None:
 
 def test_any_other_fetch_failure_stops_the_day() -> None:
     def handler(_: httpx.Request) -> httpx.Response:
-        return httpx.Response(403)  # not retryable, and not "not published yet"
+        return httpx.Response(403)
 
     with httpx.Client(transport=httpx.MockTransport(handler)) as c, pytest.raises(FetchError):
         fetch_local_day(c, date(2026, 11, 18), PHOENIX, TRAINING_SITES)

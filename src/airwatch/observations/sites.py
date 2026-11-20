@@ -15,8 +15,6 @@ __all__ = [
     "unverified_methods",
 ]
 
-# D-030: Phoenix's 10 qualifying monitors (AQS site IDs = AirNow AQSIDs), chosen by the frozen
-# D-006 check. Maricopa County (013): 8; Pinal County (021): 2.
 TRAINING_SITES = (
     "040130019",
     "040131003",
@@ -31,8 +29,6 @@ TRAINING_SITES = (
 )
 
 
-# Each monitor's name and reporting agency, as AirNow's HourlyAQObs file gives them (`SiteName`,
-# `DataSource`; checked on 2026-11-19). The page credits these agencies first (D-025).
 SITE_NAMES = {
     "040130019": "West Phoenix",
     "040131003": "Mesa - Brooks Reservoir",
@@ -60,7 +56,7 @@ SITE_AGENCY = {
     "040210001": _PINAL,
     "040213015": _PINAL,
 }
-AGENCIES = tuple(dict.fromkeys(SITE_AGENCY.values()))  # in first-seen order, no repeats
+AGENCIES = tuple(dict.fromkeys(SITE_AGENCY.values()))
 
 
 @dataclass(frozen=True)
@@ -75,9 +71,6 @@ class Method:
     max_value: float
 
 
-# D-032 (settles OQ-8): the methods of the training sites' hourly instruments, checked against
-# AQS's methods_all.html (parameter 88101) on 2026-11-19. All are continuous FEMs: the same kind
-# of instrument AirNow reports. Min/max are AQS's valid ranges (the sourced bounds for T12).
 VERIFIED_METHODS: dict[str, Method] = {
     "170": Method("Met One BAM-1020 w/VSCC", "Continuous", "FEM", "EQPM-0308-170", -10.0, 975.0),
     "181": Method(

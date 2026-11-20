@@ -244,7 +244,7 @@ def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover  (real e
                 sites=TRAINING_SITES,
                 publish=args.publish,
             )
-        except Exception as exc:  # fail loudly: the reason by type, never a value
+        except Exception as exc:
             log.error("%s: forecast FAILED: %s: %s", target, type(exc).__name__, exc)
             return 1
     log.info("%s: %s", target, outcome.status)

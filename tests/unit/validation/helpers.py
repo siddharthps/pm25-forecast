@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -11,7 +12,7 @@ from airwatch.observations.schema import HOURLY_COLUMNS, concat_hourly, validate
 
 SITE_A = "040130019"
 SITE_B = "040131003"
-START = datetime(2024, 3, 1, 7, tzinfo=UTC)  # 00:00 in Phoenix (UTC-7, no DST)
+START = datetime(2024, 3, 1, tzinfo=ZoneInfo("America/Phoenix")).astimezone(UTC)
 
 
 def varying(n: int, base: float = 8.0) -> list[float]:

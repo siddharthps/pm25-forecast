@@ -22,7 +22,6 @@ __all__ = [
     "to_local",
 ]
 
-# D-019 (frozen). Deliberately constants, not settings: changing them changes every result.
 ISSUE_TZ = ZoneInfo("America/Chicago")
 ISSUE_HOUR_LOCAL = 6
 
@@ -33,7 +32,6 @@ def _require_aware(dt: datetime) -> None:
 
 
 def _require_date(day: date) -> None:
-    # datetime subclasses date, so a datetime would otherwise slip through silently.
     if isinstance(day, datetime) or not isinstance(day, date):
         raise TypeError(f"expected a date, got {type(day).__name__}")
 

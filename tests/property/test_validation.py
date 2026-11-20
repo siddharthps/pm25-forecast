@@ -19,7 +19,6 @@ from tests.unit.validation.helpers import SITE_A, SITE_B, START, concat, frame
 PHOENIX = ZoneInfo("America/Phoenix")
 WINDOW = Window(START, START + timedelta(days=2))
 
-# Values that hit every rule: in range, negative, out of range, missing, and repeats.
 values = st.lists(
     st.one_of(
         st.sampled_from([4.0, 4.0, 4.0, -3.0, -50.0, 2000.0, float("nan")]),

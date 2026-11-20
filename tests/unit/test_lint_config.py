@@ -44,16 +44,13 @@ def _ruff_files() -> set[str]:
 
 
 def test_code_folders_are_discovered() -> None:
-    # Guards the guard: if discovery breaks, the main test would pass vacuously.
-    assert {"src", "tests"} <= _code_folders()
+    assert {"src", "tests"} <= _code_folders(), "guards the guard: discovery broke"
 
 
 def test_every_code_folder_is_linted() -> None:
     missing = _code_folders() - _ruff_files()
     assert not missing, f"Ruff does not check these code folders: {sorted(missing)}"
 
-
-# --- JavaScript and CSS (the page, T7): every such file is in Biome's pre-commit scope --------
 
 WEB_SUFFIXES = {".js", ".mjs", ".css"}
 
@@ -79,8 +76,7 @@ def _web_files() -> list[str]:
 
 
 def test_web_files_are_discovered() -> None:
-    # Guards the guard: the page's script must be found, or the next test passes vacuously.
-    assert "site/app.js" in _web_files()
+    assert "site/app.js" in _web_files(), "guards the guard: the page's script is missing"
 
 
 def test_every_web_file_is_checked_by_biome() -> None:

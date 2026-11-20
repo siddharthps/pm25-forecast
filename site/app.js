@@ -1,8 +1,3 @@
-// AirWatch page (#14, T7; D-025, D-036). Reads latest.json and history.json from the public
-// bucket and renders them. Every value comes from those files: the AQI, its category and every
-// colour (the six-category scale included) are computed once, in Python (airwatch.aqi, from
-// EPA's AQI TAD), never here. Data is written with textContent only, never as HTML.
-
 export const DATA_BASE = "https://pm25-forecast-public-65bc08.s3.amazonaws.com/";
 export const HISTORY_DAYS = 14;
 export const LOAD_ERROR =
@@ -11,8 +6,6 @@ export const LOAD_ERROR =
 /** Where to read the JSON: the public bucket, or a same-site folder for a local preview. */
 export function dataBase(search) {
   const asked = new URLSearchParams(search).get("data");
-  // A same-site path only: "./x" or "/x", named segments, no "..", and never "//" (to a
-  // browser, "//host/" is another site).
   if (asked && /^\.?\/(?:[\w.-]+\/?)*$/.test(asked) && !/\.\.|\/\//.test(asked)) {
     return asked.endsWith("/") ? asked : `${asked}/`;
   }
@@ -100,8 +93,6 @@ export function historyRows(history, limit = HISTORY_DAYS) {
     category: day.city.category,
   }));
 }
-
-// --- the page (browser only) ------------------------------------------------------------------
 
 function el(tag, text, className) {
   const node = document.createElement(tag);

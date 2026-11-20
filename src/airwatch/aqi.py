@@ -34,8 +34,6 @@ __all__ = [
 
 TAD_SOURCE = "EPA-403/B-26-003 (May 2026)"
 
-# (concentration low, concentration high, AQI low, AQI high), Table 6. The last row's top is the
-# AQI 500 concentration from footnote 4; values above it extend that segment.
 BREAKPOINTS: tuple[tuple[Decimal, Decimal, int, int], ...] = (
     (Decimal("0.0"), Decimal("9.0"), 0, 50),
     (Decimal("9.1"), Decimal("35.4"), 51, 100),
@@ -50,7 +48,7 @@ BREAKPOINTS: tuple[tuple[Decimal, Decimal, int, int], ...] = (
 class Category:
     name: str
     low: int
-    high: int | None  # None: no upper bound (Hazardous is "301+")
+    high: int | None
     rgb: tuple[int, int, int]
 
     @property
@@ -58,7 +56,6 @@ class Category:
         return "#{:02x}{:02x}{:02x}".format(*self.rgb)
 
 
-# Tables 1 and 2: names, AQI ranges and the standard colours.
 CATEGORIES: tuple[Category, ...] = (
     Category("Good", 0, 50, (0, 228, 0)),
     Category("Moderate", 51, 100, (255, 255, 0)),
@@ -82,8 +79,6 @@ def round_index(value: float) -> int:
 def pm25_aqi(pm25: float) -> int:
     """The AQI for a 24-hour PM2.5 concentration (Equation 1 on Table 6)."""
     c = Decimal(repr(truncate_pm25(max(pm25, 0.0))))
-    # The first row whose top contains c; above the last top, the last row extends (footnote 4).
-    # Truncation puts c on the 0.1 grid, where the rows leave no gaps.
     c_lo, c_hi, i_lo, i_hi = next((row for row in BREAKPOINTS if c <= row[1]), BREAKPOINTS[-1])
     index = (Decimal(i_hi - i_lo) / (c_hi - c_lo)) * (c - c_lo) + i_lo
     return round_index(float(index))

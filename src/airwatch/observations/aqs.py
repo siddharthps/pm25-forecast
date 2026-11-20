@@ -26,7 +26,7 @@ AQS_BASE = "https://aqs.epa.gov/data/api/"
 PARAMETER = "88101"
 HOURLY_CODE = "1"
 UNITS = "Micrograms/cubic meter (LC)"
-MIN_HOURS = 18  # SPEC: a valid day has >= 18 of 24 hours
+MIN_HOURS = 18
 
 
 def parse_sample_rows(rows: Iterable[Mapping[str, Any]]) -> pd.DataFrame:
@@ -55,7 +55,6 @@ def parse_sample_rows(rows: Iterable[Mapping[str, Any]]) -> pd.DataFrame:
             ),
             "value_ug_m3": [float(r["sample_measurement"]) for r in kept],
             "qualifier": [r.get("qualifier") for r in kept],
-            # the end of the change day: the earliest moment AQS had this value
             "available_at_utc": pd.to_datetime(
                 [r["date_of_last_change"] for r in kept], utc=True, format="%Y-%m-%d"
             )

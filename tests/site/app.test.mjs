@@ -1,5 +1,3 @@
-// The page's pure functions (#14, T7), run with Node's built-in test runner:
-//   node --test tests/site/
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
@@ -18,7 +16,6 @@ import {
   sortByConcentration,
 } from "../../site/app.js";
 
-// The table latest.json carries (from airwatch.aqi; the page itself holds no colours).
 const SCALE = [
   { name: "Good", low: 0, high: 50, color: "#00e400", text_color: "#000000" },
   { name: "Moderate", low: 51, high: 100, color: "#ffff00", text_color: "#000000" },
@@ -57,7 +54,7 @@ test("a preview can never point the page at another site", () => {
 
 test("dates are calendar dates, never shifted by a time zone", () => {
   assert.equal(formatDate("2026-11-21"), "Saturday, 21 November 2026");
-  assert.equal(formatDate("2026-03-08"), "Sunday, 8 March 2026"); // a US DST change day
+  assert.equal(formatDate("2026-03-08"), "Sunday, 8 March 2026", "a US DST change day");
 });
 
 test("the issue time is shown on Chicago's clock", () => {
@@ -91,7 +88,7 @@ test("history shows the newest days first, up to the limit", () => {
     city: { aqi: i, category: "Good" },
   }));
   const rows = historyRows({ days });
-  assert.equal(HISTORY_DAYS, 14); // two weeks on the page
+  assert.equal(HISTORY_DAYS, 14);
   assert.equal(rows.length, 14);
   assert.equal(rows[0].date, "Monday, 30 November 2026");
   assert.equal(rows[0].aqi, "0");
@@ -103,20 +100,18 @@ test("the heading names the forecast day, never 'tomorrow'", () => {
 
 test("each category takes an equal share of the band", () => {
   assert.equal(scalePosition(0, SCALE), 0);
-  assert.equal(scalePosition(50, SCALE), 100 / 6); // top of Good: the end of segment 1
-  assert.equal(scalePosition(51, SCALE), 100 / 6); // bottom of Moderate: its start
+  assert.equal(scalePosition(50, SCALE), 100 / 6, "top of Good: the end of segment 1");
+  assert.equal(scalePosition(51, SCALE), 100 / 6, "bottom of Moderate: its start");
   assert.ok(Math.abs(scalePosition(52, SCALE) - (1 + 1 / 49) * (100 / 6)) < 1e-9);
   assert.equal(scalePosition(500, SCALE), 100);
 });
 
 test("values beyond the band stay on it", () => {
-  assert.equal(scalePosition(699, SCALE), 100); // above 500
+  assert.equal(scalePosition(699, SCALE), 100);
   assert.equal(scalePosition(-3, SCALE), 0);
 });
 
-test("monitors are listed by concentration, highest first, as the city summary picks", () => {
-  // Two monitors can share an AQI (9.5 and 9.9 both give 52); the higher concentration leads,
-  // so the first row is always the monitor the summary names. Ties go by site ID.
+test("monitors sharing an AQI are listed by concentration, then site ID, as the city summary picks", () => {
   const rows = [
     { site_id: "040131003", pm25_ug_m3: 4.0, aqi: 22 },
     { site_id: "040134003", pm25_ug_m3: 9.5, aqi: 52 },
@@ -126,8 +121,9 @@ test("monitors are listed by concentration, highest first, as the city summary p
   assert.deepEqual(
     sortByConcentration(rows).map((r) => r.site_id),
     ["040139812", "040130019", "040134003", "040131003"],
+    "9.5 and 9.9 both give AQI 52: the higher concentration leads, ties go by site ID",
   );
-  assert.equal(rows[0].site_id, "040131003"); // the input is not reordered
+  assert.equal(rows[0].site_id, "040131003", "the input is not reordered");
 });
 
 test("a category's colours come from the scale table", () => {

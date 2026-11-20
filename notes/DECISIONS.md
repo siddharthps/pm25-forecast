@@ -985,8 +985,72 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   the coverage floor apply to it, like the rest of the core logic.
 - **The process:** `/delete-comment` (`.claude/skills/delete-comment/`) sorts comments into
   Tautology, Stale, Excuse and Decision record, then acts on each kind. The first pass's list
-  is kept in `notes/comment-audit-2026-11-20.tsv`.
+  is kept in `notes/comment-audit-2026-11-20.tsv`, and the facts it moved out of the code are
+  in D-038.
 - **Status:** Active. Owner's request and choices, 2026-11-20.
+
+---
+
+## D-038 · 2026-11-20 · Code notes: the decisions that lived in comments (#55)
+
+- **Decision:** these choices and facts came out of code comments in the D-037 audit. No other
+  entry held them. Each names where it applies. Comments that only pointed to an existing entry
+  were deleted, since that entry stays the fact's home (the full list is in
+  `notes/comment-audit-2026-11-20.tsv`).
+- **AQS API** (`scripts/aqs_bulk.py`, `scripts/city_check.py`, `AQS_PAUSE_S = 6.0`):
+  - AQS's terms ask for at most 10 requests a minute and a 5-second pause between requests
+    ("Request Limits and Terms of Service", `aqs.epa.gov/aqsweb/documents/data_api.html`, page
+    dated 2020-01-10, read 2026-11-20). A violation may get the account disabled without
+    notice. Six seconds keeps under both limits.
+- **AQS data** (`airwatch.observations`):
+  - An AQS site ID is 9 digits: state (2), county (3), site (4). AirNow's `AQSID` uses the
+    same form for monitors that are in AQS.
+  - AQS's `time_local` is local *standard* time all year, with no DST. Only the GMT fields are
+    read.
+  - An AQS row's `available_at_utc` is the end of its `date_of_last_change` day. That's the
+    earliest moment AQS is known to have held the value, which is what the leakage rule needs.
+  - `time_utc` in the hourly schema is the start of the hour.
+  - The bulk download writes a part's data first and only then the manifest entry that marks
+    it done. A failed data write leaves the part to fetch again, never listed as done with no
+    data behind it.
+- **AirNow** (`airwatch.observations.airnow`):
+  - About 30% of live PM2.5 rows carry 12-character or lettered IDs: temporary, tribal or
+    international monitors. They can never map to an AQS site, so they're counted, not fatal.
+- **Logging:** `scripts/aqs_bulk.py` and `airwatch.validation.report` set `botocore`, `boto3` and
+  `urllib3` to ERROR. The SDK otherwise logs its own retries and token refreshes with
+  tracebacks, and our rule is that request details are never logged. #52 gathers this into one
+  logging setup. (httpx's request logging is handled by `fetch_json`, whose docstring says how.)
+- **Time** (`airwatch.timeutil` and its property tests):
+  - `ISSUE_TZ` and `ISSUE_HOUR_LOCAL` are module constants, deliberately not settings. Changing
+    them changes every result, and D-019 is frozen.
+  - `datetime` is a subclass of `date`, so a function that takes a calendar day rejects a
+    `datetime` explicitly. Passing one is almost always a bug about which day is meant.
+  - The DST reference in the tests follows US law since 2007 (Energy Policy Act of 2005): DST
+    starts the second Sunday in March and ends the first Sunday in November, both at 02:00.
+  - Hypothesis's `datetimes()` takes naive bounds, and `timezones=` decides whether examples are
+    aware. That's why the bounds carry `# noqa: DTZ001`.
+  - Instants in different zones are compared as POSIX timestamps. PEP 495 makes `==` False
+    across zones for a time in the fold, the repeated hour when DST ends.
+- **Validation** (`airwatch.validation`):
+  - A missing value is never inside an instrument's valid range, so it's excluded.
+  - The Markdown report shows the first 20 items per rule; the JSON keeps every item.
+  - The last group of tests in `test_checks.py` came from planting bugs in the checks, as
+    tests of the tests.
+- **The page** (`site/`):
+  - `?data=` accepts a same-site path only: `./x` or `/x`, named segments, no `..`, and never
+    `//`, because to a browser `//host/` is another site.
+  - On narrow screens the monitor bar is hidden, because it repeats the AQI number. Its room
+    goes to the category name.
+- **Tests:**
+  - Secret-shaped test strings are built in pieces (`"AKIA" + "…"`), so secret scanners don't
+    flag the test file itself.
+  - PyYAML follows YAML 1.1, where a bare `on` key loads as the boolean `True`. The workflow
+    tests read both keys.
+  - The 2025 property test in `test_city_check.py` runs 20 Hypothesis examples. Each one
+    re-scores about 15,000 history rows, and the property is that 2025 values are never read
+    at all, not a hunt for rare edge cases. This predates D-035, where the owner declined fewer
+    property examples in general. It stays as it was and is recorded here.
+- **Status:** Active. Recorded from the code, 2026-11-20 (#55).
 
 ---
 

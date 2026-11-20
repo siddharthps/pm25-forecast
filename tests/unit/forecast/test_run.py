@@ -42,7 +42,6 @@ def test_the_plan_for_a_target_day() -> None:
 
 
 def test_the_plan_follows_chicago_daylight_saving() -> None:
-    # 06:00 Chicago is 11:00 UTC in summer (CDT) and 12:00 UTC in winter (CST).
     assert plan_for(date(2026, 7, 2)).issue_at_utc == datetime(2026, 7, 1, 11, tzinfo=UTC)
     assert plan_for(date(2026, 1, 2)).issue_at_utc == datetime(2026, 1, 1, 12, tzinfo=UTC)
 
@@ -50,10 +49,14 @@ def test_the_plan_follows_chicago_daylight_saving() -> None:
 @pytest.mark.parametrize(
     ("now", "target"),
     [
-        (ISSUE_AT - timedelta(seconds=1), TARGET - timedelta(days=1)),  # 05:59:59 Chicago
-        (ISSUE_AT, TARGET),  # 06:00 exactly: today's issue is due
-        (ISSUE_AT + timedelta(hours=17), TARGET),  # 23:00 Chicago, same day
-        (ISSUE_AT + timedelta(hours=18), TARGET),  # 00:00 Chicago next day: not yet due
+        pytest.param(
+            ISSUE_AT - timedelta(seconds=1), TARGET - timedelta(days=1), id="05:59:59 Chicago"
+        ),
+        pytest.param(ISSUE_AT, TARGET, id="06:00 exactly: today's issue is due"),
+        pytest.param(ISSUE_AT + timedelta(hours=17), TARGET, id="23:00 Chicago, same day"),
+        pytest.param(
+            ISSUE_AT + timedelta(hours=18), TARGET, id="00:00 Chicago next day: not yet due"
+        ),
     ],
 )
 def test_the_latest_target_is_the_last_one_already_due(now: datetime, target: date) -> None:
@@ -105,12 +108,13 @@ def test_a_monitor_with_no_rows_is_listed_with_zero_hours() -> None:
 
 
 def test_co_located_instruments_are_averaged_per_hour_first() -> None:
-    start = ISSUE_AT - timedelta(hours=29)  # 00:00 Phoenix on OBSERVED
+    start = ISSUE_AT - timedelta(hours=29)
     one = frame([10.0] * 24, site=A, poc=1, start=start, available_at=PUBLISHED)
     two = frame([20.0] * 12, site=A, poc=2, start=start, available_at=PUBLISHED)
     forecasts, _ = persistence(concat_hourly([one, two]), OBSERVED, PHOENIX, (A,))
-    # 12 hours average to 15, 12 hours are 10: (12*15 + 12*10) / 24 = 12.5, not (12*20+24*10)/36
-    assert forecasts[0]["forecast_ug_m3"] == pytest.approx(12.5)
+    assert forecasts[0]["forecast_ug_m3"] == pytest.approx(12.5), (
+        "12 hours average to 15, 12 are 10: (12*15 + 12*10) / 24, not pooled rows"
+    )
 
 
 def test_rows_from_other_days_never_enter_the_forecast() -> None:

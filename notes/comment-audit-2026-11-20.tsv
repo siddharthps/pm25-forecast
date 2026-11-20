@@ -19,10 +19,10 @@ src/airwatch/config.py	69	Decision	recorded D-028	public bucket
 src/airwatch/forecast/publish.py	54	Tautology	delete	the constant's name says it
 src/airwatch/forecast/publish.py	56	Tautology	delete	the AKIA/ASIA prefixes say it
 src/airwatch/forecast/record.py	95	Decision	recorded D-034	a 412 with nothing to read
-src/airwatch/forecast/run.py	247	Excuse	issue	claims "never a value" but the log line prints str(exc)
+src/airwatch/forecast/run.py	247	Excuse	issue #56	claims "never a value" but the log line prints str(exc)
 src/airwatch/observations/airnow.py	43	Decision	D-038	the AQS site ID's 2+3+4 digits
 src/airwatch/observations/airnow.py	82	Decision	D-038	non-AQS IDs (about 30% live) are counted, not fatal
-src/airwatch/observations/airnow.py	91	Excuse	issue	POC 0 stands in for "not given" in a non-null column
+src/airwatch/observations/airnow.py	91	Excuse	issue #57	POC 0 stands in for "not given" in a non-null column
 src/airwatch/observations/airnow.py	92	Tautology	delete	pd.NA says it
 src/airwatch/observations/aqs.py	29	Decision	recorded SPEC	18 of 24 hours
 src/airwatch/observations/aqs.py	58	Decision	D-038	available_at is the end of the change day
@@ -45,14 +45,14 @@ src/airwatch/observations/metadata.py	83	Tautology	delete	the field name says it
 src/airwatch/observations/schema.py	25	Tautology	delete	the annotation says it
 src/airwatch/observations/schema.py	27	Tautology	delete	the source values are in the parsers
 src/airwatch/observations/schema.py	28	Decision	D-038	same ID format as airnow.py:43
-src/airwatch/observations/schema.py	29	Excuse	issue	same POC-0 sentinel as airnow.py:91
+src/airwatch/observations/schema.py	29	Excuse	issue #57	same POC-0 sentinel as airnow.py:91
 src/airwatch/observations/schema.py	31	Decision	D-038	time_utc is the start of the hour
 src/airwatch/observations/schema.py	37	Decision	recorded D-031 D-033	the crude range is not a validity rule
 src/airwatch/observations/sites.py	18	Decision	recorded D-030	Phoenix's 10 monitors
 src/airwatch/observations/sites.py	34	Decision	recorded D-036	site names and agencies from AirNow
 src/airwatch/observations/sites.py	63	Tautology	delete	dict.fromkeys order-preserving dedupe is the idiom
 src/airwatch/observations/sites.py	78	Decision	recorded D-032	verified methods
-src/airwatch/timeutil.py	25	Decision	recorded D-019	frozen constants
+src/airwatch/timeutil.py	25	Decision	D-038	constants, not settings (D-019 is frozen)
 src/airwatch/timeutil.py	36	Decision	D-038	datetime subclasses date
 src/airwatch/validation/checks.py	58	Decision	recorded D-033	owner's thresholds
 src/airwatch/validation/checks.py	59	Decision	recorded D-033	flat line 12 hours, warn only
@@ -104,7 +104,7 @@ tests/integration/test_forecast_once.py	269	Tautology	delete	the test name says 
 tests/live/test_airnow_live.py	55	Decision	recorded D-030	Phoenix has no DST
 tests/property/test_forecast_leakage.py	39	Decision	to-code	a late run sees every rewritten hour
 tests/property/test_forecast_leakage.py	47	Tautology	delete	a module constant is computed once
-tests/property/test_forecast_leakage.py	65	Excuse	issue	early return passes the example silently
+tests/property/test_forecast_leakage.py	65	Excuse	issue #59	early return passes the example silently
 tests/property/test_forecast_leakage.py	69	Tautology	delete	pytest.raises says it
 tests/property/test_forecast_leakage.py	83	Decision	to-docstring	the scenario the test checks
 tests/property/test_time.py	24	Decision	recorded D-006	candidate metros
@@ -125,13 +125,13 @@ tests/property/test_time.py	177	Decision	to-message	the repeated hour, second pa
 tests/property/test_time.py	181	Decision	D-038	compare POSIX instants: PEP 495 fold
 tests/property/test_time.py	194	Decision	to-message	guards the guards
 tests/property/test_validation.py	22	Tautology	delete	the strategy says it
-tests/unit/forecast/fakes.py	18	Decision	to-code	ISSUE_AT written as issue_time_utc(TARGET)
+tests/unit/forecast/fakes.py	18	Decision	to-code	ISSUE_AT written as 06:00 Chicago converted to UTC
 tests/unit/forecast/fakes.py	20	Decision	recorded D-034	D-1 observed day
 tests/unit/forecast/test_publish.py	53	Tautology	delete	the assert says it
 tests/unit/forecast/test_publish.py	65	Decision	recorded D-036	TAD worked example
 tests/unit/forecast/test_publish.py	74	Decision	recorded D-036	truncated, never rounded
 tests/unit/forecast/test_publish.py	96	Decision	to-message	Equation 1 worked out
-tests/unit/forecast/test_publish.py	125	Excuse	issue	assert why exists only to use the parameter
+tests/unit/forecast/test_publish.py	125	Excuse	issue #58	assert why exists only to use the parameter
 tests/unit/forecast/test_publish.py	131	Decision	D-038	secret-shaped test strings are split
 tests/unit/forecast/test_publish.py	138	Tautology	delete	site_name is visibly free text
 tests/unit/forecast/test_publish.py	144	Tautology	delete	the test name says it
@@ -194,7 +194,7 @@ tests/unit/test_ci_config.py	38	Decision	D-038	PyYAML 1.1 loads on as True
 tests/unit/test_ci_config.py	61	Decision	to-message	guards the guards
 tests/unit/test_ci_config.py	78	Tautology	delete	the assert says it
 tests/unit/test_ci_config.py	84	Decision	recorded D-027	one uv everywhere
-tests/unit/test_ci_config.py	95	Decision	D-038	GITHUB_TOKEN PRs don't trigger CI
+tests/unit/test_ci_config.py	95	Decision	recorded D-027	GITHUB_TOKEN PRs don't trigger CI
 tests/unit/test_ci_config.py	126	Decision	to-docstring	full history so every commit is scanned
 tests/unit/test_ci_config.py	149	Decision	recorded D-023	no backend or AWS in CI
 tests/unit/test_ci_config.py	165	Decision	to-docstring	a skipped hook needs its own CI step
@@ -229,7 +229,7 @@ tests/unit/test_config.py	46	Decision	recorded D-028	private bucket
 tests/unit/test_config.py	81	Decision	to-docstring	settings errors must not echo input
 tests/unit/test_config.py	125	Decision	to-docstring	no import-time side effects
 tests/unit/test_config.py	128	Tautology	delete	the chdir says it
-tests/unit/test_fetch_json.py	58	Decision	D-038	httpx logs request URLs at INFO
+tests/unit/test_fetch_json.py	58	Decision	recorded fetch_json docstring	httpx logs request URLs at INFO
 tests/unit/test_fetch_json.py	79	Tautology	delete	the assert and test name say it
 tests/unit/test_lint_config.py	47	Decision	to-message	guards the guard
 tests/unit/test_lint_config.py	56	Tautology	delete	section divider
@@ -282,3 +282,8 @@ tests/unit/validation/test_report.py	144	Tautology	delete	the manifest line says
 tests/unit/validation/test_report.py	177	Tautology	delete	section divider
 tests/unit/validation/test_report.py	188	Decision	to-docstring	coverage over final years only
 tests/unit/validation/test_report.py	212	Tautology	delete	the test name says it
+src/airwatch/observations/aqs_bulk.py	117	Decision	D-038	data first, then the manifest (second half of line 116)
+tests/integration/test_forecast_once.py	146	Tautology	delete	prose after a pragma; the assert says it
+tests/unit/forecast/fakes.py	21	Decision	recorded D-034	inputs published before the issue time
+tests/unit/test_config.py	107	Tautology	delete	prose after a pragma; the test name says it
+tests/unit/test_config.py	114	Tautology	delete	prose after a pragma; the test name says it

@@ -52,7 +52,7 @@ def test_yesterday_in_phoenix_from_airnow(caplog: pytest.LogCaptureFixture) -> N
             daily["site_id"].nunique(),
             len(TRAINING_SITES),
         )
-    assert len(hours) == 24  # Phoenix: no DST
+    assert len(hours) == 24
     assert daily["site_id"].nunique() >= 1
     assert (
         daily["available_at_utc"] > daily["date_local"].map(lambda d: pd.Timestamp(d, tz=tz))

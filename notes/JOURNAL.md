@@ -826,6 +826,15 @@ The 3 failing tests:
     the issue time (2 hours × 10), as predicted from the rewrite timing.
   - Validation passed. Nothing was written to either bucket (checked by listing them).
 
+- **First real publish (owner's OK), 03:14 UTC:** target 2026-11-20, 10 monitors, 20 late rows
+  dropped. It was issued late (generated 21:14 Chicago), and the record says so.
+  - A second `--publish` reused the record ("already_recorded"), with nothing rewritten.
+  - **The 412 on real S3:** a deliberate second `create_if_absent` on the record was refused,
+    and the record's sha256 was unchanged.
+  - **Versions:** record 1, validation report 1, `latest.json` 1.
+  - **Public access:** an anonymous GET of `latest.json` returns 200, and listing the bucket
+    returns 403, as D-028 intends. The public file holds only the derived keys.
+
 ### Traps found (T6)
 
 - **AirNow rewrites each hourly file for about 7.7 hours.** Last-Modified is the *latest*

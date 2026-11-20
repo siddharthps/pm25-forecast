@@ -28,6 +28,7 @@ def frame(  # noqa: PLR0913  (each argument is one column of the schema)
     source: str = "aqs",
     start: datetime = START,
     step_h: int = 1,
+    available_at: datetime | None = None,
 ) -> pd.DataFrame:
     vals = list(values)
     times = [start + timedelta(hours=i * step_h) for i in range(len(vals))]
@@ -40,7 +41,7 @@ def frame(  # noqa: PLR0913  (each argument is one column of the schema)
             "time_utc": pd.to_datetime(times, utc=True),
             "value_ug_m3": vals,
             "qualifier": pd.NA,
-            "available_at_utc": pd.Timestamp(start + timedelta(days=400)),
+            "available_at_utc": pd.Timestamp(available_at or start + timedelta(days=400)),
         },
         columns=list(HOURLY_COLUMNS),
     ).astype(HOURLY_COLUMNS)

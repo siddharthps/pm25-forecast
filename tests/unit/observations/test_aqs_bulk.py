@@ -21,11 +21,11 @@ from moto import mock_aws
 from airwatch.observations.aqs_bulk import (
     MANIFEST_KEY,
     Part,
-    S3Store,
     plan_parts,
     run_download,
 )
 from airwatch.observations.schema import validate_hourly
+from airwatch.storage import S3Store
 
 BUCKET = "test-private-bucket"
 SITES = ("040130019", "040131003")

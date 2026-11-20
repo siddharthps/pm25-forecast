@@ -27,6 +27,7 @@ dev = [
     "pre-commit>=4.7.0",
     "pytest>=9.2.0",
     "pytest-cov>=7.1.0",
+    "pytest-xdist>=3.8.0",
     "pyyaml>=6.0.3",
     "ruff>=0.17.5",
     "types-pyyaml>=6.0.12.20261113",
@@ -107,7 +108,21 @@ disallow_incomplete_defs = false
 # ---------------------------------------------------------------------------
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = ["-ra", "--strict-markers", "--strict-config", "-m", "not slow and not live"]
+# Tests run in parallel (pytest-xdist; owner, 2026-11-19, D-035) to keep the core suite under
+# the SPEC's 30 s: 4 workers handed single tests (`load`) measured fastest here (about 15 s,
+# against 33 s serial; 12 workers spend longer starting up than they save). Pass -n 0 to run
+# serially, e.g. when debugging one test.
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "-m",
+    "not slow and not live",
+    "-n",
+    "4",
+    "--dist",
+    "load",
+]
 markers = [
     "slow: model smoke tests on small data (not in the core suite)",
     "live: calls real external APIs; opt-in only, never in CI",

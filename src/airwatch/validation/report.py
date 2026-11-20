@@ -29,9 +29,10 @@ import pandas as pd
 
 from airwatch.config import get_settings
 from airwatch.observations.airnow import fetch_local_day
-from airwatch.observations.aqs_bulk import FIRST_YEAR, MANIFEST_KEY, S3Store
+from airwatch.observations.aqs_bulk import FIRST_YEAR, MANIFEST_KEY
 from airwatch.observations.schema import HOURLY_COLUMNS, concat_hourly, validate_hourly
 from airwatch.observations.sites import TRAINING_SITES
+from airwatch.storage import S3Store
 from airwatch.timeutil import ensure_utc, local_day_window_utc
 from airwatch.validation.checks import ValidationResult, Window, run_checks
 

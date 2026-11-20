@@ -19,22 +19,19 @@ import logging
 from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pandas as pd
 
 from airwatch.observations.aqs import parse_sample_rows
 from airwatch.observations.schema import count_outside_crude_range
-
-if TYPE_CHECKING:
-    from mypy_boto3_s3 import S3Client
+from airwatch.storage import S3Store
 
 __all__ = [
     "FIRST_YEAR",
     "MANIFEST_KEY",
     "PREFIX",
     "Part",
-    "S3Store",
     "Summary",
     "load_manifest",
     "plan_parts",
@@ -64,24 +61,6 @@ class Part:
 class Summary:
     fetched: int
     rows: int
-
-
-class S3Store:
-    """The few S3 operations the download needs, on one bucket."""
-
-    def __init__(self, client: S3Client, bucket: str) -> None:
-        self._s3 = client
-        self._bucket = bucket
-
-    def get(self, key: str) -> bytes | None:
-        try:
-            body = self._s3.get_object(Bucket=self._bucket, Key=key)["Body"]
-        except self._s3.exceptions.NoSuchKey:
-            return None
-        return body.read()
-
-    def put(self, key: str, data: bytes) -> None:
-        self._s3.put_object(Bucket=self._bucket, Key=key, Body=data)
 
 
 def plan_parts(

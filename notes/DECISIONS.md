@@ -485,7 +485,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 - **Alternatives:**
   - 18:00 with today's partial data: needs hourly AQS history and exact partial-day matching.
   - Forecasting today instead of tomorrow: rejected because it isn't next-day.
-- **Status:** Active. **Frozen:** the T3 property tests hard-code it.
+- **Status:** Active. **Frozen:** the T3 property tests hard-code it. AirNow keeps rewriting
+  its hourly files for about 7.7 hours; the strict issue-time cut is in D-034.
   - *2026-11-19, kept for Phoenix (owner, D-030):* the issue time follows the publisher's clock
     (the author is in Chicago), not the forecast city's. Phoenix's D−1 ends at 07:00 UTC, and the
     issue is 11:00 or 12:00 UTC, so there's a 4–5 hour margin. Nothing leaks, and the data is
@@ -812,6 +813,68 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - flat lines: 6+ hours, or 24+ hours with exclusion.
 - **Status:** Active. Owner's choices, 2026-11-19. Refines D-021 and settles D-031's "how such
   hours are treated".
+
+---
+
+## D-034 · 2026-11-19 · The daily forecast's record and its edge cases (T6)
+
+- **Decision:** set before any real run, by the owner:
+  1. **The record is named after the target day:** `records/forecast_date=<D+1>/forecast.json`.
+     Scoring (T10), the page (T7) and the AQS re-score (T26) look up a day directly; the issue
+     date is stored inside.
+  2. **A monitor without a valid D−1** (under 18 of 24 hours) is left out and listed in the
+     record with its hour count. **No qualifying monitor:** the run fails with no record, so a
+     retry can succeed once AirNow's files arrive.
+  3. **Fail loudly until T9:** every failure raises and the command exits 1. Prefect (T8) marks
+     the run failed, and T9 adds the email alert.
+  4. **Strict issue-time cut:** only AirNow rows published by the issue time are used. Later
+     rows are dropped and counted (`dropped_published_after_issue`).
+- **Measured on 2026-11-19:** AirNow **rewrites each hourly file for about 7.7 hours** after its
+  hour. Every file of 2026-11-17 and 2026-11-18 was last modified 6.7–7.7 hours after it. The
+  "about three hours" seen in T5 was only a first version.
+  - An on-time run (06:00 Chicago = 12:00 UTC in winter) sees every file as it stood then.
+  - A run after about 13:42 UTC drops D−1's last two hours (22 of 24 left, still valid).
+- **S3 behaviour relied on** (AWS user guide "conditional writes" and the PutObject API
+  reference, read 2026-11-19):
+  - `If-None-Match: *` writes only if the key has no current version, otherwise **412**;
+  - of racing writes, "the first write operation to finish succeeds";
+  - **409** means a delete raced the write, and the docs say to retry (we retry 3 times);
+  - on a versioned bucket a delete reopens the key, so the pipeline has no delete permission
+    (`infra/iam.tf`) and no lifecycle rule expires a current record (`infra/s3.tf`);
+  - a lost reply after a successful write would look like a 412 on retry. So on 412 the stored
+    record is read back and used, and the published forecast is always the recorded one.
+  - moto 5.2.5 enforces the 412 and the delete-reopens behaviour (checked 2026-11-19).
+- **Order of a run:** check the issue time → reuse an existing record (never recompute) →
+  fetch → drop late rows → validate, saving the report → stop on a hard failure → forecast →
+  **record (once)** → publish `latest.json`. That file is never rewritten with the same content
+  and never moved to an older day.
+- **Why:**
+  - (1) avoids a "+1 day" in every reader;
+  - (2) keeps nine monitors' forecasts when one is down, and never hides the gap;
+  - (3) builds alerting once, in T9;
+  - (4) keeps the live track record, our truly unseen test, free of after-the-fact data.
+- **Alternatives (rejected by the owner):** (1) issue date; (2) any thin monitor stops the run,
+  or fall back to an older day (that would change D-009's persistence); (3) build the email
+  now; (4) use the latest files and flag the record.
+- **Status:** Active. Owner's choices, 2026-11-19. Refines D-019 (the AirNow timing) and D-009
+  (persistence on a thin day).
+
+---
+
+## D-035 · 2026-11-19 · Tests run in parallel to keep the core suite under 30 s
+
+- **Decision:** pytest-xdist 3.8.0 (looked up on PyPI) runs the core suite on **4 workers with
+  `--dist load`** (`pyproject.toml` addopts). `-n 0` runs serially, e.g. when debugging.
+- **Why:** T6's leakage property tests run the whole forecast on every example, and pandas'
+  fixed cost per call makes each run about 20 ms. The suite went from about 24 s to 34 s, over
+  the SPEC's 30 s.
+  - Profiling found no single hotspot to fix.
+  - Removing repeated work (a cached baseline, one moto per file) wasn't enough.
+  - Measured: serial 33 s; 4 workers with `load` 15 s; 6 or 8 workers 19–20 s; 12 (`auto`)
+    24 s, because starting workers costs more than it saves.
+- **Alternatives (rejected by the owner):** fewer property examples in the everyday run (it
+  checks less); a separate CI step for these tests (locally they'd only run on request).
+- **Status:** Active. Owner's choice, 2026-11-19.
 
 ---
 

@@ -111,7 +111,7 @@ uv run mutmut run --paths-to-mutate src/airwatch/features src/airwatch/forecast
 uv run python -m airwatch.validation.report --source all     # data-quality report
 uv run python -m airwatch.training.cv --variant lightgbm      # one variant, CV only
 uv run python -m airwatch.training.final_test                 # reads the 2025 test ONCE (guarded)
-uv run python -m airwatch.forecast.run --date 2026-11-25 --dry-run   # manual runs default to dry-run
+uv run python -m airwatch.forecast.run --target-day 2026-11-25    # a dry run; --publish acts (D-034)
 uv run prefect deploy --all              # deploy flows to Prefect Cloud
 uv run zensical build                    # build the docs (exact command confirmed at setup)
 ```

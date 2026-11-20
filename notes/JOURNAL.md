@@ -847,3 +847,58 @@ The 3 failing tests:
   is still excluded.
 - **A property test that drops its inputs before they matter proves nothing.** The first
   "issue-day rows" test gave them a publish time after 06:00, so the cut removed them first.
+
+### T6 merged (#53)
+
+- **PR #53 squash-merged** (`b07f35a`); #13 closed with all five boxes ticked.
+
+## 2026-11-19: T7 (#14) public page, on branch `14-page` (CST night, from 21:25)
+
+- **Facts looked up, not recalled:**
+  - EPA's AQI TAD, **EPA-403/B-26-003, May 2026**. The fetch agent couldn't extract the PDF's
+    text, so the saved PDF was read directly. The PM2.5 breakpoints are Table 6, p. 14; the
+    truncation, Equation 1 and rounding are on p. 13; the standard colours are Table 2, p. 4.
+    The TAD says the reporting area uses the **highest monitor**, which settled the city
+    summary.
+  - **Agencies**, from AirNow's `DataSource` field: Maricopa County AQD (7 monitors), Arizona
+    DEQ (1), Pinal County AQCD (2).
+  - **Pages** was already enabled (workflow builds), at `siddharthps.github.io/pm25-forecast/`.
+  - The AirNow guidelines form hasn't been sent yet.
+  - **Versions:** jsonschema 4.26.0; Biome 2.6.8 (published 2026-11-15); setup-node v7.1.0;
+    upload-pages-artifact v5.0.0; deploy-pages v5.0.1. All are pinned to SHAs.
+- **Owner's decisions (D-036):**
+  - build now, and deploy only after the form is sent and any reply has arrived (the
+    `PAGES_GO_LIVE` gate);
+  - credit every planned source now. This went against the agent's recommendation, so each
+    credit says what the source is used for.
+- **Built:**
+  - `aqi.py`;
+  - `publish.py` v2 (city summary, history from the records, schema and secret scan);
+  - `sites.py` names and agencies;
+  - `storage.list_keys`;
+  - `site/` (HTML, CSS, JS, with a CSP and text-only rendering);
+  - `pages.yml`;
+  - Biome, `node --test` in CI, and `.nvmrc`.
+- **Tests:**
+  - every expected AQI comes from the TAD (its worked example: 35.9 gives 102);
+  - D-025's obligations are tested on the page's text;
+  - 7 Node tests;
+  - the workflow tests check the gate, the permissions and that only the page's files are
+    published.
+  - 19 planted bugs: 2 survived at first (a guard test that failed for another reason, and a
+    test comparing a constant with itself), and both were strengthened. Then all were caught.
+- **A real bug caught by a test:** the first `?data=` preview rule let `//evil.example/` through,
+  which a browser treats as another site. The rule now refuses `//` and `..`.
+- **Local preview** of the real 20 Nov record: Durango Complex is the highest monitor, at
+  AQI 52 (Moderate). It was served on 127.0.0.1 only.
+
+### Traps found (T7)
+
+- **A Python script writing regexes inside a heredoc:** `\.` warns as an invalid escape. It
+  still wrote the right text, but raw strings or the Edit tool are safer.
+- **`sed` with nested quotes failed twice.** Edit or Write is the safe route on Windows (the
+  owner's tool-trap rule).
+- **pre-commit `--all-files` skips untracked files.** Stage new files before running a new hook,
+  or it reports "no files to check".
+- **The public bucket still holds the old-format `latest.json`** (v1) and no `history.json`. The
+  next `--publish` run (the already-recorded path) writes both.

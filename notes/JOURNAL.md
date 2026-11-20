@@ -903,6 +903,40 @@ The 3 failing tests:
 - **The public bucket still holds the old-format `latest.json`** (v1) and no `history.json`. The
   next `--publish` run (the already-recorded path) writes both.
 
+### T7 design review and merge (#54)
+
+- **frontend-design review** (the owner chose the fixes plus the scale band; recorded in
+  D-036):
+  - the heading names the day;
+  - a neutral palette (tested);
+  - an AQI scale band as the hero;
+  - monitors sorted by concentration, which fixed a table/summary mismatch the screenshots
+    showed;
+  - focus styles and a clear load error.
+- **Screenshots via headless Edge.** A plain 390 px window clips at headless Edge's minimum
+  width; a 360 px iframe gives the true phone layout.
+- **PR #54 squash-merged** (`74e7292`). #14 stays **open** until go-live: four boxes ticked, and
+  the D-025 box waits on the form.
+- **After the merge**, the Pages workflow ran: "Package the page" succeeded and "Deploy" was
+  **skipped** (the switch is off). The Pages URL returns 404, so nothing is public.
+
+### Next
+
+- **Go-live (#14), owner first:**
+  1. Email the signed form: page 1 of `https://docs.airnowapi.org/docs/DataUseGuidelines.pdf`,
+     to `dmc@airnowtech.org`. Ask whether AirNow informs the three reporting agencies or the
+     owner should (the guidelines say derived products "must be made known" to them).
+  2. After any reply, record it as a D-entry.
+  3. Refresh the real public files to v2: a `--publish` rerun on the existing record, which
+     writes `latest.json` v2 and `history.json` and leaves the record untouched.
+  4. Set `PAGES_GO_LIVE=true` (a repository variable), dispatch the Pages workflow, and check
+     the live URL.
+- **Milestone B, after go-live:** T8 (#15) Prefect daily deployment (the owner runs the first
+  deploy); T9 (#16) watchdog; T10 (#17) scoring; T11 (#18); #42, #43, #52.
+- **Dates:** T2 (#6) closes after Monday 11-23's lock-job PR passes CI. **11-25:** checkpoint B,
+  the D-014 review, delete the old AWS key and IAM user (T0c, #3).
+- **Timeline honesty:** T6 and T7 are done; T8, T9, T10 and T11 remain before 11-25.
+
 ## 2026-11-20: comment audit (#55), on branch `55-comment-audit` (CST, to about 12:45)
 
 A detour before go-live, at the owner's request. Go-live (#14) resumes on `14-go-live`.

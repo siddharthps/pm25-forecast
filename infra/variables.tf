@@ -42,3 +42,13 @@ variable "raw_noncurrent_days" {
   type        = number
   default     = 30
 }
+
+variable "prefect_account_id" {
+  description = "Prefect Cloud account ID (a UUID) that the Prefect run role trusts (D-040)."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", var.prefect_account_id))
+    error_message = "prefect_account_id must be a lower-case UUID (Prefect Cloud → account settings)."
+  }
+}

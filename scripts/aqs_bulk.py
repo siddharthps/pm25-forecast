@@ -67,10 +67,7 @@ def main() -> int:
         log.info("dry run: nothing fetched or written. Re-run with --apply to download.")
         return 0
 
-    auth = {
-        "email": settings.aqs_email.get_secret_value(),
-        "key": settings.aqs_api_key.get_secret_value(),
-    }
+    auth = settings.aqs_credentials()
     last = [0.0]
     with httpx.Client(timeout=httpx.Timeout(300.0, connect=20.0)) as client:
 

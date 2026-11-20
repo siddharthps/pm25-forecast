@@ -1,0 +1,38 @@
+# Prefect deployment for the daily forecast (#15, T8; D-011, D-019, D-040).
+# Rules kept by tests/unit/test_prefect_deployment.py. Deploy: `uv run prefect deploy --all`
+# (the owner's first deploy follows notes/guides/T8-PREFECT.md, D-023).
+name: pm25-forecast
+
+# The run starts in Prefect's managed image, clones main, installs exactly what uv.lock says
+# (requirements/prefect-run.txt, hashed), then our package alone.
+pull:
+  - prefect.deployments.steps.git_clone:
+      id: clone
+      repository: https://github.com/siddharthps/pm25-forecast.git
+      branch: main
+  - prefect.deployments.steps.pip_install_requirements:
+      directory: "{{ clone.directory }}"
+      requirements_file: requirements/prefect-run.txt
+  - prefect.deployments.steps.run_shell_script:
+      script: pip install --no-deps {{ clone.directory }}
+
+deployments:
+  - name: daily-forecast
+    description: Next-day PM2.5 persistence forecast; publishes only on the 06:00 Chicago schedule.
+    entrypoint: src/airwatch/flows/daily.py:daily_forecast
+    # No deployment-level publish: a manual run is a dry run (owner's rule).
+    parameters: {}
+    work_pool:
+      name: managed-pool
+      job_variables:
+        # D-026: a pinned Python, not 3-latest, so Prefect's default can't change the runtime.
+        image: prefecthq/prefect:3-python3.12
+        env:
+          PREFECT_LOGGING_EXTRA_LOGGERS: airwatch
+    schedules:
+      # D-019 (frozen): 06:00 America/Chicago, forecasting D+1.
+      - cron: "0 6 * * *"
+        timezone: America/Chicago
+        active: true
+        parameters:
+          publish: true

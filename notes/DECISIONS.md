@@ -963,28 +963,6 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 
 ---
 
-## D-039 · 2026-11-20 · AirNow's reply: the go-live gate is met (#14)
-
-- **Decision:** the page may go public with the D-025 credits and labels as built. The owner
-  emailed the signed Data Use Guidelines form to `dmc@airnowtech.org` (D-025, obligation 6),
-  and AirNow replied.
-- **The reply, as the owner summarised it (2026-11-20):**
-  - AirNow data is U.S. government public-domain information.
-  - Emailing beforehand is an administrative courtesy, so AirNow can track outside
-    integrations and share data-handling advice. It is not a licence step, and it doesn't
-    block a non-commercial student or portfolio project.
-  - They may follow up in a couple of weeks, or may not.
-- **Still open:** the email also asked whether AirNow tells the three reporting agencies, or
-  whether the owner should. The reply as summarised doesn't answer that. The page already
-  credits the agencies first (D-025, obligation 3). If AirNow's follow-up asks for more, it
-  gets a new D-entry.
-- **Why:** D-036's gate was "after emailing the form and waiting for any reply". The reply
-  came, and it says the email was never a blocker.
-- **Status:** Active. Owner's decision, 2026-11-20. Meets the gate in D-036 and obligation 6
-  in D-025.
-
----
-
 ## D-037 · 2026-11-20 · Code comments are banned, held by a ratchet (#55)
 
 - **Decision:** code says what it does through names, types, test ids and assert messages.
@@ -1082,6 +1060,28 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
     at all, not a hunt for rare edge cases. This predates D-035, where the owner declined fewer
     property examples in general. It stays as it was and is recorded here.
 - **Status:** Active. Recorded from the code, 2026-11-20 (#55).
+
+---
+
+## D-039 · 2026-11-20 · AirNow's reply: the go-live gate is met (#14)
+
+- **Decision:** the page may go public with the D-025 credits and labels as built. The owner
+  emailed the signed Data Use Guidelines form to `dmc@airnowtech.org` (D-025, obligation 6),
+  and AirNow replied.
+- **The reply, as the owner summarised it (2026-11-20):**
+  - AirNow data is U.S. government public-domain information.
+  - Emailing beforehand is an administrative courtesy, so AirNow can track outside
+    integrations and share data-handling advice. It is not a licence step, and it doesn't
+    block a non-commercial student or portfolio project.
+  - They may follow up in a couple of weeks, or may not.
+- **Still open:** the email also asked whether AirNow tells the three reporting agencies, or
+  whether the owner should. The reply as summarised doesn't answer that. The page already
+  credits the agencies first (D-025, obligation 3). If AirNow's follow-up asks for more, it
+  gets a new D-entry.
+- **Why:** D-036's gate was "after emailing the form and waiting for any reply". The reply
+  came, and it says the email was never a blocker.
+- **Status:** Active. Owner's decision, 2026-11-20. Meets the gate in D-036 and obligation 6
+  in D-025.
 
 ---
 

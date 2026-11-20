@@ -733,3 +733,47 @@ The 3 failing tests:
 - **T2 (#6):** close once Monday's scheduled lock job opens its PR and CI passes on it.
 - **2026-11-20:** milestone A due. **2026-11-25:** skeleton checkpoint, D-014 review, delete the
   old AWS key and IAM user.
+
+## 2026-11-19: T12a (#12) validation, on branch `12-validation` (CST evening, from 18:25)
+
+- **Start:** `LEARNING.md` caught up with the #49 review. The owner renewed the AWS SSO login,
+  and STS confirmed the `pm25` profile's SSO user.
+- **Owner's decisions, before any real data was checked (D-033):**
+  - out-of-range hours are **excluded and counted**;
+  - flat lines are **12+ identical hours, warn only** (no published EPA threshold was found).
+- **Built:**
+  - `validation/checks.py`: four problem classes, every rule reported, at zero too.
+  - `validation/report.py`: JSON + Markdown per run, never a measurement, never overwritten.
+    Read-only runs on the AQS download (`load_aqs_bulk` checks each part's rows against the
+    manifest) and on one AirNow day.
+  - `airnow.fetch_local_day`: a 404 hour is counted as `file_missing`; any other failure
+    raises (`metadata.FetchError` now carries the status).
+  - `FIRST_YEAR` moved from the download script to `aqs_bulk` (one home).
+- **Tests of the tests:**
+  - 3 property tests: another site can't change a site's result; row order doesn't matter;
+    every excluded row is counted.
+  - **28 planted bugs:** 8 survived the first pass, and each led to a new test. Examples:
+    a flat line joining two POCs, a late-evening first reading landing in the UTC month, a
+    half-written report pair. Then all 28 were caught.
+- **Speed:** the property tests first took the core suite to 29.95 s, at the 30 s limit.
+  Flat-line detection was moved to plain arrays and empty groupbys skipped, bringing it to
+  about 22 s.
+- **First real runs (counts only):**
+  - **AQS**, 180 parts, 1,217,348 rows: **passed**.
+    - 0 duplicates, 0 unverified methods, 0 out of range, 0 flat lines.
+    - 54 site-months under 75% (11 with no usable hours, e.g. 040130019 in Sep–Dec 2012).
+    - 18,601 negative readings in range, kept.
+  - **AirNow**, Phoenix 2026-11-18: **passed**. 240 rows (all 10 sites × 24 hours), 0 gaps.
+  - **Zero flat lines was checked, not assumed:** the longest identical run per instrument is
+    4–9 hours. The three whole-number BAM monitors (170) have most of the shorter runs.
+
+### Traps found (T12a)
+
+- **pandas warns on `concat` with empty frames,** and `filterwarnings = error` makes that a
+  failure. `schema.concat_hourly` skips empty frames and keeps the schema.
+- **`DataFrame.to_json` without `date_format`** raises a pandas 4 deprecation warning (seen in
+  a test helper).
+- **Comparisons on pandas `string` columns with a shifted NA give NA, not False.** The
+  flat-line code uses plain arrays, so a run can't silently join across rows.
+- **The log lines' `asctime` is local time with no zone** (here and in `scripts/aqs_bulk.py`).
+  That breaks the UTC-everywhere rule; proposed as its own issue.

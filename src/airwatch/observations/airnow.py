@@ -23,13 +23,14 @@ from zoneinfo import ZoneInfo
 import httpx
 import pandas as pd
 
-from airwatch.observations.metadata import fetch_response
-from airwatch.observations.schema import HOURLY_COLUMNS, validate_hourly
+from airwatch.observations.metadata import FetchError, fetch_response
+from airwatch.observations.schema import HOURLY_COLUMNS, concat_hourly, validate_hourly
 from airwatch.timeutil import local_day_window_utc
 
 __all__ = [
     "FILES_BASE",
     "fetch_hour",
+    "fetch_local_day",
     "hourly_file_url",
     "hours_for_local_day",
     "keep_sites",
@@ -38,6 +39,7 @@ __all__ = [
 
 FILES_BASE = "https://files.airnowtech.org/airnow/"
 UNIT = "UG/M3"
+HTTP_NOT_FOUND = 404
 AQS_SITE_ID = re.compile(r"\d{9}")  # state (2) + county (3) + site (4)
 
 
@@ -120,3 +122,32 @@ def fetch_hour(client: httpx.Client, hour_utc: datetime) -> tuple[str, datetime]
     if not modified:
         raise RuntimeError("AirNow file has no Last-Modified header")
     return response.text, parsedate_to_datetime(modified).astimezone(UTC)
+
+
+def fetch_local_day(
+    client: httpx.Client, day: date, tz: ZoneInfo, sites: Iterable[str]
+) -> tuple[pd.DataFrame, dict[str, int]]:
+    """Every hourly file of local day `day`, kept to `sites`, plus every drop counted by reason.
+
+    A file AirNow hasn't published (404) is counted as `file_missing`, not fatal: the coverage
+    check in validation judges whether the day still has enough hours. Other failures raise.
+    """
+    wanted = tuple(sites)
+    frames: list[pd.DataFrame] = []
+    drops: Counter[str] = Counter()
+    for hour in hours_for_local_day(day, tz):
+        try:
+            text, published = fetch_hour(client, hour)
+        except FetchError as exc:
+            if exc.status != HTTP_NOT_FOUND:
+                raise
+            drops["file_missing"] += 1
+            continue
+        df, dropped = parse_hourly_aqobs(text, published)
+        kept, unmatched = keep_sites(df, wanted)
+        drops.update(dropped)
+        drops["unmatched_site"] += unmatched
+        frames.append(kept)
+    day_df = concat_hourly(frames)
+    validate_hourly(day_df)
+    return day_df, dict(drops)

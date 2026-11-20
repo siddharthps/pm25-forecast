@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client
 
 __all__ = [
+    "FIRST_YEAR",
     "MANIFEST_KEY",
     "PREFIX",
     "Part",
@@ -42,6 +43,7 @@ __all__ = [
 
 log = logging.getLogger(__name__)
 
+FIRST_YEAR = 2009  # D-008: the development period starts here
 PREFIX = "raw/aqs/hourly/"
 MANIFEST_KEY = PREFIX + "manifest.json"
 

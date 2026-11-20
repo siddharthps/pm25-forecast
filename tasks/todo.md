@@ -54,6 +54,7 @@ line** (2026-12-16) · **D: Complete**.
 | --- | --- | --- | --- |
 | [#42](https://github.com/siddharthps/pm25-forecast/issues/42) | Mutation testing (mutmut) on the existing core logic | T3b | B |
 | [#43](https://github.com/siddharthps/pm25-forecast/issues/43) | uv-lock job: idempotency and step-failure tests | T3b | B |
+| [#52](https://github.com/siddharthps/pm25-forecast/issues/52) | Log timestamps in UTC with the zone shown (one logging setup) | T12a | B |
 
 The **State** column is a snapshot. GitHub is the source of truth, and this column is not kept in
 sync.

@@ -5,7 +5,15 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-__all__ = ["TRAINING_SITES", "VERIFIED_METHODS", "Method", "unverified_methods"]
+__all__ = [
+    "AGENCIES",
+    "SITE_AGENCY",
+    "SITE_NAMES",
+    "TRAINING_SITES",
+    "VERIFIED_METHODS",
+    "Method",
+    "unverified_methods",
+]
 
 # D-030: Phoenix's 10 qualifying monitors (AQS site IDs = AirNow AQSIDs), chosen by the frozen
 # D-006 check. Maricopa County (013): 8; Pinal County (021): 2.
@@ -21,6 +29,38 @@ TRAINING_SITES = (
     "040210001",
     "040213015",
 )
+
+
+# Each monitor's name and reporting agency, as AirNow's HourlyAQObs file gives them (`SiteName`,
+# `DataSource`; checked on 2026-11-19). The page credits these agencies first (D-025).
+SITE_NAMES = {
+    "040130019": "West Phoenix",
+    "040131003": "Mesa - Brooks Reservoir",
+    "040131004": "North Phoenix",
+    "040132001": "Glendale Community College",
+    "040134003": "South Phoenix",
+    "040134005": "Tempe",
+    "040139812": "Durango Complex",
+    "040139997": "Phoenix JLG Supersite",
+    "040210001": "Casa Grande Downtown",
+    "040213015": "Hidden Valley",
+}
+_MARICOPA = "Maricopa County Air Quality Department"
+_ADEQ = "Arizona Department of Environmental Quality"
+_PINAL = "Pinal County Air Quality Control District"
+SITE_AGENCY = {
+    "040130019": _MARICOPA,
+    "040131003": _MARICOPA,
+    "040131004": _MARICOPA,
+    "040132001": _MARICOPA,
+    "040134003": _MARICOPA,
+    "040134005": _MARICOPA,
+    "040139812": _MARICOPA,
+    "040139997": _ADEQ,
+    "040210001": _PINAL,
+    "040213015": _PINAL,
+}
+AGENCIES = tuple(dict.fromkeys(SITE_AGENCY.values()))  # in first-seen order, no repeats
 
 
 @dataclass(frozen=True)

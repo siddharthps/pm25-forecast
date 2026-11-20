@@ -26,7 +26,8 @@ uv run ruff check . && uv run ruff format --check .
 uv run mypy                            # strict; config in pyproject.toml
 uv run pytest                          # fast offline core suite, 4 workers (D-035; -n 0 = serial); -m slow / -m live are opt-in
 uv run pytest tests/property --hypothesis-profile=explore   # fresh random search (default is derandomized)
-uv run pre-commit run --all-files      # every hook, including gitleaks, markdownlint, terraform fmt
+uv run pre-commit run --all-files      # every hook: gitleaks, markdownlint, Biome, terraform fmt
+node --test tests/site/                # the page's JavaScript tests (Node from .nvmrc)
 terraform -chdir=infra test            # infra safety rules on the plan, mock AWS provider, offline
 aws sso login --profile pm25           # AWS access (never use long-lived keys); lasts 8 hours
 uv run pytest -m live -o log_cli=true --log-cli-level=INFO   # opt-in real-API checks, counts only

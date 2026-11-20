@@ -605,7 +605,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
      before the page goes public (T7). The agent does not send email.
 - **Why:** These are the data provider's terms, and following them visibly is part of the
   "production ML done properly" story.
-- **Status:** Active. Added to T7's "done when" list.
+- **Status:** Active. Added to T7's "done when" list. The AQI rules, the colours' one home and
+  the go-live gate are in D-036.
 
 ---
 
@@ -875,6 +876,62 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 - **Alternatives (rejected by the owner):** fewer property examples in the everyday run (it
   checks less); a separate CI step for these tests (locally they'd only run on request).
 - **Status:** Active. Owner's choice, 2026-11-19.
+
+---
+
+## D-036 · 2026-11-19 · The public page: AQI rules, public files, credits and the go-live gate (T7)
+
+- **AQI, from EPA's Technical Assistance Document** (EPA-403/B-26-003, May 2026, read
+  2026-11-19), in one home, `airwatch/aqi.py`:
+  - PM2.5 truncated to 1 decimal; Equation 1 on Table 6's 24-hour breakpoints; the index rounded
+    to the nearest integer (p. 13–14);
+  - above AQI 500, Equation 1 extends the 301–500 segment (Table 6, footnote 4);
+  - **the area's value is the highest monitor** (p. 13: "the highest concentration among all of
+    the monitors within each reporting area");
+  - the categories and **standard colours** from Tables 1–2. ColorVision Assist colours are
+    optional and not used.
+  - **Not in the TAD:** a negative mean reads as AQI 0, and the text on each colour is black or
+    white, whichever has the higher WCAG contrast.
+- **The colours have one home:** `aqi.py`, sent in the JSON. The site holds none (a test checks
+  this). This refines D-025's "pinned in one place in `site/`" to one place overall.
+- **Public files** (`publish.py`, version 2):
+  - `latest.json` has the city summary and every monitor;
+  - `history.json` holds every recorded day, newest first, **rebuilt from the private records**
+    on each run, so it can't drift from them.
+  - Each payload must pass a strict JSON schema (`forecast/schemas/`, no field outside the list)
+    and a secret scan before upload; a refusal writes nothing.
+- **The page:** plain HTML, CSS and JavaScript, with no outside scripts or styles.
+  - A Content-Security-Policy allows only the page itself and the public bucket.
+  - Data is written as text, never as HTML.
+  - A local `?data=` preview accepts same-site paths only (a test found that `//host/` slipped
+    through the first rule).
+  - No chart library yet: charts are T25, which pins its version.
+- **Checks on the page's code:** Biome 2.6.8 (`biomejs/pre-commit`, pinned to the release
+  commit, published 2026-11-15) lints and formats the JavaScript and CSS. `node --test` runs the
+  page's tests in CI, with Node from `.nvmrc`. The lint-coverage test now also requires every
+  JS and CSS file to be in Biome's scope.
+- **Go-live gate (owner's choice):** `.github/workflows/pages.yml` packages only `index.html`,
+  `app.js` and `style.css`. Its deploy job runs only when the repository variable
+  `PAGES_GO_LIVE` is `true`. The owner sets it after emailing the signed AirNow guidelines form
+  (D-025) and waiting for any reply.
+- **Credits (owner's choice, against the agent's recommendation):** every planned source from
+  the first page, each with what it's used for:
+  - EPA AirNow (the forecasts shown);
+  - EPA AQS (validated history, training);
+  - Open-Meteo, CC BY 4.0 (weather, being added);
+  - Copernicus CAMS (composition forecasts, being added).
+
+  The agencies (Maricopa County AQD, Arizona DEQ, Pinal County AQCD, from AirNow's
+  `DataSource` field) and EPA AirNow come first, as D-025 requires.
+- **Why:** EPA's rules are the data provider's terms (D-025), so they're taken from the document
+  and pinned by tests to its own worked example. The gate keeps a public repo's Pages site from
+  going live before the form. The schema and scan stop a future bug from publishing private
+  data.
+- **Alternatives:**
+  - deploy normally once the form is sent, or leave the deploy job out (owner chose the gate);
+  - credit only the sources in use (the agent's recommendation; the owner chose all);
+  - the median monitor as the city value (rejected: the TAD says the highest).
+- **Status:** Active. Owner's choices, 2026-11-19. Refines D-025 (where the colours live).
 
 ---
 

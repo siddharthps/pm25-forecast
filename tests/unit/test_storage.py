@@ -89,3 +89,14 @@ def test_other_errors_are_not_mistaken_for_an_existing_record(s3: Any) -> None:
     store = S3Store(s3, "no-such-bucket-here")
     with pytest.raises(ClientError):
         store.create_if_absent("records/w.json", b"data")
+
+
+def test_list_keys_returns_every_key_under_a_prefix_past_one_page(s3: Any) -> None:
+    store = S3Store(s3, BUCKET)
+    for i in range(1005):  # more than one 1,000-key page
+        store.put(f"records/forecast_date=d{i:04d}/forecast.json", b"{}")
+    store.put("reports/other.json", b"{}")
+    keys = store.list_keys("records/")
+    assert len(keys) == 1005
+    assert keys == sorted(keys)
+    assert all(k.startswith("records/") for k in keys)

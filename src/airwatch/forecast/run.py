@@ -34,6 +34,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 
 from airwatch.forecast.publish import publish as publish_latest
+from airwatch.forecast.publish import publish_history
 from airwatch.forecast.record import Store, build_record, record_key, report_key, write_once
 from airwatch.observations.aqs import daily_means
 from airwatch.timeutil import ISSUE_TZ, ensure_utc, issue_time_utc, local_day_window_utc
@@ -132,6 +133,13 @@ def _encode(data: dict[str, Any]) -> bytes:
     return (json.dumps(data, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
 
+def _publish_all(public: Store, private: Store, record: dict[str, Any]) -> bool:
+    """latest.json, then history.json (rebuilt from the records). True if latest changed."""
+    latest = publish_latest(public, record)
+    publish_history(public, private)
+    return latest
+
+
 def run_daily(  # noqa: PLR0913  (each argument is one injected edge or the run's context)
     target_day: date,
     *,
@@ -152,7 +160,7 @@ def run_daily(  # noqa: PLR0913  (each argument is one injected edge or the run'
     existing = private.get(record_key(target_day))
     if existing is not None:
         record: dict[str, Any] = json.loads(existing)
-        published = publish and publish_latest(public, record)
+        published = publish and _publish_all(public, private, record)
         log.info("%s: record exists; reused (published: %s)", target_day, published)
         return RunOutcome("already_recorded", record, published)
 
@@ -190,7 +198,7 @@ def run_daily(  # noqa: PLR0913  (each argument is one injected edge or the run'
         return RunOutcome("dry_run", record, published=False)
 
     created, record = write_once(private, record)
-    published = publish_latest(public, record)
+    published = _publish_all(public, private, record)
     log.info(
         "%s: %s, %d monitor(s), %d without a valid day (published: %s)",
         target_day,

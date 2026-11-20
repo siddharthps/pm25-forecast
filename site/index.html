@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self' https://pm25-forecast-public-65bc08.s3.amazonaws.com; base-uri 'none'; form-action 'none'"
+    >
+    <title>Phoenix PM2.5 forecast (experimental)</title>
+    <meta
+      name="description"
+      content="An experimental next-day PM2.5 forecast for the Phoenix area, from preliminary EPA AirNow data."
+    >
+    <link rel="stylesheet" href="style.css">
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <header>
+      <h1>Phoenix PM2.5 forecast</h1>
+      <p class="notice" id="experimental">
+        <strong>Experimental model forecast, not an official air quality forecast.</strong>
+        For official forecasts and health advisories, see
+        <a href="https://www.airnow.gov/">AirNow.gov</a>.
+      </p>
+    </header>
+
+    <main>
+      <p id="status">Loading the forecast…</p>
+
+      <div id="content" hidden>
+        <section aria-labelledby="tomorrow-heading">
+          <h2 id="tomorrow-heading">Tomorrow: <span id="forecast-date"></span></h2>
+          <div id="city" class="city">
+            <p class="aqi"><span id="city-aqi"></span> <span class="unit">AQI</span></p>
+            <p id="city-category" class="category"></p>
+          </div>
+          <p id="city-basis"></p>
+          <p class="label">Preliminary, not validated: based on AirNow data.</p>
+        </section>
+
+        <section aria-labelledby="monitors-heading">
+          <h2 id="monitors-heading">Each monitor</h2>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Monitor</th>
+                  <th scope="col" class="num">PM2.5 (24-hour mean)</th>
+                  <th scope="col" class="num">AQI</th>
+                  <th scope="col">Category</th>
+                </tr>
+              </thead>
+              <tbody id="monitors"></tbody>
+            </table>
+          </div>
+          <ul id="no-forecast" hidden></ul>
+          <p class="label">Preliminary, not validated: based on AirNow data.</p>
+        </section>
+
+        <section aria-labelledby="history-heading">
+          <h2 id="history-heading">Recent forecasts</h2>
+          <div class="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Day</th>
+                  <th scope="col" class="num">City AQI</th>
+                  <th scope="col">Category</th>
+                </tr>
+              </thead>
+              <tbody id="history"></tbody>
+            </table>
+          </div>
+          <p class="label">Preliminary, not validated: based on AirNow data.</p>
+        </section>
+
+        <section aria-labelledby="method-heading">
+          <h2 id="method-heading">How this forecast is made</h2>
+          <p>
+            Each morning at 06:00 Chicago time, each monitor's forecast for tomorrow is its
+            average PM2.5 over the last complete day ("persistence"), the standard baseline that
+            better models must beat. The area's value is the highest monitor, converted to the
+            Air Quality Index as set out in EPA's Technical Assistance Document
+            (<span id="aqi-source"></span>).
+          </p>
+          <p>Issued: <span id="issued"></span>.</p>
+        </section>
+      </div>
+
+      <section aria-labelledby="credits-heading" class="credits">
+        <h2 id="credits-heading">Data and credits</h2>
+        <p>
+          The air quality data come from the agencies that operate these monitors:
+          Maricopa County Air Quality Department, Arizona Department of Environmental Quality
+          and Pinal County Air Quality Control District, through the U.S. EPA AirNow program
+          (<a href="https://www.airnow.gov/partners/">AirNow partners</a>).
+        </p>
+        <ul>
+          <li>
+            <strong>EPA AirNow</strong>: the live, preliminary hourly data behind every forecast
+            on this page.
+          </li>
+          <li>
+            <strong>EPA Air Quality System (AQS)</strong>: validated history, used to build and
+            test the forecasting models.
+          </li>
+          <li>
+            <strong><a href="https://open-meteo.com/">Open-Meteo</a></strong> (licensed
+            <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>): weather
+            history and forecasts, being added as model inputs.
+          </li>
+          <li>
+            <strong>Copernicus Atmosphere Monitoring Service (CAMS)</strong>: atmospheric
+            composition forecasts, being added as a comparison.
+          </li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

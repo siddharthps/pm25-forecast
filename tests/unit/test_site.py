@@ -97,3 +97,28 @@ def test_the_page_works_at_phone_width() -> None:
     assert ".scroll" in CSS
     assert "overflow-x: auto" in CSS  # wide tables scroll inside their box, not the page
     assert tags("html")[0].get("lang") == "en"
+
+
+def test_the_heading_never_says_tomorrow() -> None:
+    # The page may be read after the forecast day has started; the day is named instead.
+    for text in (HTML, JS):
+        assert "Tomorrow" not in text
+        assert "tomorrow:" not in text.lower()
+
+
+def _hue_and_saturation(hex_colour: str) -> tuple[float, float]:
+    import colorsys  # noqa: PLC0415
+
+    r, g, b = (int(hex_colour[i : i + 2], 16) / 255 for i in (1, 3, 5))
+    h, _, s = colorsys.rgb_to_hls(r, g, b)
+    return h * 360, s
+
+
+def test_the_pages_own_colours_never_look_like_an_aqi_category() -> None:
+    # Only EPA's colours (from the JSON) carry meaning: the page's own palette is neutral or
+    # blue, never green, yellow, orange, red or purple (D-036).
+    colours = re.findall(r"#[0-9a-fA-F]{6}\b", CSS)
+    assert colours, "the palette is found"
+    for colour in colours:
+        hue, saturation = _hue_and_saturation(colour)
+        assert saturation < 0.15 or 190 <= hue <= 235, colour

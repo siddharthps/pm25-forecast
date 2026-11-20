@@ -931,6 +931,25 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - deploy normally once the form is sent, or leave the deploy job out (owner chose the gate);
   - credit only the sources in use (the agent's recommendation; the owner chose all);
   - the median monitor as the city value (rejected: the TAD says the highest).
+- **Design review (frontend-design plugin; owner chose "fixes and scale band", system font),
+  same night, before the PR:**
+  - **Fixes:**
+    - the heading names the forecast day ("Forecast for …"), never "Tomorrow", which goes
+      wrong once that day has started;
+    - the page's own palette is neutral and cool, with no colour that could pass for an AQI
+      category (a test checks every colour in `style.css`);
+    - the history uses the category colours;
+    - links show a visible keyboard focus;
+    - the load error says what happened and what to do.
+  - **The scale band is the hero:** the six categories as equal segments, with a marker placed
+    within the forecast's category. `latest.json` carries the category table from
+    `aqi_scale()`, so the colours still have one home.
+  - **Monitors are listed by concentration, highest first.** That's the rule that picks the
+    city summary, because two monitors can share an AQI. Each monitor has a CSS bar, hidden on
+    narrow screens where it repeats the number.
+  - **Type:** a 1.25 modular scale on the system font. Self-hosting a typeface was declined.
+  - **Checked by screenshot** in headless Edge at desktop width and in a 360 px frame. A
+    plain 390 px window looked clipped only because headless Edge has a minimum window width.
 - **Status:** Active. Owner's choices, 2026-11-19. Refines D-025 (where the colours live).
 
 ---

@@ -24,7 +24,14 @@ from typing import Any
 
 import jsonschema
 
-from airwatch.aqi import TAD_SOURCE, aqi_category, pm25_aqi, text_color, truncate_pm25
+from airwatch.aqi import (
+    TAD_SOURCE,
+    aqi_category,
+    aqi_scale,
+    pm25_aqi,
+    text_color,
+    truncate_pm25,
+)
 from airwatch.forecast.record import Store
 from airwatch.observations.sites import SITE_NAMES
 
@@ -86,6 +93,7 @@ def public_payload(record: dict[str, Any]) -> dict[str, Any]:
         "method": record["method"],
         "preliminary": True,
         "aqi_source": TAD_SOURCE,
+        "aqi_scale": aqi_scale(),
         "city": _city(record),
         "forecasts": [_monitor(f["site_id"], f["forecast_ug_m3"]) for f in record["forecasts"]],
         "no_forecast": [

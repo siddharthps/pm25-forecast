@@ -29,18 +29,17 @@
       <p id="status">Loading the forecast…</p>
 
       <div id="content" hidden>
-        <section aria-labelledby="tomorrow-heading">
-          <h2 id="tomorrow-heading">Tomorrow: <span id="forecast-date"></span></h2>
-          <div id="city" class="city">
-            <p class="aqi"><span id="city-aqi"></span> <span class="unit">AQI</span></p>
-            <p id="city-category" class="category"></p>
-          </div>
+        <section aria-labelledby="forecast-heading" class="hero">
+          <h2 id="forecast-heading"></h2>
+          <p id="city-answer" class="answer"></p>
+          <div id="band" class="band" role="img"></div>
+          <ul id="legend" class="legend"></ul>
           <p id="city-basis"></p>
           <p class="label">Preliminary, not validated: based on AirNow data.</p>
         </section>
 
         <section aria-labelledby="monitors-heading">
-          <h2 id="monitors-heading">Each monitor</h2>
+          <h2 id="monitors-heading">Each monitor, highest first</h2>
           <div class="scroll">
             <table>
               <thead>
@@ -48,6 +47,9 @@
                   <th scope="col">Monitor</th>
                   <th scope="col" class="num">PM2.5 (24-hour mean)</th>
                   <th scope="col" class="num">AQI</th>
+                  <th scope="col" class="bar-head">
+                    <span class="visually-hidden">Position on the AQI scale</span>
+                  </th>
                   <th scope="col">Category</th>
                 </tr>
               </thead>

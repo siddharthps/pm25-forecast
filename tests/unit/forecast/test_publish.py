@@ -12,6 +12,7 @@ from typing import Any
 
 import pytest
 
+from airwatch.aqi import aqi_scale
 from airwatch.forecast.publish import (
     HISTORY_KEY,
     LATEST_KEY,
@@ -48,7 +49,9 @@ def _day_before(day: str) -> str:
 
 
 def test_the_latest_payload() -> None:
-    assert public_payload(record()) == {
+    payload = public_payload(record())
+    assert payload.pop("aqi_scale") == aqi_scale()  # the colour table, from aqi.py only
+    assert payload == {
         "version": 2,
         "forecast_date": "2026-11-21",
         "issued_at_utc": "2026-11-20T12:00:00+00:00",
@@ -110,6 +113,8 @@ def test_the_latest_payload_passes_its_own_schema() -> None:
         (lambda p: p["city"].update(color="red"), "a colour not from the table"),
         (lambda p: p.update(preliminary=False), "dropping the preliminary label"),
         (lambda p: p["forecasts"][0].update(n_hours=24), "a record-only field"),
+        (lambda p: p["aqi_scale"][2].update(color="orange"), "a scale colour not from the table"),
+        (lambda p: p["aqi_scale"].pop(), "a scale missing a category"),
     ],
 )
 def test_the_schema_refuses_anything_off_the_list(change: Any, why: str) -> None:

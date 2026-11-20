@@ -117,3 +117,18 @@ def test_each_index_falls_in_one_category(aqi: int, name: str) -> None:
 def test_text_on_each_colour_uses_the_higher_contrast(name: str, text: str) -> None:
     category = next(c for c in CATEGORIES if c.name == name)
     assert text_color(category) == text
+
+
+def test_the_scale_table_for_the_page_lists_all_six_categories_in_order() -> None:
+    from airwatch.aqi import aqi_scale  # noqa: PLC0415
+
+    scale = aqi_scale()
+    assert [s["name"] for s in scale] == [c.name for c in CATEGORIES]
+    assert scale[0] == {
+        "name": "Good",
+        "low": 0,
+        "high": 50,
+        "color": "#00e400",
+        "text_color": "#000000",
+    }
+    assert scale[-1]["high"] == 500  # the top of the scale on the page (TAD footnote 4)

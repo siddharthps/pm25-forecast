@@ -25,6 +25,7 @@ __all__ = [
     "TAD_SOURCE",
     "Category",
     "aqi_category",
+    "aqi_scale",
     "pm25_aqi",
     "round_index",
     "text_color",
@@ -93,6 +94,22 @@ def aqi_category(aqi: int) -> Category:
         if category.high is None or aqi <= category.high:
             return category
     raise AssertionError("unreachable")  # pragma: no cover
+
+
+def aqi_scale() -> list[dict[str, str | int]]:
+    """The six categories for the page's scale band. Hazardous is drawn up to AQI 500, the top
+    of Table 6 (footnote 4); higher values sit at the band's end."""
+    top = BREAKPOINTS[-1][3]
+    return [
+        {
+            "name": c.name,
+            "low": c.low,
+            "high": c.high if c.high is not None else top,
+            "color": c.hex,
+            "text_color": text_color(c),
+        }
+        for c in CATEGORIES
+    ]
 
 
 def _luminance(rgb: tuple[int, int, int]) -> float:

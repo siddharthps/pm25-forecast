@@ -157,3 +157,8 @@ def test_the_image_pins_the_projects_python() -> None:
     python = ".".join((ROOT / ".python-version").read_text(encoding="utf-8").split(".")[:2])
     image = _daily()["work_pool"]["job_variables"]["image"]
     assert image == f"prefecthq/prefect:3-python{python}"
+
+
+def test_a_hung_run_is_stopped_within_30_minutes() -> None:
+    """The pool's default is 24 h: one hung run could burn ~1,440 of the 500 free minutes (#63)."""
+    assert _daily()["work_pool"]["job_variables"]["timeout"] <= 1800

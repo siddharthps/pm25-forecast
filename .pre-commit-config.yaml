@@ -49,7 +49,7 @@ repos:
         types_or: [python, pyi]
       - id: terraform-fmt
         name: terraform fmt
-        entry: terraform fmt -check -diff -recursive infra
+        entry: terraform fmt -check -recursive infra
         language: system
         files: ^infra/.*\.(tf|tftest\.hcl)$
         pass_filenames: false

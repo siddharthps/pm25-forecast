@@ -203,3 +203,14 @@ def test_lock_upgrade_job_is_scheduled_and_dispatches_ci() -> None:
     runs = _run_lines(workflow)
     assert "uv lock --upgrade" in runs
     assert "gh workflow run ci.yml" in runs
+
+
+def test_terraform_fmt_never_prints_file_contents() -> None:
+    """`-diff` would print the gitignored terraform.tfvars, which holds private values (#64)."""
+    config = yaml.safe_load((ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8"))
+    hooks = [h for repo in config["repos"] for h in repo["hooks"] if h["id"] == "terraform-fmt"]
+    assert len(hooks) == 1
+    assert "-diff" not in hooks[0]["entry"].split()
+    ci = CI.read_text(encoding="utf-8")
+    assert "terraform fmt" in ci, "guards the guard: CI's format step must be found"
+    assert all("-diff" not in line for line in ci.splitlines() if "terraform fmt" in line)

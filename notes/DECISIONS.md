@@ -1131,7 +1131,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
     checked against Prefect's usage page by hand.
 - **Deployments used:** 1 of the Hobby plan's 5 (a test caps `prefect.yaml` at 5).
 - **Status:** Active. Owner's choices, 2026-11-20. The first deploy is the owner's
-  (`notes/guides/T8-PREFECT.md`, D-023).
+  (`notes/guides/T8-PREFECT.md`, D-023). *2026-11-20 (#63):* runs time out after 30 minutes
+  (owner's choice), because the managed pool's default is 24 hours.
 
 ---
 

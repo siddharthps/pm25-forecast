@@ -52,6 +52,15 @@ class S3Store:
     def put(self, key: str, data: bytes) -> None:
         self._s3.put_object(Bucket=self._bucket, Key=key, Body=data)
 
+    def list_keys(self, prefix: str) -> list[str]:
+        """Every key under `prefix`, sorted (paginated, so no 1,000-key cap)."""
+        keys: list[str] = []
+        for page in self._s3.get_paginator("list_objects_v2").paginate(
+            Bucket=self._bucket, Prefix=prefix
+        ):
+            keys.extend(obj["Key"] for obj in page.get("Contents", []))
+        return sorted(keys)
+
     def create_if_absent(self, key: str, data: bytes) -> bool:
         """Write `data` only if `key` doesn't exist. True if written; False if it already was."""
         for attempt in range(1, CONFLICT_ATTEMPTS + 1):

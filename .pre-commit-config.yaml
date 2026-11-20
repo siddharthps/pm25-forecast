@@ -27,6 +27,14 @@ repos:
     hooks:
       - id: markdownlint-cli2
 
+  # The page's JavaScript and CSS (T7, D-036). Scoped to the page's own files; markdownlint
+  # and the hooks above keep Markdown, YAML and JSON.
+  - repo: https://github.com/biomejs/pre-commit
+    rev: 32d5a0d7e11fdd020784e4cd64ed53d3cfe81e72  # frozen: v2.6.8
+    hooks:
+      - id: biome-check
+        files: ^(site/.*\.(js|css)|tests/site/.*\.mjs)$
+
   - repo: local
     hooks:
       - id: ruff-check

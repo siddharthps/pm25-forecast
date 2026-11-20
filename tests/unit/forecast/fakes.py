@@ -78,6 +78,9 @@ class MemoryStore:
     def put(self, key: str, data: bytes) -> None:
         self.objects[key] = data
 
+    def list_keys(self, prefix: str) -> list[str]:
+        return sorted(k for k in self.objects if k.startswith(prefix))
+
     def create_if_absent(self, key: str, data: bytes) -> bool:
         if key in self.objects:
             return False

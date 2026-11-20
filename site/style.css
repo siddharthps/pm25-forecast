@@ -1,0 +1,234 @@
+/* AirWatch page (#14, T7; D-036). The EPA's AQI colours are the only colours that carry
+   meaning here, and they arrive in the JSON from airwatch.aqi. The page's own palette is
+   neutral and cool, with no greens, yellows, oranges, reds or purples to confuse with them. */
+
+:root {
+  --ink: #1e2a36;
+  --paper: #fbfcfd;
+  --panel: #eef2f5;
+  --rule: #d5dbe1;
+  --muted: #5a6672;
+  --link: #1f5a96;
+
+  /* A 1.25 type scale on a 1rem body (The Elements of Typographic Style's modular scale). */
+  --step-0: 1rem;
+  --step-1: 1.25rem;
+  --step-2: 1.563rem;
+  --step-3: 1.953rem;
+  --step--1: 0.875rem;
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0 auto;
+  max-width: 42rem; /* about 70 characters a line */
+  padding: 1rem;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: var(--step-0);
+  line-height: 1.55;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+a {
+  color: var(--link);
+  text-underline-offset: 0.15em;
+}
+
+a:focus-visible {
+  outline: 3px solid var(--link);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+h1 {
+  font-size: var(--step-3);
+  line-height: 1.15;
+  margin: 0.75rem 0 0.5rem;
+}
+
+h2 {
+  font-size: var(--step-1);
+  line-height: 1.3;
+  margin: 2.25rem 0 0.5rem;
+}
+
+.notice {
+  background: var(--panel);
+  border-left: 4px solid var(--ink);
+  padding: 0.75rem 1rem;
+}
+
+/* The hero: the answer in words, then where it sits on the AQI scale. */
+.hero h2 {
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 1.75rem;
+}
+
+.answer {
+  font-size: var(--step-3);
+  font-weight: 700;
+  line-height: 1.15;
+  margin: 0.25rem 0 1.25rem;
+}
+
+.band {
+  display: flex;
+  position: relative;
+  height: 1.5rem;
+  margin: 1.25rem 0 0.75rem;
+}
+
+.segment {
+  flex: 1;
+}
+
+.segment:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.segment:nth-child(6) {
+  /* the last of the six categories (the schema fixes six) */
+  border-radius: 0 4px 4px 0;
+}
+
+/* A downward pointer above the band at the forecast's place. */
+.marker {
+  position: absolute;
+  top: -0.85rem;
+  width: 0;
+  height: 0;
+  border-left: 0.6rem solid transparent;
+  border-right: 0.6rem solid transparent;
+  border-top: 0.75rem solid var(--ink);
+  transform: translateX(-50%);
+}
+
+.marker::after {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: -0.1rem;
+  width: 2px;
+  height: 2.35rem;
+  background: var(--ink);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+.swatch {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-right: 0.35rem;
+  border-radius: 2px;
+  vertical-align: -0.05rem;
+}
+
+.label {
+  color: var(--muted);
+  font-size: var(--step--1);
+}
+
+.scroll {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--rule);
+  padding: 0.45rem 0.5rem;
+  text-align: left;
+  vertical-align: middle;
+}
+
+th {
+  font-size: var(--step--1);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.bar-cell {
+  min-width: 5rem;
+  width: 22%;
+}
+
+.track {
+  display: block;
+  height: 0.5rem;
+  background: var(--panel);
+  border-radius: 2px;
+}
+
+.fill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+}
+
+.chip {
+  border-radius: 4px;
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  font-size: var(--step--1);
+  white-space: nowrap;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.credits {
+  border-top: 1px solid var(--rule);
+  margin-top: 2.75rem;
+}
+
+/* On narrow screens the bar repeats the AQI number, so it gives way to the category. */
+@media (max-width: 32rem) {
+  .bar-cell,
+  th.bar-head {
+    display: none;
+  }
+
+  th,
+  td {
+    padding: 0.4rem 0.35rem;
+  }
+
+  /* Headers and long category names may wrap; the numbers in the cells still never break. */
+  th.num,
+  .chip {
+    white-space: normal;
+  }
+}

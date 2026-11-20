@@ -106,6 +106,7 @@ def test_ci_runs_on_prs_pushes_to_main_and_dispatch() -> None:
         "uv run --frozen pytest",
         "--cov",
         "uv lock --check",
+        "node --test tests/site/",
     ],
 )
 def test_ci_runs_each_gate(command: str) -> None:

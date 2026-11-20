@@ -138,7 +138,7 @@ pm25-forecast/                 new public repo (D-002, D-017); package name `air
 ├── scripts/                   manual tools: city_check.py (reads only), aqs_bulk.py (dry run unless --apply)
 ├── data/                      local cache of downloads (gitignored; raw data never committed)
 ├── infra/                     Terraform (D-018) + watchdog Lambda source
-├── site/                      static page (HTML/JS/CSS)
+├── site/                      static page (HTML/JS/CSS; deployed only after the go-live switch, D-036)
 ├── tests/
 │   ├── unit/                  one file per module
 │   ├── property/              Hypothesis: leakage, time and DST, per-group, idempotency

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "history.json: every recorded forecast day, newest first (T7, D-036)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "preliminary", "aqi_source", "days"],
+  "properties": {
+    "version": { "const": 2 },
+    "preliminary": { "const": true },
+    "aqi_source": { "type": "string", "maxLength": 80 },
+    "days": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["forecast_date", "issued_at_utc", "city", "forecasts"],
+        "properties": {
+          "forecast_date": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "issued_at_utc": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\+00:00$"
+          },
+          "city": { "$ref": "#/$defs/brief" },
+          "forecasts": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/$defs/brief" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "brief": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["site_id", "pm25_ug_m3", "aqi", "category"],
+      "properties": {
+        "site_id": { "type": "string", "pattern": "^\\d{9}$" },
+        "pm25_ug_m3": { "type": "number", "minimum": -10, "maximum": 10000 },
+        "aqi": { "type": "integer", "minimum": 0 },
+        "category": {
+          "enum": [
+            "Good",
+            "Moderate",
+            "Unhealthy for Sensitive Groups",
+            "Unhealthy",
+            "Very Unhealthy",
+            "Hazardous"
+          ]
+        }
+      }
+    }
+  }
+}

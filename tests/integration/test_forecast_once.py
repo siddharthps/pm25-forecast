@@ -20,7 +20,7 @@ import pandas as pd
 import pytest
 from moto import mock_aws
 
-from airwatch.forecast.publish import LATEST_KEY
+from airwatch.forecast.publish import HISTORY_KEY, LATEST_KEY
 from airwatch.forecast.record import record_key, report_key
 from airwatch.forecast.run import NoForecastError, RunOutcome, TooEarlyError, run_daily
 from airwatch.storage import S3Store
@@ -146,6 +146,7 @@ def test_running_twice_writes_one_record_and_one_public_file(s3: Any) -> None:
     assert fetch.calls == 1  # type: ignore[attr-defined]  # the rerun reused the record
     assert object_versions(s3, PRIVATE, RECORD) == 1
     assert object_versions(s3, PUBLIC, LATEST_KEY) == 1
+    assert object_versions(s3, PUBLIC, HISTORY_KEY) == 1
 
 
 # --- each step failing in turn -------------------------------------------------------------

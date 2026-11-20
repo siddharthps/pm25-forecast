@@ -902,3 +902,43 @@ The 3 failing tests:
   or it reports "no files to check".
 - **The public bucket still holds the old-format `latest.json`** (v1) and no `history.json`. The
   next `--publish` run (the already-recorded path) writes both.
+
+## 2026-11-20: comment audit (#55), on branch `55-comment-audit` (CST, to about 12:45)
+
+A detour before go-live, at the owner's request. Go-live (#14) resumes on `14-go-live`.
+
+- **Owner's choices:** the scope is code comments only (not docstrings, pragmas or config
+  files), and decision records go to D-entries.
+- **The check came first.** `airwatch.devtools.comments` counts comments per file against
+  `comment-baseline.json`, and `--update` only lowers it. It runs as a pre-commit hook and a
+  core test. The first commit set the baseline at 322 comment lines in 44 files. Planting bugs
+  in it found two gaps in its tests: a regex literal after an operator, and a `/` inside a
+  regex character class. Both now have tests. The one surviving planted bug can't change any
+  result.
+- **288 comments sorted** (`notes/comment-audit-2026-11-20.tsv`): 131 tautologies, 2 stale,
+  5 excuses (4 issues, #56–#59), 150 decision records. Of those, 71 were already recorded, 28
+  are new in D-038, and 51 moved into the code. The baseline is now `{}`, net 202 lines fewer.
+- **`/delete-comment` skill** in `.claude/skills/delete-comment/`.
+
+### Traps found
+
+- **My comment dump hid comments.** It skipped any comment on a line already shown as context
+  for the one above, so 5 went unlisted. The deletion script refused to touch comments that
+  weren't on the list, and its report named them. Lesson: the tool that acts should also check
+  that the list is complete.
+- **"Already recorded" needs reading, not grepping for a D-number.** Three claims were wrong on
+  a first check against the code: the SDK log level (ERROR, not WARNING), which scripts set it,
+  and where the httpx fact lived (`fetch_json`'s docstring). The D-019 "constants, not
+  settings" point wasn't recorded anywhere, so it went into D-038.
+- **Computing a fixture from the code under test makes a test tautological.** `ISSUE_AT` is
+  written as 06:00 Chicago converted to UTC, not as `issue_time_utc(TARGET)`.
+- **A blanket `.claude/skills/**` lint exclusion would have hidden our own skill.** Both
+  exclusions now list exactly the vendored skills (D-029 refined).
+- **Windows Git Bash has no tz database for `TZ=…`:** `date` printed GMT. Use `zoneinfo` in
+  Python for local times.
+
+### Next
+
+- PR for #55 when the owner asks. Then back to go-live on `14-go-live` (its journal "Next"
+  section). Expect a small conflict in `notes/JOURNAL.md` and `notes/DECISIONS.md` when the two
+  branches meet.

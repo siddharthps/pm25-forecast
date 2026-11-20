@@ -4,9 +4,11 @@ Owner's rule (day-zero checklist): a tool's include/exclude list once skipped tw
 silently. This test discovers code folders itself, so a new folder can't be missed.
 """
 
+import json
 import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import yaml
@@ -83,3 +85,29 @@ def test_every_web_file_is_checked_by_biome() -> None:
     pattern = _biome_pattern()
     missing = [f for f in _web_files() if not pattern.search(f)]
     assert not missing, f"Biome's hook does not cover: {missing}"
+
+
+def _vendored_skill_globs() -> set[str]:
+    lock = json.loads((ROOT / "skills-lock.json").read_text(encoding="utf-8"))
+    return {f".claude/skills/{name}/**" for name in lock["skills"]}
+
+
+def _skill_globs(patterns: list[str]) -> set[str]:
+    return {p for p in patterns if p.startswith(".claude/skills/")}
+
+
+def test_our_own_skills_exist_beside_the_vendored_ones() -> None:
+    ours = {p.name for p in (ROOT / ".claude" / "skills").iterdir() if p.is_dir()} - {
+        g.split("/")[2] for g in _vendored_skill_globs()
+    }
+    assert "delete-comment" in ours, "guards the guard: no skill of our own to keep linted"
+
+
+def test_markdownlint_skips_only_the_vendored_skills() -> None:
+    config = yaml.safe_load((ROOT / ".markdownlint-cli2.yaml").read_text(encoding="utf-8"))
+    assert _skill_globs(config["ignores"]) == _vendored_skill_globs()
+
+
+def test_ruff_format_skips_only_the_vendored_skills() -> None:
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert _skill_globs(pyproject["tool"]["ruff"]["format"]["exclude"]) == _vendored_skill_globs()

@@ -689,7 +689,10 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - The owner's global CLAUDE.md and SPEC § Boundaries now allow scoping one check away from
     files the project doesn't own, recorded as a D-entry.
   - Whole checks and rules are never relaxed.
-- **Status:** Active. Owner accepted, 2026-11-18.
+- **Status:** Active. Owner accepted, 2026-11-18. *Refined 2026-11-20 (#55, D-037):* the
+  `.claude/skills/**` exclusions in markdownlint and `ruff format` now list exactly the vendored
+  skills in `skills-lock.json`, so our own skills (`delete-comment`) stay checked; a test keeps
+  the lists in step with the lock.
 
 ---
 

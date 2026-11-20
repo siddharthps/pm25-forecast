@@ -32,6 +32,7 @@ aws sso login --profile pm25           # AWS access (never use long-lived keys);
 uv run pytest -m live -o log_cli=true --log-cli-level=INFO   # opt-in real-API checks, counts only
 AWS_PROFILE=pm25 uv run python scripts/aqs_bulk.py           # AQS history to S3: dry run; --apply acts
 uv run python scripts/city_check.py    # the frozen D-006 city check (reads only; cached in data/)
+AWS_PROFILE=pm25 uv run python -m airwatch.validation.report --source all  # D-033 report (reads only)
 ```
 
 Run every command from the project folder (`cd ~/code/pm25-forecast`). Scripts that change

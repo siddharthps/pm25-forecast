@@ -26,12 +26,12 @@ from airwatch.config import get_settings
 from airwatch.observations.aqs import fetch_site_year
 from airwatch.observations.aqs_bulk import (
     FIRST_YEAR,
-    S3Store,
     load_manifest,
     plan_parts,
     run_download,
 )
 from airwatch.observations.sites import TRAINING_SITES
+from airwatch.storage import S3Store
 
 AQS_PAUSE_S = 6.0  # AQS terms: <= 10 requests a minute, a 5-second pause between requests
 

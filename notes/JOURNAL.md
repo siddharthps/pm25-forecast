@@ -777,3 +777,73 @@ The 3 failing tests:
   flat-line code uses plain arrays, so a run can't silently join across rows.
 - **The log lines' `asctime` is local time with no zone** (here and in `scripts/aqs_bulk.py`).
   That breaks the UTC-everywhere rule; proposed as its own issue.
+
+### T12a merged (#51)
+
+- **PR #51 squash-merged** (`c8e0307`) and #12 closed. Three boxes are ticked. The fourth has a
+  status note: the stop on a hard failure is built, and wiring it into the forecast is a box on
+  #13.
+- **Follow-ups:** a box on #13 and one on #20 (per-site AirNow ranges); #52 (log times in UTC)
+  was created and listed in `tasks/todo.md`.
+
+## 2026-11-19: T6 (#13) persistence forecast, on branch `13-forecast` (CST night, from 20:30)
+
+- **Owner's decisions, before any real run (D-034):**
+  - the record is named after the target day;
+  - a thin monitor is skipped and listed, and no qualifying monitor means no record;
+  - fail loudly until T9;
+  - a strict issue-time cut.
+- **Read the S3 docs first** (conditional writes and PutObject): 412 if the key exists, the
+  first racing write wins, 409 (a racing delete) is retried. On a versioned bucket a delete
+  reopens the key; `infra/` already allows no deletes and never expires a current record.
+  moto 5.2.5 enforces the 412.
+- **Built:**
+  - `storage.py`: `S3Store` moves here (one home) and gains `create_if_absent`.
+  - `forecast/record.py`: the keys, `build_record`, `write_once` (an existing record wins and
+    is read back).
+  - `forecast/publish.py`: `latest.json`, derived, rounded and "preliminary". It's never
+    rewritten with the same content and never moved to an older day.
+  - `forecast/run.py`: `run_daily` with injected edges. The command is a dry run unless given
+    `--publish`, and exits 1 on any failure.
+  - `config.public_bucket`.
+- **Check first:** `tests/integration/test_forecast_once.py`.
+  - Running twice writes one record version and one public version.
+  - Each of six steps failing in turn (fetch, validate, compute, report, record, publish)
+    leaves at most one record and never a public file without one, and the retry then
+    completes.
+  - Also tested: a racing writer's record wins; a dry run writes nothing; an early run is
+    refused.
+- **Leakage properties:** a row published after the issue time counts as if deleted, whatever
+  its value; rows from the unfinished issue day never change the forecast.
+- **24 planted bugs:** 6 survived at first, and each led to a new test (e.g. a run exactly at
+  06:00, another full day overwriting the observed one, a dry run re-publishing). Then all 24
+  were caught.
+- **Speed (D-035):** the suite reached about 34 s (over 30). Profiling showed pandas' per-call
+  overhead, not a hotspot. With pytest-xdist on 4 workers and `--dist load` it takes about 16 s.
+- **First real run, a dry run:** at 03:07 UTC, target 2026-11-20 (issued 2026-11-19 12:00 UTC,
+  observed 2026-11-18).
+  - All 10 monitors were forecast, from 22 hours each. 20 rows were dropped as published after
+    the issue time (2 hours × 10), as predicted from the rewrite timing.
+  - Validation passed. Nothing was written to either bucket (checked by listing them).
+
+- **First real publish (owner's OK), 03:14 UTC:** target 2026-11-20, 10 monitors, 20 late rows
+  dropped. It was issued late (generated 21:14 Chicago), and the record says so.
+  - A second `--publish` reused the record ("already_recorded"), with nothing rewritten.
+  - **The 412 on real S3:** a deliberate second `create_if_absent` on the record was refused,
+    and the record's sha256 was unchanged.
+  - **Versions:** record 1, validation report 1, `latest.json` 1.
+  - **Public access:** an anonymous GET of `latest.json` returns 200, and listing the bucket
+    returns 403, as D-028 intends. The public file holds only the derived keys.
+
+### Traps found (T6)
+
+- **AirNow rewrites each hourly file for about 7.7 hours.** Last-Modified is the *latest*
+  version, so a late run must cut by the issue time (D-034).
+- **A `daily_means` rewrite gained nothing.** The cost is pandas' fixed overhead per call, so
+  measure before optimising. It was reverted.
+- **`pytest -n auto` on 12 cores was slower than 4 workers:** each worker's start-up (pandas,
+  moto) outweighs the gain.
+- **With xdist the summary no longer says "1 deselected".** `--co -n 0` confirmed the live test
+  is still excluded.
+- **A property test that drops its inputs before they matter proves nothing.** The first
+  "issue-day rows" test gave them a publish time after 06:00, so the cut removed them first.

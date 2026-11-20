@@ -18,8 +18,9 @@ import pandas as pd
 import pytest
 from moto import mock_aws
 
-from airwatch.observations.aqs_bulk import MANIFEST_KEY, Part, S3Store
+from airwatch.observations.aqs_bulk import MANIFEST_KEY, Part
 from airwatch.observations.sites import TRAINING_SITES
+from airwatch.storage import S3Store
 from airwatch.validation.checks import Window, run_checks
 from airwatch.validation.report import (
     MARKDOWN_ITEM_CAP,

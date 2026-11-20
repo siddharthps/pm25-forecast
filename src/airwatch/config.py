@@ -66,6 +66,8 @@ class Settings(BaseSettings):
 
     # The private data bucket from T3b (Terraform output `private_bucket`; D-028). Never public.
     data_bucket: BucketName = "pm25-forecast-data-65bc08"
+    # The public bucket (Terraform output `public_bucket`; D-028): derived JSON for the page only.
+    public_bucket: BucketName = "pm25-forecast-public-65bc08"
 
 
 @lru_cache(maxsize=1)

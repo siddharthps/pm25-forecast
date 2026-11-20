@@ -24,7 +24,7 @@ This file points to where things live. It doesn't repeat them; each fact has one
 uv sync --frozen                       # install exactly what uv.lock says
 uv run ruff check . && uv run ruff format --check .
 uv run mypy                            # strict; config in pyproject.toml
-uv run pytest                          # fast offline core suite (-m slow / -m live are opt-in)
+uv run pytest                          # fast offline core suite, 4 workers (D-035; -n 0 = serial); -m slow / -m live are opt-in
 uv run pytest tests/property --hypothesis-profile=explore   # fresh random search (default is derandomized)
 uv run pre-commit run --all-files      # every hook, including gitleaks, markdownlint, terraform fmt
 terraform -chdir=infra test            # infra safety rules on the plan, mock AWS provider, offline
@@ -33,6 +33,7 @@ uv run pytest -m live -o log_cli=true --log-cli-level=INFO   # opt-in real-API c
 AWS_PROFILE=pm25 uv run python scripts/aqs_bulk.py           # AQS history to S3: dry run; --apply acts
 uv run python scripts/city_check.py    # the frozen D-006 city check (reads only; cached in data/)
 AWS_PROFILE=pm25 uv run python -m airwatch.validation.report --source all  # D-033 report (reads only)
+AWS_PROFILE=pm25 uv run python -m airwatch.forecast.run   # D+1 forecast: dry run; --publish acts
 ```
 
 Run every command from the project folder (`cd ~/code/pm25-forecast`). Scripts that change

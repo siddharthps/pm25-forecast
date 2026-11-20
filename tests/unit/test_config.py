@@ -45,6 +45,7 @@ def test_reads_the_environment() -> None:
     assert s.city_cbsa == "38060"
     # T3b output: the private data bucket (D-028).
     assert s.data_bucket == "pm25-forecast-data-65bc08"
+    assert s.public_bucket == "pm25-forecast-public-65bc08"
 
 
 @pytest.mark.usefixtures("env")

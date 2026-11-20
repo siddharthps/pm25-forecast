@@ -22,21 +22,17 @@ __all__ = [
     "validate_hourly",
 ]
 
-# column -> pandas dtype (as a string, compared with str(dtype))
 HOURLY_COLUMNS: dict[str, str] = {
-    "source": "string",  # "aqs" or "airnow"
-    "site_id": "string",  # 9-digit AQS site ID (state + county + site)
-    "poc": "int16",  # instrument number at the site (AirNow: 0 when not given)
+    "source": "string",
+    "site_id": "string",
+    "poc": "int16",
     "method_code": "string",
-    "time_utc": "datetime64[us, UTC]",  # start of the hour
+    "time_utc": "datetime64[us, UTC]",
     "value_ug_m3": "float64",
     "qualifier": "string",
     "available_at_utc": "datetime64[us, UTC]",
 }
 
-# A crude, *unsourced* range used only to count readings worth a look (D-031). It is not a
-# validity rule: real hours exceed it (1,167 at midnight on New Year's 2014 in Phoenix, from
-# fireworks). Validation judges values with sourced per-method bounds instead (D-033).
 CRUDE_RANGE_UG_M3 = (-10.0, 1000.0)
 
 

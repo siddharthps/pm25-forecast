@@ -55,7 +55,6 @@ def test_gives_up_after_the_last_attempt() -> None:
 
 
 def test_a_successful_request_logs_no_url_or_credentials(caplog: pytest.LogCaptureFixture) -> None:
-    # httpx logs every request URL at INFO; with credentials in the query that would leak them.
     client, _ = client_from([200])
     with caplog.at_level(logging.DEBUG):
         fetch_json(client, URL, SECRET, backoff_s=0)
@@ -76,4 +75,4 @@ def test_failures_never_show_the_url_or_credentials(
     shown = str(info.value) + caplog.text + repr(info.value.__cause__)
     for secret in [*SECRET.values(), URL, "aqs.example.invalid"]:
         assert secret not in shown
-    assert info.value.__cause__ is None  # the httpx error (which holds the URL) is not chained
+    assert info.value.__cause__ is None

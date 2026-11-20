@@ -31,7 +31,7 @@ BUCKET = "test-private-bucket"
 SITES = ("040130019", "040131003")
 TODAY = date(2026, 11, 19)
 NOW = datetime(2026, 11, 19, 4, 0, tzinfo=UTC)
-SECRET_VALUE = 987.6  # a distinctive measurement that must never appear in a log
+SECRET_VALUE = 987.6
 
 
 @pytest.fixture
@@ -135,7 +135,6 @@ def test_an_interrupted_run_resumes_without_duplicates(store: S3Store) -> None:
     second = FakeAqs()
     run(store, second)
     total = first.calls + second.calls
-    # Every finished (final-year) part was fetched exactly once across both runs.
     assert all(total[p] == 1 for p in ALL_PARTS if p[1] < TODAY.year)
     assert {(e["site_id"], e["year"]) for e in manifest(store)["parts"].values()} == ALL_PARTS
 
@@ -147,7 +146,7 @@ def test_a_crash_between_data_and_manifest_is_repaired_by_a_rerun(store: S3Store
     def flaky_put(key: str, data: bytes) -> None:
         if key == MANIFEST_KEY:
             calls["n"] += 1
-            if calls["n"] == 2:  # the second manifest write fails
+            if calls["n"] == 2:
                 raise OSError("S3 hiccup")
         real_put(key, data)
 
@@ -163,8 +162,6 @@ def test_a_crash_between_data_and_manifest_is_repaired_by_a_rerun(store: S3Store
 
 
 def test_the_manifest_never_claims_a_part_whose_data_write_failed(store: S3Store) -> None:
-    # Record after the outward action: if writing a part's data fails, the manifest must not
-    # list that part as done (otherwise a rerun would skip it and the data would be missing).
     real_put = store.put
     failing_key = Part(SITES[0], 2025).key
 
@@ -181,7 +178,7 @@ def test_the_manifest_never_claims_a_part_whose_data_write_failed(store: S3Store
     parts = json.loads(raw)["parts"] if raw else {}
     assert failing_key not in parts
     for entry in parts.values():
-        assert store.get(entry["key"]) is not None  # every claimed part really exists
+        assert store.get(entry["key"]) is not None
 
 
 def test_last_years_partial_part_becomes_final_next_year(store: S3Store) -> None:
@@ -189,7 +186,7 @@ def test_last_years_partial_part_becomes_final_next_year(store: S3Store) -> None
     assert manifest(store)["parts"][Part(SITES[0], 2026).key]["final"] is False
     later = FakeAqs()
     run(store, later, today=date(2027, 1, 5))
-    assert (SITES[0], 2026) in later.calls  # refreshed once more, now complete
+    assert (SITES[0], 2026) in later.calls
     assert manifest(store)["parts"][Part(SITES[0], 2026).key]["final"] is True
 
 
@@ -218,12 +215,13 @@ def test_logs_show_progress_but_never_measurements(
 ) -> None:
     with caplog.at_level(logging.DEBUG):
         run(store, FakeAqs())
-    assert "040130019" in caplog.text  # progress is visible
+    assert "040130019" in caplog.text
     assert str(SECRET_VALUE) not in caplog.text
 
 
 def test_a_year_with_no_data_is_recorded_as_done_with_zero_rows(store: S3Store) -> None:
-    # Most monitors didn't exist in 2009: an empty year must still count as finished.
+    """Most monitors didn't exist in 2009: an empty year must still count as finished."""
+
     def empty(_site: str, _year: int) -> list[dict[str, Any]]:
         return []
 
@@ -244,7 +242,6 @@ def test_a_year_with_no_data_is_recorded_as_done_with_zero_rows(store: S3Store) 
 def test_out_of_range_readings_are_stored_and_counted(
     store: S3Store, caplog: pytest.LogCaptureFixture
 ) -> None:
-    # D-031: a real extreme (1,167 at New Year's midnight 2014, fireworks) is kept and counted.
     def with_spike(site: str, year: int) -> list[dict[str, Any]]:
         rows = fake_rows(site, year)
         rows[0]["sample_measurement"] = 1167.0
@@ -257,6 +254,6 @@ def test_out_of_range_readings_are_stored_and_counted(
     assert entry["rows"] == 2
     raw = store.get(entry["key"])
     assert raw is not None
-    assert pd.read_parquet(io.BytesIO(raw))["value_ug_m3"].max() == 1167.0  # kept as received
+    assert pd.read_parquet(io.BytesIO(raw))["value_ug_m3"].max() == 1167.0
     assert "1 outside crude range" in caplog.text
-    assert "1167" not in caplog.text  # the count is logged, the value isn't
+    assert "1167" not in caplog.text

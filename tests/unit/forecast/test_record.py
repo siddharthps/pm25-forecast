@@ -33,7 +33,7 @@ def test_an_existing_record_wins_and_is_returned() -> None:
 
 class RefusesButEmpty(MemoryStore):
     def create_if_absent(self, key: str, data: bytes) -> bool:  # noqa: ARG002
-        return False  # a 412 with nothing to read: only a delete could cause this
+        return False
 
 
 def test_a_refused_write_with_nothing_to_read_fails_loudly() -> None:

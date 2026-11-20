@@ -51,9 +51,8 @@ HISTORY_KEY = "history.json"
 PUBLIC_VERSION = 2
 RECORD_FILE = "/forecast.json"
 
-# Shapes that must never reach a public file, whatever field they hide in.
 SECRET_PATTERNS = (
-    re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"),  # AWS access key IDs
+    re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"),
     re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----"),
     re.compile(r"(?i)aws_secret_access_key|secret[_-]?key|api[_-]?key|password|token"),
 )

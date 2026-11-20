@@ -15,10 +15,10 @@ from tests.unit.validation.helpers import frame, varying
 
 PHOENIX = ZoneInfo("America/Phoenix")
 SITES = ("040130019", "040131003")
-TARGET = date(2026, 11, 21)  # issued Friday 2026-11-20 06:00 Chicago = 12:00 UTC
-ISSUE_AT = datetime(2026, 11, 20, 12, tzinfo=UTC)
-OBSERVED = date(2026, 11, 19)  # D-1: the last complete Phoenix day at issue time
-PUBLISHED = ISSUE_AT - timedelta(hours=3)  # every input file existed before the issue time
+TARGET = date(2026, 11, 21)
+ISSUE_AT = datetime(2026, 11, 20, 6, tzinfo=ZoneInfo("America/Chicago")).astimezone(UTC)
+OBSERVED = date(2026, 11, 19)
+PUBLISHED = ISSUE_AT - timedelta(hours=3)
 PRIVATE, PUBLIC = "test-private-bucket", "test-public-bucket"
 
 

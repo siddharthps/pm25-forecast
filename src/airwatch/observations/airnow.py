@@ -40,7 +40,7 @@ __all__ = [
 FILES_BASE = "https://files.airnowtech.org/airnow/"
 UNIT = "UG/M3"
 HTTP_NOT_FOUND = 404
-AQS_SITE_ID = re.compile(r"\d{9}")  # state (2) + county (3) + site (4)
+AQS_SITE_ID = re.compile(r"\d{9}")
 
 
 def _require_aware(dt: datetime, name: str) -> None:
@@ -79,7 +79,7 @@ def parse_hourly_aqobs(text: str, published_utc: datetime) -> tuple[pd.DataFrame
         elif r.get("PM25_Unit") != UNIT:
             dropped["unit_not_ug_m3"] += 1
         elif not AQS_SITE_ID.fullmatch(r.get("AQSID", "")):
-            dropped["not_an_aqs_site_id"] += 1  # temporary, tribal or international monitors
+            dropped["not_an_aqs_site_id"] += 1
         else:
             kept.append(r)
 
@@ -88,8 +88,8 @@ def parse_hourly_aqobs(text: str, published_utc: datetime) -> tuple[pd.DataFrame
         {
             "source": "airnow",
             "site_id": [r["AQSID"] for r in kept],
-            "poc": 0,  # AirNow doesn't give the instrument number
-            "method_code": pd.NA,  # nor the method
+            "poc": 0,
+            "method_code": pd.NA,
             "time_utc": pd.to_datetime(
                 [f"{r['ValidDate']} {r['ValidTime']}" for r in kept],
                 utc=True,

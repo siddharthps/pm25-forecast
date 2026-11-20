@@ -50,7 +50,7 @@ def _day_before(day: str) -> str:
 
 def test_the_latest_payload() -> None:
     payload = public_payload(record())
-    assert payload.pop("aqi_scale") == aqi_scale()  # the colour table, from aqi.py only
+    assert payload.pop("aqi_scale") == aqi_scale()
     assert payload == {
         "version": 2,
         "forecast_date": "2026-11-21",
@@ -62,7 +62,7 @@ def test_the_latest_payload() -> None:
             "site_id": B,
             "site_name": "Mesa - Brooks Reservoir",
             "pm25_ug_m3": 35.9,
-            "aqi": 102,  # the TAD's worked example
+            "aqi": 102,
             "category": "Unhealthy for Sensitive Groups",
             "color": "#ff7e00",
             "text_color": "#000000",
@@ -71,7 +71,7 @@ def test_the_latest_payload() -> None:
             {
                 "site_id": A,
                 "site_name": "West Phoenix",
-                "pm25_ug_m3": 8.4,  # truncated, never rounded up to 8.5
+                "pm25_ug_m3": 8.4,
                 "aqi": 47,
                 "category": "Good",
                 "color": "#00e400",
@@ -93,8 +93,9 @@ def test_the_latest_payload() -> None:
 
 def test_the_city_is_the_highest_monitor() -> None:
     city = public_payload(record(a=60.0, b=12.0))["city"]
-    # Equation 1: (200 - 151) / (125.4 - 55.5) * (60.0 - 55.5) + 151 = 154.15 -> 154
-    assert (city["site_id"], city["aqi"], city["category"]) == (A, 154, "Unhealthy")
+    assert (city["site_id"], city["aqi"], city["category"]) == (A, 154, "Unhealthy"), (
+        "Equation 1: (200 - 151) / (125.4 - 55.5) * (60.0 - 55.5) + 151 = 154.15, so 154"
+    )
 
 
 def test_a_tie_for_highest_picks_the_first_site_id() -> None:
@@ -122,26 +123,26 @@ def test_the_schema_refuses_anything_off_the_list(change: Any, why: str) -> None
     change(payload)
     with pytest.raises(PublishRefusedError, match="schema"):
         check_public(payload, "latest")
-    assert why  # documents the case
+    assert why
 
 
 @pytest.mark.parametrize(
     "secret",
     [
-        "AKIA" + "ABCDEFGHIJKLMNOP",  # an AWS access key ID shape (split so scanners stay quiet)
+        "AKIA" + "ABCDEFGHIJKLMNOP",
         "-----BEGIN " + "PRIVATE KEY-----",
         "aws_secret_access_key",
     ],
 )
 def test_the_secret_scan_refuses_secret_shapes(secret: str) -> None:
     payload = public_payload(record())
-    payload["forecasts"][0]["site_name"] = secret  # a free-text field
+    payload["forecasts"][0]["site_name"] = secret
     with pytest.raises(PublishRefusedError, match="secret"):
         check_public(payload, "latest")
 
 
 def test_publish_refuses_before_writing_anything() -> None:
-    bad = record() | {"method": "ensemble"}  # builds fine, but the schema allows persistence only
+    bad = record() | {"method": "ensemble"}
     store = MemoryStore()
     with pytest.raises(PublishRefusedError, match="schema"):
         publish(store, bad)
@@ -161,11 +162,11 @@ def test_history_is_rebuilt_from_the_private_records_and_never_rewritten_unchang
     private, public = MemoryStore(), MemoryStore()
     for r in (record("2026-11-20", a=5.0, b=6.0), record("2026-11-21")):
         private.put(record_key(date.fromisoformat(r["forecast_date"])), encode(r))
-    private.put("records/notes.txt", b"not a record")  # only forecast.json files count
+    private.put("records/notes.txt", b"not a record")
     assert publish_history(public, private) is True
     hist = json.loads(public.objects[HISTORY_KEY])
     assert [d["forecast_date"] for d in hist["days"]] == ["2026-11-21", "2026-11-20"]
-    assert publish_history(public, private) is False  # the same content: no second write
+    assert publish_history(public, private) is False
 
 
 def test_latest_is_written_once_per_content() -> None:

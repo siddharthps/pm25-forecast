@@ -33,7 +33,7 @@ from airwatch.observations.aqs_bulk import (
 from airwatch.observations.sites import TRAINING_SITES
 from airwatch.storage import S3Store
 
-AQS_PAUSE_S = 6.0  # AQS terms: <= 10 requests a minute, a 5-second pause between requests
+AQS_PAUSE_S = 6.0
 
 log = logging.getLogger("aqs_bulk")
 
@@ -43,8 +43,6 @@ def main() -> int:
     parser.add_argument("--apply", action="store_true", help="fetch and upload (default: dry run)")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
-    # The AWS SDK logs its own retries and token refreshes (with tracebacks); keep it quiet and
-    # never let it log request details. Our own messages say what matters.
     for name in ("botocore", "boto3", "urllib3"):
         logging.getLogger(name).setLevel(logging.ERROR)
 
@@ -103,6 +101,5 @@ if __name__ == "__main__":
     try:
         sys.exit(main())
     except (TokenRetrievalError, SSOError, NoCredentialsError) as exc:
-        # The SSO session lasts 8 hours (notes/TOKENS.md); say how to renew it, no traceback.
         log.error("AWS login needed (%s): run `aws sso login --profile pm25`", type(exc).__name__)
         sys.exit(3)

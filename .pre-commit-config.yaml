@@ -53,6 +53,12 @@ repos:
         language: system
         files: ^infra/.*\.(tf|tftest\.hcl)$
         pass_filenames: false
+      - id: comment-ban
+        name: comment ban (ratchet, D-037)
+        entry: uv run --frozen python -m airwatch.devtools.comments
+        language: system
+        files: ^(src|scripts|tests|site)/|^comment-baseline\.json$
+        pass_filenames: false
       - id: mypy
         name: mypy (strict)
         entry: uv run --frozen mypy

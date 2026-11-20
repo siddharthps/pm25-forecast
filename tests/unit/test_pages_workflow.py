@@ -21,7 +21,6 @@ def _load() -> dict[Any, Any]:
 
 def test_it_runs_only_when_the_page_changes_or_on_request() -> None:
     workflow = _load()
-    # PyYAML follows YAML 1.1, where a bare `on` key loads as the boolean True.
     triggers: dict[str, Any] = workflow["on"] if "on" in workflow else workflow[True]
     assert triggers["push"]["branches"] == ["main"]
     assert "site/**" in triggers["push"]["paths"]
@@ -49,5 +48,6 @@ def test_only_the_pages_own_files_are_published() -> None:
     )
     upload = next(s for s in steps if "upload-pages-artifact" in str(s.get("uses")))
     assert upload["with"]["path"] == "_site/"
-    # and those are exactly the page's files: a new one must be added here on purpose
-    assert {p.name for p in (ROOT / "site").iterdir() if p.is_file()} == SITE_FILES
+    assert {p.name for p in (ROOT / "site").iterdir() if p.is_file()} == SITE_FILES, (
+        "a new file in site/ must be added to the deploy on purpose"
+    )

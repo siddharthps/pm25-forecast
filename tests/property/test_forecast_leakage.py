@@ -30,13 +30,16 @@ BASE = observed_day()
 any_value = st.floats(min_value=-20, max_value=5000, allow_nan=False)
 
 
+LATE_RUN_SEES_EVERY_HOUR = ISSUE_AT + timedelta(hours=9)
+
+
 def forecast_of(df: pd.DataFrame) -> tuple[Any, Any]:
     outcome = run_daily(
         TARGET,
         fetch_day=fetcher(df),
         private=MemoryStore(),
         public=MemoryStore(),
-        now=lambda: ISSUE_AT + timedelta(hours=9),  # a late run sees every rewritten hour
+        now=lambda: LATE_RUN_SEES_EVERY_HOUR,
         tz=PHOENIX,
         sites=SITES,
         publish=False,
@@ -44,7 +47,7 @@ def forecast_of(df: pd.DataFrame) -> tuple[Any, Any]:
     return outcome.record["forecasts"], outcome.record["no_forecast"]
 
 
-BASE_FORECAST = forecast_of(BASE)  # computed once: every example compares against it
+BASE_FORECAST = forecast_of(BASE)
 
 
 @settings(deadline=None)
@@ -62,11 +65,11 @@ def test_a_row_published_after_issue_counts_as_if_deleted(
     changed.loc[mask, "available_at_utc"] = pd.Timestamp(ISSUE_AT + timedelta(seconds=after_s))
     deleted = BASE[~mask].reset_index(drop=True)
     if len(deleted) == 0:
-        return  # nothing left to forecast from either way (covered by NoForecastError tests)
+        return
     try:
         expected = forecast_of(deleted)
     except NoForecastError:
-        with pytest.raises(NoForecastError):  # then the changed frame fails the same way
+        with pytest.raises(NoForecastError):
             forecast_of(changed)
         return
     assert forecast_of(changed) == expected
@@ -80,8 +83,10 @@ def test_a_row_published_after_issue_counts_as_if_deleted(
 def test_rows_from_the_unfinished_issue_day_never_change_the_forecast(
     values: list[float], site: str
 ) -> None:
-    # Hours from 00:00 Phoenix on the issue day D (07:00 UTC), published by 11:30 UTC: *before*
-    # the 12:00 UTC issue time, so only the observed-day rule keeps them out.
+    """Hours from 00:00 Phoenix on the issue day (07:00 UTC), published by 11:30 UTC.
+
+    That's before the 12:00 UTC issue time, so only the observed-day rule keeps them out.
+    """
     d_start = ISSUE_AT - timedelta(hours=5)
     published = d_start + timedelta(hours=4, minutes=30)
     assert published <= ISSUE_AT

@@ -55,10 +55,8 @@ __all__ = [
     "run_checks",
 ]
 
-# D-033: owner's choices on 2026-11-19, set before any real data was checked.
-FLATLINE_MIN_HOURS = 12  # a judgement (no published EPA threshold found); warn only
-COVERAGE_MIN_SHARE = 0.75  # the SPEC's daily rule (18 of 24 hours), applied per month
-# AirNow rows carry no method, so they get the widest range across the verified methods.
+FLATLINE_MIN_HOURS = 12
+COVERAGE_MIN_SHARE = 0.75
 AIRNOW_RANGE_UG_M3 = (
     min(m.min_value for m in VERIFIED_METHODS.values()),
     max(m.max_value for m in VERIFIED_METHODS.values()),
@@ -109,7 +107,7 @@ class ValidationFailedError(RuntimeError):
 @dataclass(frozen=True, eq=False)
 class ValidationResult:
     findings: tuple[Finding, ...]
-    clean: pd.DataFrame  # the usable rows: input minus every excluded row
+    clean: pd.DataFrame
     rows_in: int
 
     @property
@@ -181,9 +179,6 @@ def run_checks(  # noqa: PLR0913  (each argument is one part of the run's contex
     return ValidationResult(tuple(findings), clean, len(df))
 
 
-# --- duplicates ----------------------------------------------------------------------------
-
-
 def _duplicates(df: pd.DataFrame) -> Finding:
     extra = df.duplicated(KEY, keep="first")
     if not extra.any():
@@ -197,12 +192,9 @@ def _duplicates(df: pd.DataFrame) -> Finding:
     return Finding("duplicates", "duplicate_hours", Severity.HARD, int(extra.sum()), items=items)
 
 
-# --- implausible values --------------------------------------------------------------------
-
-
 def _unverified_mask(df: pd.DataFrame) -> pd.Series:
     method = df["method_code"]
-    no_method = method.isna() & (df["source"] != "airnow")  # only AirNow may lack a method
+    no_method = method.isna() & (df["source"] != "airnow")
     unknown = method.notna() & ~method.isin(list(VERIFIED_METHODS))
     return (no_method | unknown).fillna(value=False).astype(bool)
 
@@ -232,7 +224,7 @@ def _outside_range_mask(df: pd.DataFrame) -> pd.Series:
     lo = lo.fillna(lo_default)
     hi = hi.fillna(hi_default)
     value = df["value_ug_m3"]
-    inside = (value >= lo) & (value <= hi)  # a missing value is never inside
+    inside = (value >= lo) & (value <= hi)
     return ~inside
 
 
@@ -277,9 +269,6 @@ def _flat_lines(clean: pd.DataFrame) -> Finding:
         {"site_id": s_, "poc": p, "start_utc": t, "hours": h} for s_, p, t, h in found
     )
     return Finding("implausible values", "flat_line", Severity.WARN, len(items), items=items)
-
-
-# --- coverage gaps -------------------------------------------------------------------------
 
 
 def _month_starts_utc(start: datetime, end: datetime, tz: ZoneInfo) -> list[datetime]:
@@ -335,9 +324,6 @@ def _coverage(  # noqa: PLR0913  (the frames and the run's context)
             items=tuple({"site_id": s} for s in missing),
         ),
     ]
-
-
-# --- AirNow IDs (T5) -----------------------------------------------------------------------
 
 
 def _airnow_ids(drops: Mapping[str, int]) -> list[Finding]:

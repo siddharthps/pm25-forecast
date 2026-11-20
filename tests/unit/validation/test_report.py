@@ -37,7 +37,7 @@ from tests.unit.validation.helpers import SITE_A, SITE_B, START, concat, frame, 
 PHOENIX = ZoneInfo("America/Phoenix")
 DAY = Window(START, START + timedelta(days=1))
 NOW = datetime(2026, 11, 20, 1, 2, 3, tzinfo=UTC)
-SECRET = 123.456  # a distinctive measurement that must never appear in a report
+SECRET = 123.456
 
 
 def report_for(df: pd.DataFrame, extra: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -64,8 +64,8 @@ def test_report_is_json_with_the_run_facts() -> None:
 
 def test_no_measurement_reaches_the_report() -> None:
     vals = varying(24, base=SECRET)
-    vals[2] = 5000.0 + SECRET  # out of range for the BAM, so it is itemised
-    df = concat(frame(vals), frame(vals).iloc[[0]])  # and a duplicate
+    vals[2] = 5000.0 + SECRET
+    df = concat(frame(vals), frame(vals).iloc[[0]])
     rep = report_for(df)
     assert str(SECRET) not in json.dumps(rep)
     assert str(SECRET) not in render_markdown(rep)
@@ -86,7 +86,7 @@ def test_markdown_caps_long_item_lists() -> None:
     result = run_checks(frame(varying(24)), window=window, tz=PHOENIX, sites=(SITE_A,))
     rep = build_report(result, source="aqs", window=window, generated_at_utc=NOW)
     gaps = next(f for f in rep["findings"] if f["rule"] == "coverage_gap")
-    assert len(gaps["items"]) > MARKDOWN_ITEM_CAP  # the JSON keeps them all
+    assert len(gaps["items"]) > MARKDOWN_ITEM_CAP
     md = render_markdown(rep)
     assert f"and {len(gaps['items']) - MARKDOWN_ITEM_CAP} more" in md
 
@@ -118,8 +118,6 @@ def test_save_never_overwrites_an_earlier_report(tmp_path: Path) -> None:
         save_report(rep, tmp_path)
 
 
-# --- loading the bulk download (read-only) -------------------------------------------------
-
 BUCKET = "test-private-bucket"
 
 
@@ -141,7 +139,7 @@ def test_load_reads_every_manifest_part_and_nothing_else(store: S3Store) -> None
     a, b = Part(SITE_A, 2024), Part(SITE_B, 2024)
     put_part(store, a, frame(varying(24)))
     put_part(store, b, frame(varying(10), site=SITE_B))
-    put_part(store, Part(SITE_B, 2023), frame(varying(5), site=SITE_B))  # not in the manifest
+    put_part(store, Part(SITE_B, 2023), frame(varying(5), site=SITE_B))
     manifest = {"version": 1, "parts": {a.key: {"rows": 24}, b.key: {"rows": 10}}}
     store.put(MANIFEST_KEY, json.dumps(manifest).encode())
     df, n_parts = load_aqs_bulk(store)
@@ -174,9 +172,6 @@ def test_load_keeps_the_schema_for_empty_parts(store: S3Store) -> None:
     assert date(2024, 3, 1) == df["time_utc"].min().date()
 
 
-# --- the two runs, on fakes ----------------------------------------------------------------
-
-
 def test_the_aqs_run_checks_the_download_and_saves_a_report(store: S3Store, tmp_path: Path) -> None:
     a = Part(SITE_A, 2024)
     put_part(store, a, frame(varying(24)))
@@ -185,11 +180,10 @@ def test_the_aqs_run_checks_the_download_and_saves_a_report(store: S3Store, tmp_
     assert result.passed
     rep = json.loads((tmp_path / "validation_aqs_20261120T010203Z.json").read_text("utf-8"))
     assert rep["extra"] == {"parts": 1}
-    # coverage runs over the final years only: 2009 to the start of 2026 (Phoenix midnight)
     assert rep["window_utc"] == {
         "start": "2009-01-01T07:00:00+00:00",
         "end": "2026-01-01T07:00:00+00:00",
-    }
+    }, "coverage runs over the final years only, Phoenix midnight to Phoenix midnight"
 
 
 def test_the_aqs_run_reports_a_hard_failure(store: S3Store, tmp_path: Path) -> None:
@@ -209,7 +203,7 @@ def test_the_airnow_run_checks_one_local_day(tmp_path: Path) -> None:
         )
     assert result.passed
     assert result.finding("airnow_rows_dropped").items[0] == {"reason": "file_missing", "rows": 1}
-    assert result.finding("coverage_gap").count == 0  # 23 of 24 hours is enough
+    assert result.finding("coverage_gap").count == 0
     rep = json.loads((tmp_path / "validation_airnow_20261120T010203Z.json").read_text("utf-8"))
     assert rep["extra"] == {"local_day": "2026-11-18"}
     assert rep["window_utc"]["start"] == "2026-11-18T07:00:00+00:00"

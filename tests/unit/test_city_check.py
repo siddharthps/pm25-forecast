@@ -68,18 +68,14 @@ def year_of_rows(
     ]
 
 
-# --- reading AQS daily summaries ------------------------------------------------------------
-
-
 def test_recorded_response_keeps_only_hourly_instruments() -> None:
     rows = json.loads(FIXTURE.read_text(encoding="utf-8"))
     days = site_days(rows, keep_values=True)
-    # 45 rows: 5 hourly instruments ("1 HOUR") plus 40 derived 24-HR BLK AVG rows (D-006 note).
     hourly = [r for r in rows if r["sample_duration_code"] == "1"]
     sites = {f"{r['state_code']}{r['county_code']}{r['site_number']}" for r in hourly}
     assert {k[0] for k in days} == sites
     assert all(len(k[0]) == 9 for k in days)
-    assert all(v.valid for v in days.values())  # 24, 24 and 21 hours in the recording
+    assert all(v.valid for v in days.values())
 
 
 def test_derived_block_average_rows_are_never_counted() -> None:
@@ -102,8 +98,8 @@ def test_co_located_instruments_are_one_monitor() -> None:
     days = site_days(rows, keep_values=True)
     assert len(days) == 1
     (day,) = days.values()
-    assert day.valid  # one instrument with >= 18 hours is enough
-    assert day.mean == pytest.approx(30.0)  # the mean of the instruments' daily means
+    assert day.valid
+    assert day.mean == pytest.approx(30.0)
 
 
 def test_exceptional_event_days_are_kept_once() -> None:
@@ -116,8 +112,6 @@ def test_exceptional_event_days_are_kept_once() -> None:
 
 
 def test_concurred_excluded_twin_is_dropped_and_the_included_day_kept() -> None:
-    # Seen in Chicago's AQS data: every "Concurred Events Excluded" row has an "Events Included"
-    # twin for the same instrument-day (D-006 clarification).
     rows = [
         row(event="Events Included", mean=80.0),
         row(event="Concurred Events Excluded", mean=12.0),
@@ -141,22 +135,16 @@ def test_values_can_be_dropped_on_read() -> None:
     assert day.mean is None
 
 
-# --- good years -----------------------------------------------------------------------------
-
-
 def test_good_year_is_75_percent_of_days_including_leap_years() -> None:
-    # 2020 has 366 days: 75% is 274.5, so 275 valid days is good and 274 is not.
+    """2020 has 366 days, so 75% is 274.5; 2021 has 365, so 75% is 273.75."""
     good = good_years(site_days(year_of_rows(2020, valid_days=275), keep_values=True))
     assert good == {"170310001": {2020}}
     assert good_years(site_days(year_of_rows(2020, valid_days=274), keep_values=True)) == {}
-    # 2021 has 365 days: 273.75, so 274 is good and 273 is not.
     assert good_years(site_days(year_of_rows(2021, valid_days=274), keep_values=True)) == {
         "170310001": {2021}
     }
     assert good_years(site_days(year_of_rows(2021, valid_days=273), keep_values=True)) == {}
 
-
-# --- AirNow -----------------------------------------------------------------------------------
 
 AIRNOW = "\n".join(
     [
@@ -174,13 +162,8 @@ def test_airnow_match_is_active_pm25_rows_only() -> None:
 
 def test_airnow_parsing_uses_the_header_not_column_positions() -> None:
     lines = AIRNOW.splitlines()
-    swapped = [
-        "|".join(reversed(line.split("|"))) for line in lines
-    ]  # same data, columns in another order
+    swapped = ["|".join(reversed(line.split("|"))) for line in lines]
     assert parse_airnow_active_pm25("\n".join(swapped)) == {"170310001"}
-
-
-# --- scoring a city ---------------------------------------------------------------------------
 
 
 def history(site: str, years: range, *, mean: float = 10.0) -> list[dict[str, Any]]:
@@ -233,11 +216,11 @@ def test_fewer_than_five_qualifying_monitors_fails() -> None:
 
 
 def test_qualifying_needs_eight_good_years() -> None:
-    assert not city(5, years=range(2018, 2025)).passes  # 7 years
+    assert not city(5, years=range(2018, 2025)).passes
 
 
 def test_qualifying_needs_2024_to_be_a_good_year() -> None:
-    assert not city(5, years=range(2015, 2024)).passes  # 9 years, but none in 2024
+    assert not city(5, years=range(2015, 2024)).passes
 
 
 def test_qualifying_needs_an_active_airnow_listing() -> None:
@@ -248,8 +231,9 @@ def test_bad_air_threshold_is_strictly_above_35() -> None:
     assert BAD_AIR_UG_M3 == 35.0
     at = city(5, bad_days_per_site=0)
     assert at.bad_air_share == 0.0
-    # 8 years x 365/366 days per site; 0.5% needs about 15 bad days per site.
-    assert not city(5, bad_days_per_site=10).passes
+    assert not city(5, bad_days_per_site=10).passes, (
+        "8 years of about 365 days per site: 0.5% needs about 15 bad days per site"
+    )
     assert city(5, bad_days_per_site=20).passes
 
 
@@ -288,18 +272,13 @@ def _passing_history() -> list[dict[str, Any]]:
     return hist
 
 
-# Built once: only the 2025 values vary between examples (score_city never mutates its input).
 HIST5 = _passing_history()
-BASELINE5 = city(5)  # the same five monitors, built independently, with all-default 2025 values
+BASELINE5 = city(5)
 
 
-# 20 examples: each one re-scores ~15,000 history rows, and the property is that 2025 values
-# are never read at all (not a hunt for rare edge cases), so more examples add little.
 @settings(max_examples=20)
 @given(values=st.lists(st.floats(min_value=0, max_value=500), min_size=366, max_size=366))
 def test_2025_pm_values_never_change_the_result(values: list[float]) -> None:
-    # D-008: 2025 is the test year. Its PM values are dropped on read, so any values give the
-    # same score as any others.
     test = []
     for s in SITES5:
         for r, v in zip(year_of_rows(2025, site=s), values, strict=False):
@@ -320,12 +299,11 @@ def test_strip_values_removes_every_pm_value_field() -> None:
     stripped = strip_values(rows)
     value_fields = {"arithmetic_mean", "first_max_value", "first_max_hour", "aqi"}
     assert all(not (value_fields & r.keys()) for r in stripped)
-    assert all("observation_count" in r for r in stripped)  # counts survive
-    assert "arithmetic_mean" in rows[0]  # the input is not modified
+    assert all("observation_count" in r for r in stripped)
+    assert "arithmetic_mean" in rows[0]
 
 
 def test_scoring_refuses_2025_rows_that_still_carry_values() -> None:
-    # D-008: 2025 values must be stripped before they are stored, so unstripped rows are a bug.
     with pytest.raises(ValueError, match="2025"):
         score_city(
             "X",
@@ -337,7 +315,6 @@ def test_scoring_refuses_2025_rows_that_still_carry_values() -> None:
 
 
 def test_rows_outside_2009_2024_are_not_history() -> None:
-    # A 2008 or 2025 row passed as history must not count toward good years or bad-air share.
     sites = [f"{i:04d}" for i in range(1, 6)]
     hist = [r for s in sites for r in history(s, range(2017, 2025))]
     extra = [r for s in sites for r in history(s, range(2008, 2009), mean=80.0)]
@@ -356,9 +333,6 @@ def test_rows_outside_2009_2024_are_not_history() -> None:
         weather_ok=True,
     )
     assert a == b
-
-
-# --- choosing ----------------------------------------------------------------------------------
 
 
 def scored(name: str, *, passes: bool, monitors: int, share: float) -> CityScore:

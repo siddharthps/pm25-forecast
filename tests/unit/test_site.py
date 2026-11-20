@@ -24,7 +24,7 @@ SITE = Path(__file__).resolve().parents[2] / "site"
 HTML = (SITE / "index.html").read_text(encoding="utf-8")
 JS = (SITE / "app.js").read_text(encoding="utf-8")
 CSS = (SITE / "style.css").read_text(encoding="utf-8")
-TEXT = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", HTML))  # the page's words, one line
+TEXT = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", HTML))
 
 
 class Tags(HTMLParser):
@@ -43,7 +43,7 @@ def tags(name: str) -> list[dict[str, str | None]]:
 
 
 def test_every_airnow_section_is_labelled_preliminary() -> None:
-    assert TEXT.count("Preliminary, not validated") == 3  # tomorrow, monitors, history
+    assert TEXT.count("Preliminary, not validated") == 3, "tomorrow, monitors, history"
 
 
 def test_the_forecast_is_labelled_experimental_with_a_link_to_airnow() -> None:
@@ -95,12 +95,12 @@ def test_the_page_works_at_phone_width() -> None:
     viewport = next(m for m in tags("meta") if m.get("name") == "viewport")
     assert viewport.get("content") == "width=device-width, initial-scale=1"
     assert ".scroll" in CSS
-    assert "overflow-x: auto" in CSS  # wide tables scroll inside their box, not the page
+    assert "overflow-x: auto" in CSS
     assert tags("html")[0].get("lang") == "en"
 
 
 def test_the_heading_never_says_tomorrow() -> None:
-    # The page may be read after the forecast day has started; the day is named instead.
+    """The page may be read after the forecast day has started, so the day is named."""
     for text in (HTML, JS):
         assert "Tomorrow" not in text
         assert "tomorrow:" not in text.lower()
@@ -115,8 +115,6 @@ def _hue_and_saturation(hex_colour: str) -> tuple[float, float]:
 
 
 def test_the_pages_own_colours_never_look_like_an_aqi_category() -> None:
-    # Only EPA's colours (from the JSON) carry meaning: the page's own palette is neutral or
-    # blue, never green, yellow, orange, red or purple (D-036).
     colours = re.findall(r"#[0-9a-fA-F]{6}\b", CSS)
     assert colours, "the palette is found"
     for colour in colours:

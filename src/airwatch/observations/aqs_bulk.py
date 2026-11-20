@@ -40,7 +40,7 @@ __all__ = [
 
 log = logging.getLogger(__name__)
 
-FIRST_YEAR = 2009  # D-008: the development period starts here
+FIRST_YEAR = 2009
 PREFIX = "raw/aqs/hourly/"
 MANIFEST_KEY = PREFIX + "manifest.json"
 
@@ -113,13 +113,13 @@ def run_download(  # noqa: PLR0913  (each argument is an injected edge: store, f
         df = parse_sample_rows(fetch(part.site_id, part.year))
         flagged = count_outside_crude_range(df)
         data = _parquet_bytes(df)
-        store.put(part.key, data)  # 1. the data
-        manifest["parts"][part.key] = {  # 2. then the record that it is done
+        store.put(part.key, data)
+        manifest["parts"][part.key] = {
             "key": part.key,
             "site_id": part.site_id,
             "year": part.year,
             "rows": len(df),
-            "outside_crude_range": flagged,  # counted, never dropped (D-031)
+            "outside_crude_range": flagged,
             "sha256": hashlib.sha256(data).hexdigest(),
             "fetched_at_utc": now().isoformat(),
             "final": part.year < today.year,

@@ -30,7 +30,7 @@ from airwatch.validation.checks import (
 from tests.unit.validation.helpers import SITE_A, SITE_B, START, concat, frame, varying
 
 PHOENIX = ZoneInfo("America/Phoenix")
-DAY = Window(START, START + timedelta(days=1))  # one Phoenix day, 24 hours
+DAY = Window(START, START + timedelta(days=1))
 
 
 def check(
@@ -51,12 +51,9 @@ def check(
     )
 
 
-# --- the agreed thresholds (D-033) ---------------------------------------------------------
-
-
 def test_thresholds_are_the_agreed_ones() -> None:
     assert FLATLINE_MIN_HOURS == 12
-    assert COVERAGE_MIN_SHARE == 0.75  # the SPEC's 18 of 24 hours, applied per month
+    assert COVERAGE_MIN_SHARE == 0.75
 
 
 def test_a_clean_day_passes_with_every_rule_reported_at_zero() -> None:
@@ -73,10 +70,7 @@ def test_a_clean_day_passes_with_every_rule_reported_at_zero() -> None:
     }
     assert all(f.count == 0 for f in result.findings)
     assert len(result.clean) == 24
-    result.raise_if_failed()  # no error
-
-
-# --- duplicates ----------------------------------------------------------------------------
+    result.raise_if_failed()
 
 
 def test_a_repeated_hour_is_a_hard_failure() -> None:
@@ -113,19 +107,16 @@ def test_a_hard_failure_raises_naming_the_rule_but_no_values() -> None:
     assert "123.456" not in str(exc.value)
 
 
-# --- implausible values --------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("method", "value", "excluded"),
     [
-        ("170", 975.0, False),  # BAM max, inclusive
+        pytest.param("170", 975.0, False, id="BAM max, inclusive"),
         ("170", 975.1, True),
-        ("170", -10.0, False),  # BAM min, inclusive
+        pytest.param("170", -10.0, False, id="BAM min, inclusive"),
         ("170", -10.1, True),
-        ("181", 1167.0, False),  # the 2014 New Year's fireworks hour (TEOM, up to 5,000)
+        pytest.param("181", 1167.0, False, id="the 2014 fireworks hour, TEOM up to 5,000"),
         ("181", 5000.1, True),
-        ("638", -0.1, True),  # T640X min is 0
+        pytest.param("638", -0.1, True, id="T640X min is 0"),
         ("638", 9999.0, False),
     ],
 )
@@ -140,7 +131,7 @@ def test_values_outside_the_instruments_valid_range_are_excluded(
     assert f.count == int(excluded)
     assert f.excluded == int(excluded)
     assert len(result.clean) == 24 - int(excluded)
-    assert result.passed  # one faulty hour never stops the day (D-033)
+    assert result.passed
 
 
 def test_a_missing_value_is_excluded_as_outside_the_range() -> None:
@@ -163,7 +154,7 @@ def test_an_unverified_method_is_a_hard_failure_and_excluded() -> None:
 
 def test_airnow_rows_use_the_widest_verified_range() -> None:
     vals = varying(24)
-    vals[1], vals[2] = 9000.0, 10_000.1  # no method on AirNow rows: -10 to 10,000 (D-033)
+    vals[1], vals[2] = 9000.0, 10_000.1
     result = check(frame(vals, method=None, poc=0, source="airnow"))
     assert result.finding("outside_valid_range").count == 1
     assert result.finding("unverified_method").count == 0
@@ -202,7 +193,7 @@ def test_eleven_identical_hours_are_not_a_flat_line() -> None:
 
 def test_a_gap_in_time_breaks_a_flat_line() -> None:
     first = frame([4.0] * 6)
-    second = frame([4.0] * 6, start=START + timedelta(hours=7))  # hour 6 missing
+    second = frame([4.0] * 6, start=START + timedelta(hours=7))
     assert check(concat(first, second)).finding("flat_line").count == 0
 
 
@@ -210,9 +201,6 @@ def test_flat_lines_are_judged_per_instrument() -> None:
     df = concat(frame([4.0] * 12, poc=1), frame(varying(12), poc=3))
     f = check(df).finding("flat_line")
     assert [item["poc"] for item in f.items] == [1]
-
-
-# --- coverage gaps -------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(("hours", "gap"), [(24, False), (18, False), (17, True)])
@@ -226,12 +214,12 @@ def test_a_day_needs_three_quarters_of_its_hours(hours: int, gap: bool) -> None:
 
 def test_excluded_hours_do_not_count_as_coverage() -> None:
     vals = varying(18)
-    vals[0] = 2000.0  # out of range for the BAM: 17 usable hours left
+    vals[0] = 2000.0
     assert check(frame(vals)).finding("coverage_gap").count == 1
 
 
 def test_co_located_instruments_count_each_hour_once() -> None:
-    df = concat(frame(varying(9), poc=1), frame(varying(9), poc=3))  # 9 distinct hours
+    df = concat(frame(varying(9), poc=1), frame(varying(9), poc=3))
     assert check(df).finding("coverage_gap").count == 1
 
 
@@ -244,7 +232,6 @@ def test_a_site_with_no_rows_is_missing_not_a_gap() -> None:
 
 
 def test_months_are_local_calendar_months() -> None:
-    # Local March 2024 in Phoenix is 744 hours, from 03-01 07:00 UTC to 04-01 07:00 UTC.
     march = Window(START, datetime(2024, 4, 1, 7, tzinfo=UTC))
     f = check(frame(varying(744)), window=march).finding("coverage_gap")
     assert f.count == 0
@@ -261,7 +248,7 @@ def test_each_month_is_judged_on_its_own() -> None:
 
 def test_from_first_reading_ignores_months_before_a_monitor_existed() -> None:
     window = Window(datetime(2023, 1, 1, 7, tzinfo=UTC), datetime(2024, 4, 1, 7, tzinfo=UTC))
-    df = frame(varying(744))  # the monitor starts in March 2024
+    df = frame(varying(744))
     assert (
         check(df, window=window, coverage_from="first_reading").finding("coverage_gap").count == 0
     )
@@ -269,7 +256,7 @@ def test_from_first_reading_ignores_months_before_a_monitor_existed() -> None:
 
 
 def test_from_first_reading_counts_from_that_hour() -> None:
-    start = START + timedelta(days=20)  # mid-month start, full after that
+    start = START + timedelta(days=20)
     window = Window(START, datetime(2024, 4, 1, 7, tzinfo=UTC))
     df = frame(varying(11 * 24), start=start)
     assert (
@@ -278,11 +265,8 @@ def test_from_first_reading_counts_from_that_hour() -> None:
 
 
 def test_rows_outside_the_window_are_not_counted_as_coverage() -> None:
-    df = frame(varying(24), start=START + timedelta(days=1))  # the next day
+    df = frame(varying(24), start=START + timedelta(days=1))
     assert check(df).finding("coverage_gap").count == 1
-
-
-# --- AirNow IDs (from T5) ------------------------------------------------------------------
 
 
 def test_airnow_drop_counts_are_reported_for_information() -> None:
@@ -297,9 +281,6 @@ def test_airnow_drop_counts_are_reported_for_information() -> None:
 def test_without_drop_counts_there_are_no_airnow_rules() -> None:
     with pytest.raises(KeyError):
         check(frame(varying(24))).finding("airnow_not_aqs_id")
-
-
-# --- inputs ---------------------------------------------------------------------------------
 
 
 def test_a_naive_window_is_refused() -> None:
@@ -334,12 +315,9 @@ def test_a_window_shorter_than_an_hour_expects_no_hours() -> None:
     assert check(frame(varying(1)), window=short).finding("coverage_gap").count == 0
 
 
-# --- found by planted bugs (tests of the tests) --------------------------------------------
-
-
 def test_an_excluded_negative_is_not_also_counted_as_in_range() -> None:
     vals = varying(24)
-    vals[4] = -50.0  # below the BAM's -10: excluded, so not "negative in range"
+    vals[4] = -50.0
     result = check(frame(vals))
     assert result.finding("outside_valid_range").count == 1
     assert result.finding("negative_in_range").count == 0
@@ -347,13 +325,13 @@ def test_an_excluded_negative_is_not_also_counted_as_in_range() -> None:
 
 def test_a_flat_line_never_joins_two_instruments() -> None:
     first = frame([4.0] * 6, poc=1)
-    second = frame([4.0] * 6, poc=3, start=START + timedelta(hours=6))  # continues in time
+    second = frame([4.0] * 6, poc=3, start=START + timedelta(hours=6))
     assert check(concat(first, second)).finding("flat_line").count == 0
 
 
 def test_readings_before_the_window_never_widen_it() -> None:
-    window = Window(START, datetime(2024, 4, 1, 7, tzinfo=UTC))  # local March
-    early = frame([5.0], start=datetime(2024, 2, 1, 7, tzinfo=UTC))  # one February hour
+    window = Window(START, datetime(2024, 4, 1, 7, tzinfo=UTC))
+    early = frame([5.0], start=datetime(2024, 2, 1, 7, tzinfo=UTC))
     df = concat(early, frame(varying(744)))
     assert (
         check(df, window=window, coverage_from="first_reading").finding("coverage_gap").count == 0
@@ -361,7 +339,7 @@ def test_readings_before_the_window_never_widen_it() -> None:
 
 
 def test_a_site_whose_rows_were_all_excluded_is_a_gap_not_missing() -> None:
-    result = check(frame([2000.0] * 24))  # all out of range for the BAM
+    result = check(frame([2000.0] * 24))
     assert result.finding("site_missing").count == 0
     assert result.finding("coverage_gap").items == (
         {"site_id": SITE_A, "month": "2024-03", "hours": 0, "expected": 24},
@@ -369,7 +347,7 @@ def test_a_site_whose_rows_were_all_excluded_is_a_gap_not_missing() -> None:
 
 
 def test_a_first_reading_late_on_the_last_local_day_counts_in_that_month() -> None:
-    # 2024-04-01 03:00 UTC is 20:00 on 31 March in Phoenix: March has 4 hours left, 1 present.
+    """2024-04-01 03:00 UTC is 20:00 on 31 March in Phoenix: 4 hours left, 1 present."""
     window = Window(START, datetime(2024, 5, 1, 7, tzinfo=UTC))
     late_march = frame([5.0], start=datetime(2024, 4, 1, 3, tzinfo=UTC))
     april = frame(varying(30 * 24), start=datetime(2024, 4, 1, 7, tzinfo=UTC))

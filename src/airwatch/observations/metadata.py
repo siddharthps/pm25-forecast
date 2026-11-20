@@ -39,26 +39,22 @@ __all__ = [
 
 log = logging.getLogger(__name__)
 
-# --- Frozen D-006 criteria --------------------------------------------------------------------
-PARAMETER = "88101"  # PM2.5, local conditions
-HOURLY_CODE = "1"  # sample_duration_code "1 HOUR": an hourly instrument's daily summary
-MIN_HOURS = 18  # valid day: >= 18 of 24 hours
-GOOD_YEAR_SHARE = 0.75  # good year: >= 75% of the year's days valid
+PARAMETER = "88101"
+HOURLY_CODE = "1"
+MIN_HOURS = 18
+GOOD_YEAR_SHARE = 0.75
 MIN_GOOD_YEARS = 8
-HISTORY_YEARS = range(2009, 2025)  # 2009-2024 (D-008 development period)
-LAST_HISTORY_YEAR = 2024  # must itself be a good year
-TEST_YEAR = 2025  # counts only; values dropped on read (D-008)
+HISTORY_YEARS = range(2009, 2025)
+LAST_HISTORY_YEAR = 2024
+TEST_YEAR = 2025
 MIN_MONITORS = 5
-BAD_AIR_UG_M3 = 35.0  # 24-hour primary PM2.5 NAAQS; a bad-air day is strictly above it
+BAD_AIR_UG_M3 = 35.0
 MIN_BAD_AIR_SHARE = 0.005
 DEFAULT_CITY = "Chicago"
 
-# Exceptional-event days are kept (D-006): AQS gives such days twice, with the event data
-# included and excluded. Any other value is new to us, so the check stops instead of guessing.
 KEEP_EVENTS = frozenset({"No Events", "Events Included"})
 DROP_EVENTS = frozenset({"Events Excluded", "Concurred Events Excluded"})
 
-# Every field of an AQS daily summary that carries a PM value (stripped from 2025 rows).
 VALUE_FIELDS = frozenset({"arithmetic_mean", "first_max_value", "first_max_hour", "aqi"})
 
 
@@ -67,7 +63,7 @@ class SiteDay:
     """One monitor (AQS site) on one local day."""
 
     valid: bool
-    mean: float | None  # mean of the site's hourly instruments' daily means; None if dropped
+    mean: float | None
 
 
 @dataclass(frozen=True)
@@ -80,7 +76,7 @@ class CityScore:
     test_year_monitors: int
     weather_ok: bool
     passes: bool
-    reasons: tuple[str, ...]  # why it failed; empty when it passes
+    reasons: tuple[str, ...]
 
 
 def _site_id(r: Mapping[str, Any]) -> str:

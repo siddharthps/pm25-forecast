@@ -58,7 +58,7 @@ def aws() -> Iterator[Any]:
 
 @pytest.fixture
 def s3(aws: Any) -> Iterator[Any]:
-    for bucket in (PRIVATE, PUBLIC):  # every test starts from empty, versioned buckets
+    for bucket in (PRIVATE, PUBLIC):
         listing = aws.list_object_versions(Bucket=bucket)
         for v in listing.get("Versions", []) + listing.get("DeleteMarkers", []):
             aws.delete_object(Bucket=bucket, Key=v["Key"], VersionId=v["VersionId"])
@@ -117,9 +117,6 @@ def keys(s3: Any, bucket: str) -> list[str]:
     return sorted(o["Key"] for o in s3.list_objects_v2(Bucket=bucket).get("Contents", []))
 
 
-# --- once, and twice -----------------------------------------------------------------------
-
-
 def test_a_first_run_records_then_publishes(s3: Any) -> None:
     outcome = run(s3)
     assert outcome.status == "recorded"
@@ -143,13 +140,10 @@ def test_running_twice_writes_one_record_and_one_public_file(s3: Any) -> None:
     second = run(s3, fetch=fetch, now=NOW + timedelta(hours=2))
     assert (first.status, second.status) == ("recorded", "already_recorded")
     assert second.record == first.record
-    assert fetch.calls == 1  # type: ignore[attr-defined]  # the rerun reused the record
+    assert fetch.calls == 1  # type: ignore[attr-defined]
     assert object_versions(s3, PRIVATE, RECORD) == 1
     assert object_versions(s3, PUBLIC, LATEST_KEY) == 1
     assert object_versions(s3, PUBLIC, HISTORY_KEY) == 1
-
-
-# --- each step failing in turn -------------------------------------------------------------
 
 
 def _fetch_down(_: date) -> tuple[pd.DataFrame, dict[str, int]]:
@@ -168,9 +162,9 @@ def test_a_failure_at_any_step_acts_at_most_once(s3: Any, step: str) -> None:
     if step == "fetch":
         fetch = _fetch_down
     elif step == "validate":
-        fetch = fetcher(concat(df, df.iloc[[0]]))  # a duplicate hour: hard failure
+        fetch = fetcher(concat(df, df.iloc[[0]]))
     elif step == "compute":
-        fetch = fetcher(observed_day({SITES[0]: 10, SITES[1]: 10}))  # no monitor qualifies
+        fetch = fetcher(observed_day({SITES[0]: 10, SITES[1]: 10}))
     elif step in ("report", "record"):
         private = Failing(s3, PRIVATE, "reports/" if step == "report" else "records/")
     else:
@@ -179,13 +173,11 @@ def test_a_failure_at_any_step_acts_at_most_once(s3: Any, step: str) -> None:
     with pytest.raises((RuntimeError, ValidationFailedError, NoForecastError)):
         run(s3, fetch=fetch, private=private, public=public)
 
-    # after the failure: at most one record, and no public file without one
     assert object_versions(s3, PRIVATE, RECORD) == (1 if step == "publish" else 0)
     if stored(s3, PUBLIC, LATEST_KEY) is not None:
         assert stored(s3, PRIVATE, RECORD) is not None
     assert stored(s3, PUBLIC, LATEST_KEY) is None
 
-    # the retry, once the fault is gone, completes with still exactly one record
     outcome = run(s3, fetch=fetcher(df), now=NOW + timedelta(minutes=30))
     assert outcome.status == ("already_recorded" if step == "publish" else "recorded")
     assert object_versions(s3, PRIVATE, RECORD) == 1
@@ -210,9 +202,6 @@ def test_no_qualifying_monitor_writes_no_record(s3: Any) -> None:
         run(s3, fetch=fetcher(observed_day({SITES[0]: 0, SITES[1]: 17})))
     assert keys(s3, PRIVATE) == [REPORT]
     assert keys(s3, PUBLIC) == []
-
-
-# --- the record comes first ----------------------------------------------------------------
 
 
 class Racing(S3Store):
@@ -245,14 +234,11 @@ def test_the_public_file_never_moves_back_to_an_older_day(s3: Any) -> None:
         ),
         day=OBSERVED - timedelta(days=1),
     )
-    run(s3, target=older, fetch=older_day)  # a late manual run for the day before
+    run(s3, target=older, fetch=older_day)
     latest = stored(s3, PUBLIC, LATEST_KEY)
     assert latest is not None
     assert latest["forecast_date"] == TARGET.isoformat()
-    assert stored(s3, PRIVATE, record_key(older)) is not None  # its own record still exists
-
-
-# --- dry runs, early runs, late inputs -----------------------------------------------------
+    assert stored(s3, PRIVATE, record_key(older)) is not None
 
 
 def test_a_dry_run_writes_nothing_anywhere(s3: Any) -> None:
@@ -266,7 +252,7 @@ def test_a_dry_run_writes_nothing_anywhere(s3: Any) -> None:
 def test_a_dry_run_after_the_record_exists_still_writes_nothing(s3: Any) -> None:
     run(s3)
     older = json.dumps({"forecast_date": "2026-11-20"}).encode()
-    S3Store(s3, PUBLIC).put(LATEST_KEY, older)  # a public file a real run would replace
+    S3Store(s3, PUBLIC).put(LATEST_KEY, older)
     outcome = run(s3, publish=False, now=NOW + timedelta(hours=1))
     assert outcome.status == "already_recorded"
     assert not outcome.published

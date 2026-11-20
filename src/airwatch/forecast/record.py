@@ -92,7 +92,7 @@ def write_once(store: Store, record: dict[str, Any]) -> tuple[bool, dict[str, An
     if store.create_if_absent(key, encode(record)):
         return True, record
     raw = store.get(key)
-    if raw is None:  # 412, yet nothing to read: only a delete could do this (none is allowed)
+    if raw is None:
         raise RuntimeError(f"record refused as existing but not readable: {key}")
     existing: dict[str, Any] = json.loads(raw)
     return False, existing

@@ -954,6 +954,42 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 
 ---
 
+## D-037 · 2026-11-20 · Code comments are banned, held by a ratchet (#55)
+
+- **Decision:** code says what it does through names, types, test ids and assert messages.
+  Whatever a comment would add beyond that goes where it belongs:
+  - a decision goes to a D-entry in this file;
+  - a test's scenario goes into its docstring;
+  - a hacky spot gets an issue to fix the code.
+- **Scope (owner, 2026-11-20):** Python `#` comments in `src/`, `scripts/` and `tests/`; JS and
+  CSS comments in `site/` and `tests/site/`.
+  - Not counted: Python docstrings, and JSDoc blocks directly before a declaration (the JS
+    equivalent).
+  - Not counted: tool pragmas (`# type: ignore`, `# noqa`, `# pragma: no cover`, `# fmt:`,
+    `# ruff:`, `# mypy:`). A pragma followed by prose still counts.
+  - Not counted: config files (workflows, Terraform, `pyproject.toml`, pre-commit). Their
+    comments carry the version tag after each pinned SHA and the reason for each lint ignore,
+    which other rules require.
+- **Enforcement:** `airwatch.devtools.comments`, run as a pre-commit hook (so also in CI's
+  pre-commit step) and as a core test.
+  - It counts comments per file against `comment-baseline.json`. A file may never go over its
+    allowance, and a file not listed may have none.
+  - When comments are deleted, the baseline must be lowered to match (`--update`). `--update`
+    refuses to raise any allowance, so the baseline only ever goes down.
+  - A test checks that every folder holding code is in the scope, so a new folder can't slip
+    past it.
+- **Why:** comments drift from the code they describe. Some also excuse a hack that then gets
+  copied. Decisions in a comment are invisible to anyone reading this log. Ruff has no rule
+  that bans comments (its `ERA` only catches commented-out code), so the check is our own.
+- **Where the checker lives:** in the package (`src/airwatch/devtools/`), so strict mypy and
+  the coverage floor apply to it, like the rest of the core logic.
+- **The process:** `/delete-comment` (`.claude/skills/delete-comment/`) sorts comments into
+  Tautology, Stale, Excuse and Decision record, then acts on each kind. The first pass's list
+  is kept in `notes/comment-audit-2026-11-20.tsv`.
+- **Status:** Active. Owner's request and choices, 2026-11-20.
+
+---
+
 ## Open questions (to settle, then move into a D-entry)
 
 - Further open items are listed in [SPEC.md](SPEC.md) § Open Questions.

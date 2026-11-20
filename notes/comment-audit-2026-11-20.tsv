@@ -1,0 +1,284 @@
+path	line	kind	action	note
+scripts/aqs_bulk.py	36	Decision	D-038	AQS rate terms (10 a minute, 5 s pause): not recorded anywhere
+scripts/aqs_bulk.py	46	Decision	D-038	SDK loggers kept quiet so they never log request details
+scripts/aqs_bulk.py	106	Tautology	delete	the log line names the command; TOKENS.md holds the 8 hours
+scripts/city_check.py	46	Decision	recorded D-006	CBSA-code clarification
+scripts/city_check.py	53	Decision	recorded D-006	pre-2013 LA code 31100
+scripts/city_check.py	55	Decision	D-038	same AQS rate terms as aqs_bulk.py:36
+scripts/city_check.py	62	Tautology	delete	write-to-temp-then-replace is the atomic-write idiom
+src/airwatch/aqi.py	37	Decision	recorded D-036	TAD Table 6 and footnote 4
+src/airwatch/aqi.py	53	Tautology	delete	the type says None; the name says high
+src/airwatch/aqi.py	61	Decision	recorded D-036	TAD Tables 1 and 2
+src/airwatch/aqi.py	85	Decision	recorded D-036	truncation to 0.1 and the extended last row
+src/airwatch/config.py	51	Tautology	delete	the field name says it
+src/airwatch/config.py	53	Tautology	delete	the field names say it
+src/airwatch/config.py	57	Decision	recorded TOKENS.md	no long-lived AWS keys; SSO locally
+src/airwatch/config.py	61	Decision	recorded D-030 D-005 D-019	Phoenix; local days; issue zone separate
+src/airwatch/config.py	67	Decision	recorded D-028	private bucket
+src/airwatch/config.py	69	Decision	recorded D-028	public bucket
+src/airwatch/forecast/publish.py	54	Tautology	delete	the constant's name says it
+src/airwatch/forecast/publish.py	56	Tautology	delete	the AKIA/ASIA prefixes say it
+src/airwatch/forecast/record.py	95	Decision	recorded D-034	a 412 with nothing to read
+src/airwatch/forecast/run.py	247	Excuse	issue	claims "never a value" but the log line prints str(exc)
+src/airwatch/observations/airnow.py	43	Decision	D-038	the AQS site ID's 2+3+4 digits
+src/airwatch/observations/airnow.py	82	Decision	D-038	non-AQS IDs (about 30% live) are counted, not fatal
+src/airwatch/observations/airnow.py	91	Excuse	issue	POC 0 stands in for "not given" in a non-null column
+src/airwatch/observations/airnow.py	92	Tautology	delete	pd.NA says it
+src/airwatch/observations/aqs.py	29	Decision	recorded SPEC	18 of 24 hours
+src/airwatch/observations/aqs.py	58	Decision	D-038	available_at is the end of the change day
+src/airwatch/observations/aqs_bulk.py	43	Decision	recorded D-008	development period starts in 2009
+src/airwatch/observations/aqs_bulk.py	116	Decision	D-038	data first, then the manifest says it's done
+src/airwatch/observations/aqs_bulk.py	122	Decision	recorded D-031	counted, never dropped
+src/airwatch/observations/metadata.py	42	Decision	recorded D-006	frozen criteria (block of constants)
+src/airwatch/observations/metadata.py	43	Decision	recorded D-006	88101
+src/airwatch/observations/metadata.py	44	Decision	recorded D-006	sample duration 1 HOUR
+src/airwatch/observations/metadata.py	45	Decision	recorded SPEC	18 of 24 hours
+src/airwatch/observations/metadata.py	46	Decision	recorded D-006	75% good year
+src/airwatch/observations/metadata.py	48	Decision	recorded D-008	2009-2024
+src/airwatch/observations/metadata.py	49	Decision	recorded D-006	last year must be good
+src/airwatch/observations/metadata.py	50	Decision	recorded D-008	2025 values dropped on read
+src/airwatch/observations/metadata.py	52	Decision	recorded D-006	35 ug/m3, strictly above
+src/airwatch/observations/metadata.py	56	Decision	recorded D-006	exceptional-event rows
+src/airwatch/observations/metadata.py	61	Decision	recorded D-008	value fields stripped from 2025 rows
+src/airwatch/observations/metadata.py	70	Tautology	delete	the field and its Optional type say it
+src/airwatch/observations/metadata.py	83	Tautology	delete	the field name says it
+src/airwatch/observations/schema.py	25	Tautology	delete	the annotation says it
+src/airwatch/observations/schema.py	27	Tautology	delete	the source values are in the parsers
+src/airwatch/observations/schema.py	28	Decision	D-038	same ID format as airnow.py:43
+src/airwatch/observations/schema.py	29	Excuse	issue	same POC-0 sentinel as airnow.py:91
+src/airwatch/observations/schema.py	31	Decision	D-038	time_utc is the start of the hour
+src/airwatch/observations/schema.py	37	Decision	recorded D-031 D-033	the crude range is not a validity rule
+src/airwatch/observations/sites.py	18	Decision	recorded D-030	Phoenix's 10 monitors
+src/airwatch/observations/sites.py	34	Decision	recorded D-036	site names and agencies from AirNow
+src/airwatch/observations/sites.py	63	Tautology	delete	dict.fromkeys order-preserving dedupe is the idiom
+src/airwatch/observations/sites.py	78	Decision	recorded D-032	verified methods
+src/airwatch/timeutil.py	25	Decision	recorded D-019	frozen constants
+src/airwatch/timeutil.py	36	Decision	D-038	datetime subclasses date
+src/airwatch/validation/checks.py	58	Decision	recorded D-033	owner's thresholds
+src/airwatch/validation/checks.py	59	Decision	recorded D-033	flat line 12 hours, warn only
+src/airwatch/validation/checks.py	60	Decision	recorded D-033	coverage share
+src/airwatch/validation/checks.py	61	Decision	recorded D-033	AirNow gets the widest range
+src/airwatch/validation/checks.py	112	Tautology	delete	the field name says it
+src/airwatch/validation/checks.py	184	Tautology	delete	section divider
+src/airwatch/validation/checks.py	200	Tautology	delete	section divider
+src/airwatch/validation/checks.py	205	Decision	recorded D-033	only AirNow may lack a method
+src/airwatch/validation/checks.py	235	Decision	D-038	a missing value is never inside the range
+src/airwatch/validation/checks.py	282	Tautology	delete	section divider
+src/airwatch/validation/checks.py	340	Stale	delete	divider naming T5, which is finished
+src/airwatch/validation/report.py	58	Decision	D-038	the Markdown shows 20 items per rule, the JSON all
+src/airwatch/validation/report.py	61	Tautology	delete	section divider
+src/airwatch/validation/report.py	158	Tautology	delete	section divider
+src/airwatch/validation/report.py	188	Tautology	delete	section divider
+site/app.js	1	Decision	recorded D-025 D-036	the page computes nothing; textContent only
+site/app.js	14	Decision	D-038	same-site data path only; "//host" is another site
+site/app.js	104	Tautology	delete	section divider
+site/style.css	1	Decision	recorded D-036	only EPA colours carry meaning
+site/style.css	13	Decision	recorded D-036	1.25 modular scale
+site/style.css	29	Tautology	delete	42rem measure is the standard line length
+site/style.css	67	Tautology	delete	the selector names it
+site/style.css	97	Tautology	delete	the schema fixes six (D-036)
+site/style.css	101	Tautology	delete	the selector names it
+site/style.css	217	Decision	D-038	narrow screens: the bar gives way to the category
+site/style.css	229	Tautology	delete	the rules say it
+tests/site/app.test.mjs	1	Tautology	delete	CLAUDE.md holds the command
+tests/site/app.test.mjs	21	Decision	recorded D-036	the page holds no colours
+tests/site/app.test.mjs	60	Decision	to-message	a US DST change day
+tests/site/app.test.mjs	94	Tautology	delete	14 days is two weeks
+tests/site/app.test.mjs	106	Decision	to-message	top of Good
+tests/site/app.test.mjs	107	Decision	to-message	bottom of Moderate
+tests/site/app.test.mjs	113	Tautology	delete	699 is above 500
+tests/site/app.test.mjs	118	Decision	to-message	ties: higher concentration leads, then site ID
+tests/site/app.test.mjs	130	Decision	to-message	the input is not reordered
+tests/integration/test_forecast_once.py	61	Tautology	delete	the loop empties the buckets
+tests/integration/test_forecast_once.py	120	Tautology	delete	section divider
+tests/integration/test_forecast_once.py	152	Tautology	delete	section divider
+tests/integration/test_forecast_once.py	171	Tautology	delete	the step name says which fault
+tests/integration/test_forecast_once.py	173	Tautology	delete	the step name says which fault
+tests/integration/test_forecast_once.py	182	Tautology	delete	the asserts say it
+tests/integration/test_forecast_once.py	188	Tautology	delete	the asserts say it
+tests/integration/test_forecast_once.py	215	Tautology	delete	section divider
+tests/integration/test_forecast_once.py	248	Tautology	delete	the test name says it
+tests/integration/test_forecast_once.py	252	Tautology	delete	the assert says it
+tests/integration/test_forecast_once.py	255	Tautology	delete	section divider
+tests/integration/test_forecast_once.py	269	Tautology	delete	the test name says it
+tests/live/test_airnow_live.py	55	Decision	recorded D-030	Phoenix has no DST
+tests/property/test_forecast_leakage.py	39	Decision	to-code	a late run sees every rewritten hour
+tests/property/test_forecast_leakage.py	47	Tautology	delete	a module constant is computed once
+tests/property/test_forecast_leakage.py	65	Excuse	issue	early return passes the example silently
+tests/property/test_forecast_leakage.py	69	Tautology	delete	pytest.raises says it
+tests/property/test_forecast_leakage.py	83	Decision	to-docstring	the scenario the test checks
+tests/property/test_time.py	24	Decision	recorded D-006	candidate metros
+tests/property/test_time.py	41	Decision	D-038	US DST rule since 2007
+tests/property/test_time.py	65	Tautology	delete	section divider
+tests/property/test_time.py	75	Decision	to-docstring	the reference the property compares with
+tests/property/test_time.py	87	Decision	recorded D-019	frozen issue time
+tests/property/test_time.py	93	Decision	to-message	hand-checked CST/CDT anchors
+tests/property/test_time.py	96	Decision	to-message	DST start 2025-03-09
+tests/property/test_time.py	98	Decision	to-message	DST end 2025-11-02
+tests/property/test_time.py	103	Decision	D-038	datetime subclasses date (same as timeutil.py:36)
+tests/property/test_time.py	108	Tautology	delete	section divider
+tests/property/test_time.py	123	Tautology	delete	the assert says it
+tests/property/test_time.py	129	Decision	to-docstring	exhaustive 2009-2030 against the US DST law
+tests/property/test_time.py	151	Tautology	delete	section divider
+tests/property/test_time.py	153	Decision	D-038	Hypothesis datetimes take naive bounds
+tests/property/test_time.py	177	Decision	to-message	the repeated hour, second pass (folded into the docstring)
+tests/property/test_time.py	181	Decision	D-038	compare POSIX instants: PEP 495 fold
+tests/property/test_time.py	194	Decision	to-message	guards the guards
+tests/property/test_validation.py	22	Tautology	delete	the strategy says it
+tests/unit/forecast/fakes.py	18	Decision	to-code	ISSUE_AT written as issue_time_utc(TARGET)
+tests/unit/forecast/fakes.py	20	Decision	recorded D-034	D-1 observed day
+tests/unit/forecast/test_publish.py	53	Tautology	delete	the assert says it
+tests/unit/forecast/test_publish.py	65	Decision	recorded D-036	TAD worked example
+tests/unit/forecast/test_publish.py	74	Decision	recorded D-036	truncated, never rounded
+tests/unit/forecast/test_publish.py	96	Decision	to-message	Equation 1 worked out
+tests/unit/forecast/test_publish.py	125	Excuse	issue	assert why exists only to use the parameter
+tests/unit/forecast/test_publish.py	131	Decision	D-038	secret-shaped test strings are split
+tests/unit/forecast/test_publish.py	138	Tautology	delete	site_name is visibly free text
+tests/unit/forecast/test_publish.py	144	Tautology	delete	the test name says it
+tests/unit/forecast/test_publish.py	164	Tautology	delete	the test name says it
+tests/unit/forecast/test_publish.py	168	Tautology	delete	is False says it
+tests/unit/forecast/test_record.py	36	Decision	recorded D-034	a 412 with nothing to read
+tests/unit/forecast/test_run.py	45	Decision	recorded D-019	CDT/CST offsets
+tests/unit/forecast/test_run.py	53	Decision	to-id	05:59:59 Chicago
+tests/unit/forecast/test_run.py	54	Decision	to-id	06:00 exactly
+tests/unit/forecast/test_run.py	55	Decision	to-id	23:00 Chicago
+tests/unit/forecast/test_run.py	56	Decision	to-id	00:00 next day
+tests/unit/forecast/test_run.py	108	Tautology	delete	29 hours back is visibly OBSERVED's start
+tests/unit/forecast/test_run.py	112	Decision	to-message	hour-first averaging, worked out
+tests/unit/observations/test_airnow.py	33	Tautology	delete	the name says when the file was published
+tests/unit/observations/test_airnow.py	56	Tautology	delete	the test name says it
+tests/unit/observations/test_airnow.py	60	Tautology	delete	the assert says it
+tests/unit/observations/test_airnow.py	75	Tautology	delete	the edit says it
+tests/unit/observations/test_airnow.py	83	Decision	D-038	same as airnow.py:82
+tests/unit/observations/test_airnow.py	118	Tautology	delete	section divider
+tests/unit/observations/test_airnow.py	125	Tautology	delete	the assert says it
+tests/unit/observations/test_airnow.py	135	Tautology	delete	section divider
+tests/unit/observations/test_airnow.py	182	Tautology	delete	the test name says it
+tests/unit/observations/test_airnow.py	200	Tautology	delete	the test name says it
+tests/unit/observations/test_aqs.py	51	Tautology	delete	the default is visibly after them
+tests/unit/observations/test_aqs.py	80	Tautology	delete	section divider
+tests/unit/observations/test_aqs.py	98	Decision	D-038	AQS time_local is standard time
+tests/unit/observations/test_aqs.py	106	Tautology	delete	the expected timestamp says it
+tests/unit/observations/test_aqs.py	142	Tautology	delete	section divider
+tests/unit/observations/test_aqs.py	160	Decision	recorded D-031	stored as received
+tests/unit/observations/test_aqs.py	176	Tautology	delete	section divider
+tests/unit/observations/test_aqs.py	196	Decision	to-message	hour-first averaging, worked out
+tests/unit/observations/test_aqs.py	205	Decision	to-docstring	23:00 local on 4 July is 06:00 UTC on 5 July
+tests/unit/observations/test_aqs.py	214	Tautology	delete	same as line 205
+tests/unit/observations/test_aqs.py	220	Tautology	delete	section divider
+tests/unit/observations/test_aqs_bulk.py	34	Tautology	delete	the name says it
+tests/unit/observations/test_aqs_bulk.py	138	Tautology	delete	the assert says it
+tests/unit/observations/test_aqs_bulk.py	150	Tautology	delete	the raise says it
+tests/unit/observations/test_aqs_bulk.py	166	Decision	D-038	same as aqs_bulk.py:116
+tests/unit/observations/test_aqs_bulk.py	184	Tautology	delete	the assert says it
+tests/unit/observations/test_aqs_bulk.py	192	Tautology	delete	the assert says it
+tests/unit/observations/test_aqs_bulk.py	221	Tautology	delete	the assert says it
+tests/unit/observations/test_aqs_bulk.py	226	Decision	to-docstring	an empty year still counts as finished
+tests/unit/observations/test_aqs_bulk.py	247	Decision	recorded D-031	the fireworks hour
+tests/unit/observations/test_aqs_bulk.py	260	Tautology	delete	the assert says it
+tests/unit/observations/test_aqs_bulk.py	262	Tautology	delete	the assert says it
+tests/unit/observations/test_sites.py	21	Decision	recorded D-032	methods_all.html
+tests/unit/observations/test_sites.py	27	Decision	recorded D-033	the fireworks hour's method
+tests/unit/test_aqi.py	39	Decision	to-id	top of Good
+tests/unit/test_aqi.py	40	Decision	to-id	bottom of Moderate
+tests/unit/test_aqi.py	42	Decision	to-id	bottom of USG
+tests/unit/test_aqi.py	43	Decision	to-id	TAD worked example
+tests/unit/test_aqi.py	50	Decision	to-id	footnote 4
+tests/unit/test_aqi.py	51	Decision	to-id	above 500, extended
+tests/unit/test_aqi.py	52	Decision	to-id	truncated first
+tests/unit/test_aqi.py	60	Decision	recorded D-036	TAD rounding example
+tests/unit/test_aqi.py	66	Decision	recorded D-036	negative means read as 0
+tests/unit/test_aqi.py	134	Decision	recorded D-036	footnote 4
+tests/unit/test_ci_config.py	21	Decision	recorded global CLAUDE.md	SHA pin with version comment
+tests/unit/test_ci_config.py	38	Decision	D-038	PyYAML 1.1 loads on as True
+tests/unit/test_ci_config.py	61	Decision	to-message	guards the guards
+tests/unit/test_ci_config.py	78	Tautology	delete	the assert says it
+tests/unit/test_ci_config.py	84	Decision	recorded D-027	one uv everywhere
+tests/unit/test_ci_config.py	95	Decision	D-038	GITHUB_TOKEN PRs don't trigger CI
+tests/unit/test_ci_config.py	126	Decision	to-docstring	full history so every commit is scanned
+tests/unit/test_ci_config.py	149	Decision	recorded D-023	no backend or AWS in CI
+tests/unit/test_ci_config.py	165	Decision	to-docstring	a skipped hook needs its own CI step
+tests/unit/test_ci_config.py	195	Decision	recorded SPEC	85% coverage floor
+tests/unit/test_ci_config.py	201	Decision	recorded D-027	no Dependabot for Python
+tests/unit/test_city_check.py	71	Tautology	delete	section divider
+tests/unit/test_city_check.py	77	Decision	recorded D-006	derived 24-HR BLK AVG rows
+tests/unit/test_city_check.py	82	Tautology	delete	the recording holds it
+tests/unit/test_city_check.py	105	Tautology	delete	the test name says it
+tests/unit/test_city_check.py	106	Tautology	delete	the test name says it
+tests/unit/test_city_check.py	119	Decision	recorded D-006	events twin rows
+tests/unit/test_city_check.py	144	Tautology	delete	section divider
+tests/unit/test_city_check.py	148	Decision	to-message	366 days: 274.5
+tests/unit/test_city_check.py	152	Decision	to-message	365 days: 273.75
+tests/unit/test_city_check.py	159	Tautology	delete	section divider
+tests/unit/test_city_check.py	179	Tautology	delete	the name swapped says it
+tests/unit/test_city_check.py	183	Tautology	delete	section divider
+tests/unit/test_city_check.py	236	Tautology	delete	the range shows 7 years
+tests/unit/test_city_check.py	240	Tautology	delete	the range shows it
+tests/unit/test_city_check.py	251	Decision	to-message	about 15 bad days per site needed
+tests/unit/test_city_check.py	291	Tautology	delete	a module constant is built once
+tests/unit/test_city_check.py	293	Tautology	delete	the name says it
+tests/unit/test_city_check.py	296	Decision	D-038	20 Hypothesis examples for the 2025 property
+tests/unit/test_city_check.py	301	Decision	recorded D-008	2025 values dropped on read
+tests/unit/test_city_check.py	323	Tautology	delete	the asserts say it
+tests/unit/test_city_check.py	324	Tautology	delete	the asserts say it
+tests/unit/test_city_check.py	328	Decision	recorded D-008	unstripped 2025 rows are a bug
+tests/unit/test_city_check.py	340	Decision	recorded D-008	out-of-period rows don't count
+tests/unit/test_city_check.py	361	Tautology	delete	section divider
+tests/unit/test_config.py	43	Decision	recorded D-030	Phoenix
+tests/unit/test_config.py	46	Decision	recorded D-028	private bucket
+tests/unit/test_config.py	81	Decision	to-docstring	settings errors must not echo input
+tests/unit/test_config.py	125	Decision	to-docstring	no import-time side effects
+tests/unit/test_config.py	128	Tautology	delete	the chdir says it
+tests/unit/test_fetch_json.py	58	Decision	D-038	httpx logs request URLs at INFO
+tests/unit/test_fetch_json.py	79	Tautology	delete	the assert and test name say it
+tests/unit/test_lint_config.py	47	Decision	to-message	guards the guard
+tests/unit/test_lint_config.py	56	Tautology	delete	section divider
+tests/unit/test_lint_config.py	82	Decision	to-message	guards the guard
+tests/unit/test_pages_workflow.py	24	Decision	D-038	PyYAML 1.1 loads on as True
+tests/unit/test_pages_workflow.py	52	Decision	to-message	a new site file must be added on purpose
+tests/unit/test_site.py	27	Tautology	delete	the regexes say it
+tests/unit/test_site.py	46	Decision	to-message	the three preliminary notices
+tests/unit/test_site.py	98	Tautology	delete	overflow-x says it
+tests/unit/test_site.py	103	Decision	to-docstring	the day is named, never "tomorrow"
+tests/unit/test_site.py	118	Decision	recorded D-036	only EPA colours carry meaning
+tests/unit/test_storage.py	53	Tautology	delete	the assert says it
+tests/unit/test_storage.py	96	Tautology	delete	1005 is visibly over 1,000
+tests/unit/validation/helpers.py	14	Decision	to-code	written as Phoenix midnight converted to UTC
+tests/unit/validation/test_checks.py	33	Tautology	delete	the window says it
+tests/unit/validation/test_checks.py	54	Tautology	delete	section divider
+tests/unit/validation/test_checks.py	59	Decision	recorded D-033	coverage share
+tests/unit/validation/test_checks.py	76	Tautology	delete	the call says it
+tests/unit/validation/test_checks.py	79	Tautology	delete	section divider
+tests/unit/validation/test_checks.py	116	Tautology	delete	section divider
+tests/unit/validation/test_checks.py	122	Decision	to-id	BAM max inclusive
+tests/unit/validation/test_checks.py	124	Decision	to-id	BAM min inclusive
+tests/unit/validation/test_checks.py	126	Decision	to-id	the fireworks hour
+tests/unit/validation/test_checks.py	128	Decision	to-id	T640X min 0
+tests/unit/validation/test_checks.py	143	Decision	recorded D-033	one faulty hour never stops the day
+tests/unit/validation/test_checks.py	166	Decision	recorded D-033	AirNow's range
+tests/unit/validation/test_checks.py	205	Tautology	delete	the start offset shows it
+tests/unit/validation/test_checks.py	215	Tautology	delete	section divider
+tests/unit/validation/test_checks.py	229	Tautology	delete	the test name says it
+tests/unit/validation/test_checks.py	234	Tautology	delete	varying(9) says it
+tests/unit/validation/test_checks.py	247	Tautology	delete	the window says it
+tests/unit/validation/test_checks.py	264	Tautology	delete	the test name says it
+tests/unit/validation/test_checks.py	272	Tautology	delete	the offset says it
+tests/unit/validation/test_checks.py	281	Tautology	delete	the offset says it
+tests/unit/validation/test_checks.py	285	Stale	delete	divider naming T5, which is finished
+tests/unit/validation/test_checks.py	302	Tautology	delete	section divider
+tests/unit/validation/test_checks.py	337	Decision	D-038	tests found by planted bugs (section)
+tests/unit/validation/test_checks.py	342	Tautology	delete	the test name says it
+tests/unit/validation/test_checks.py	350	Tautology	delete	the start offset shows it
+tests/unit/validation/test_checks.py	355	Tautology	delete	the window says it
+tests/unit/validation/test_checks.py	356	Tautology	delete	the start says it
+tests/unit/validation/test_checks.py	364	Tautology	delete	the test name says it
+tests/unit/validation/test_checks.py	372	Decision	to-docstring	the month-end hour arithmetic
+tests/unit/validation/test_report.py	40	Tautology	delete	the name says it
+tests/unit/validation/test_report.py	67	Tautology	delete	the test name says it
+tests/unit/validation/test_report.py	68	Tautology	delete	the concat says it
+tests/unit/validation/test_report.py	89	Tautology	delete	the assert says it
+tests/unit/validation/test_report.py	121	Tautology	delete	section divider
+tests/unit/validation/test_report.py	144	Tautology	delete	the manifest line says it
+tests/unit/validation/test_report.py	177	Tautology	delete	section divider
+tests/unit/validation/test_report.py	188	Decision	to-docstring	coverage over final years only
+tests/unit/validation/test_report.py	212	Tautology	delete	the test name says it

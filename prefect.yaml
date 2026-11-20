@@ -27,6 +27,8 @@ deployments:
       job_variables:
         # D-026: a pinned Python, not 3-latest, so Prefect's default can't change the runtime.
         image: prefecthq/prefect:3-python3.12
+        # The pool's default is 24 h; a hung run would burn ~1,440 of 500 free minutes (#63).
+        timeout: 1800
         env:
           PREFECT_LOGGING_EXTRA_LOGGERS: airwatch
     schedules:

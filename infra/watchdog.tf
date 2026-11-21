@@ -217,10 +217,9 @@ resource "aws_scheduler_schedule" "watchdog" {
   target {
     arn      = aws_lambda_function.watchdog.arn
     role_arn = aws_iam_role.scheduler.arn
-    input = jsonencode({
-      mode           = each.key
-      scheduled_time = "<aws.scheduler.scheduled-time>"
-    })
+    # Plain text, not jsonencode: jsonencode writes < and > as < and >, and the
+    # scheduler then sends the placeholder itself instead of the time (2026-11-21).
+    input = "{\"mode\":\"${each.key}\",\"scheduled_time\":\"<aws.scheduler.scheduled-time>\"}"
 
     retry_policy {
       maximum_retry_attempts       = 2

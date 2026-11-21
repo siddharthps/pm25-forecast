@@ -1253,6 +1253,18 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - The watchdog's logs: 4 INFO lines, with no key-shaped string and no `Bearer`.
   - The zip no longer carries uv's empty `.lock` file (#73). That changes the zip's hash
     once, so the next plan updates the Lambda's code.
+  - *2026-11-21, the first real checks failed* (08:00 and 09:00, both emailed, and the
+    error alarm fired; nothing else was affected, and the forecast was recorded at 06:01):
+    - **The cause:** `jsonencode` in `infra/watchdog.tf` wrote the placeholder's `<` and
+      `>` as `\u003c` and `\u003e`. The scheduler substitutes only the literal
+      `<aws.scheduler.scheduled-time>`, so the Lambda got the placeholder itself.
+    - **Why the checks missed it:** the Terraform test compared the input after
+      `jsondecode`, which turns the escapes back into `<` and `>`. The drill invoked the
+      Lambda directly, so it never went through the scheduler.
+    - **The fix:** the input is plain text. A Terraform test now checks the raw string for
+      the literal placeholder (it failed on the old code), and the guide reads each
+      schedule's stored input after apply. The error email now names the value it got
+      (at most 60 characters; it holds no secret).
 
 ---
 

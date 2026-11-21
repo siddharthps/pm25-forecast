@@ -87,6 +87,19 @@ AWS_PROFILE=pm25 terraform -chdir=infra plan
 
 The second `plan` should say **No changes**.
 
+Then check what each schedule will really send. The drill (step 7) invokes the Lambda
+directly, so it can't test this step:
+
+```bash
+AWS_PROFILE=pm25 MSYS_NO_PATHCONV=1 aws scheduler get-schedule --group-name pm25-forecast \
+  --name pm25-forecast-watchdog-retry --query Target.Input --output text
+```
+
+Expect `{"mode":"retry","scheduled_time":"<aws.scheduler.scheduled-time>"}` with the
+**angle brackets as they are**. If it shows `\u003c` instead, the scheduler would send the
+placeholder itself instead of the time. That happened on 2026-11-21. Repeat with
+`pm25-forecast-watchdog-verify`.
+
 ## 6. Confirm the email subscription (2 min, within 48 hours)
 
 AWS emails "AWS Notification - Subscription Confirmation" to your alert address. Click **Confirm

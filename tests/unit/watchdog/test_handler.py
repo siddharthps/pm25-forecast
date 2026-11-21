@@ -465,3 +465,19 @@ def test_drill_must_be_a_boolean(aws: Aws) -> None:
     with pytest.raises(wd.WatchdogError, match="drill"):
         _handle(aws, {**RETRY, "drill": "yes"})
     assert aws.emails()
+
+
+def test_a_placeholder_left_by_the_scheduler_is_named_in_the_email(aws: Aws) -> None:
+    """2026-11-21: the scheduler sent its placeholder unsubstituted; the email should say so."""
+    event = {"mode": "retry", "scheduled_time": "<aws.scheduler.scheduled-time>"}
+    with pytest.raises(wd.WatchdogError):
+        _handle(aws, event)
+    [email] = aws.emails()
+    assert "<aws.scheduler.scheduled-time>" in email["message"]
+
+
+def test_a_long_bad_value_is_cut_short_in_the_email(aws: Aws) -> None:
+    with pytest.raises(wd.WatchdogError):
+        _handle(aws, {"mode": "retry", "scheduled_time": "x" * 500})
+    [email] = aws.emails()
+    assert "x" * 61 not in email["message"]

@@ -60,6 +60,7 @@ HTTP_CREATED = 201
 HTTP_EXISTING = 200
 SUBJECT = "[pm25-forecast]"
 SDK_LOGGERS = ("boto3", "botocore", "s3transfer", "urllib3")
+MAX_SHOWN = 60
 
 log = logging.getLogger(__name__)
 
@@ -122,12 +123,15 @@ def record_key(day: date) -> str:
 
 def _scheduled_time(event: Mapping[str, Any]) -> datetime:
     raw = event.get("scheduled_time")
+    got = repr(raw)[:MAX_SHOWN]
     if not isinstance(raw, str) or not raw.endswith("Z"):
-        raise WatchdogError("the event needs scheduled_time as UTC, e.g. 2026-11-21T14:00:00Z")
+        raise WatchdogError(
+            f"the event needs scheduled_time as UTC, e.g. 2026-11-21T14:00:00Z; got {got}"
+        )
     try:
         return datetime.fromisoformat(raw).astimezone(UTC)
     except ValueError as exc:
-        raise WatchdogError("scheduled_time isn't an ISO time") from exc
+        raise WatchdogError(f"scheduled_time isn't an ISO time; got {got}") from exc
 
 
 def _exists(s3: Any, bucket: str, key: str) -> bool:

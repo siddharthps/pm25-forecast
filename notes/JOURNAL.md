@@ -1113,3 +1113,55 @@ fixes as they came up and checked each result with reads only.
 - 2026-11-21 after 06:00 Chicago: check that the scheduled run wrote the 11-22 record and
   updated the live page. If it did, close #15.
 - Then T9 (#16): the watchdog, plus the compute-minutes email.
+
+## 2026-11-20: T9 (#16) watchdog, on branch `16-watchdog` (CST, about 20:40 to 21:30)
+
+Start: after #70 and #71 merged; the first scheduled Prefect run is due 2026-11-21 06:00.
+
+- **Docs first:**
+  - Prefect: `create_flow_run` with a Bearer key; the body takes `parameters` and an
+    `idempotency_key` (read from the installed client). A repeated key returns the existing run
+    with HTTP 200 (Prefect's server code). Hobby has no service accounts.
+  - AWS: Lambda's Python runtimes and dates, Scheduler's DST rules and context attributes, SSM
+    and KMS permissions, SNS email confirmation, and the free tiers.
+- **Owner's choices:**
+  - a check-only 09:00 run after the 08:00 retry, with emails at both;
+  - the minutes email once a month, through a create-once marker.
+- **Shape:** `src/airwatch/watchdog/handler.py` (stdlib + boto3 only), zipped by
+  `airwatch.watchdog.build` with boto3 and tzdata from a new `watchdog` dependency group
+  (`requirements/watchdog.txt`). `infra/watchdog.tf` adds 13 resources. D-041 records it all.
+- **A drill mode** came out of writing the guide: a test retry for a future day would have used
+  up that day's real idempotency key. Drills get `watchdog-drill-<day>`, DRILL emails, and must
+  target a day not yet issued, so their run stops as too early.
+- **Checks:**
+  - 507 Python tests (50 for the watchdog) and 19 Terraform tests pass. Watchdog coverage is 99%.
+  - The real build runs twice and gives the same SHA-256, and the handler and boto3 import from
+    the unpacked zip.
+  - 23 planted bugs (16 in the handler, 7 in the Terraform) were all caught.
+
+### Traps found
+
+- **At DEBUG, botocore logs response bodies,** including the decrypted SSM key. A test with the
+  root logger at DEBUG caught it. The Lambda pins the SDK's loggers at WARNING and logs at INFO.
+- **`airwatch/__init__.py` reads the installed package's version,** so nothing in a bare zip
+  can import `airwatch`. The handler is standalone, and tests check it agrees with the forecast's
+  record key, ledger rules and target day.
+- **A marker in the ledger's month folder would break `record_run`,** which sums every file there.
+  The marker lives in `reports/compute-alerts/`.
+- **Without `s3:ListBucket`, HeadObject on a missing key returns 403, not 404** (S3 HeadObject API
+  reference). Our ListBucket grants are limited to prefixes, so instead of relying on how that
+  condition applies to a HEAD, the record check lists the exact key.
+- **`terraform test -filter=tests/x.tftest.hcl` on Windows matches nothing and still exits 0**
+  ("could not be found"). Use a backslash. My planted-bug script first reported every Terraform
+  plant as missed; it now refuses to run when the filter matches nothing.
+- **A shared `.tfmock.hcl` (`mock_provider { source = ... }`)** keeps realistic mock ARNs in one
+  place, once several test files apply the same resources.
+- **Bash heredocs with quotes break on Windows** (the global notes already say so). Edit scripts
+  go in the scratchpad.
+
+### Next
+
+- PR for #16 when the owner asks. After it merges, the owner follows
+  `notes/guides/T9-WATCHDOG.md`: Prefect key, SSM parameter, two IDs, build, plan (13 to add),
+  apply, confirm the email, then the drill.
+- 2026-11-21 after 06:00 Chicago: check the first scheduled run, then close #15.

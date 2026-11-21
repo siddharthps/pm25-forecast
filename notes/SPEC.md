@@ -136,14 +136,15 @@ pm25-forecast/                 new public repo (D-002, D-017); package name `air
 │   ├── training/              split.py, baselines.py, models/, cv.py, final_test.py, registry.py
 │   ├── forecast/              run.py, record.py (conditional write), publish.py, schemas/ (D-036)
 │   ├── monitoring/            score.py, drift.py, flags.py
-│   └── flows/                 Prefect flows (thin wrappers that call the modules above)
+│   ├── flows/                 Prefect flows (thin wrappers that call the modules above)
+│   └── watchdog/              handler.py (the backup-trigger Lambda; stdlib + boto3 only), build.py (its zip; D-041)
 ├── scripts/                   manual tools: city_check.py (reads only), aqs_bulk.py (dry run unless --apply)
 ├── data/                      local cache of downloads (gitignored; raw data never committed)
-├── infra/                     Terraform (D-018) + watchdog Lambda source
+├── infra/                     Terraform (D-018); the watchdog's zip is built into infra/build/ (gitignored)
 ├── site/                      static page (HTML/JS/CSS; deployed only after the go-live switch, D-036)
 ├── biome.json, .nvmrc         Biome lint/format for the page's JS and CSS; Node version for its tests
 ├── prefect.yaml               the Prefect deployment: schedule, image, pull steps (D-040)
-├── requirements/              prefect-run.txt, exported from uv.lock for the Prefect run (D-040)
+├── requirements/              exported from uv.lock: prefect-run.txt (the Prefect run, D-040), watchdog.txt (D-041)
 ├── tests/
 │   ├── unit/                  one file per module
 │   ├── property/              Hypothesis: leakage, time and DST, per-group, idempotency

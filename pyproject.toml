@@ -35,6 +35,10 @@ dev = [
     "types-jsonschema>=4.26.0.20261006",
     "types-pyyaml>=6.0.12.20261113",
 ]
+watchdog = [
+    "boto3>=1.44.6",
+    "tzdata>=2026.6",
+]
 
 [build-system]
 requires = ["uv_build>=0.13.9,<0.14.0"]

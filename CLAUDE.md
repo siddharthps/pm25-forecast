@@ -36,6 +36,8 @@ uv run python scripts/city_check.py    # the frozen D-006 city check (reads only
 AWS_PROFILE=pm25 uv run python -m airwatch.validation.report --source all  # D-033 report (reads only)
 AWS_PROFILE=pm25 uv run python -m airwatch.forecast.run   # D+1 forecast: dry run; --publish acts
 uv export --frozen --no-dev --no-emit-project --no-header --format requirements.txt > requirements/prefect-run.txt  # after any uv.lock change (D-040)
+uv export --frozen --only-group watchdog --no-emit-project --no-header --format requirements.txt > requirements/watchdog.txt  # likewise (D-041)
+uv run python -m airwatch.watchdog.build  # the watchdog Lambda's zip, into infra/build/, before any terraform plan (D-041)
 ```
 
 Run every command from the project folder (`cd ~/code/pm25-forecast`). Scripts that change

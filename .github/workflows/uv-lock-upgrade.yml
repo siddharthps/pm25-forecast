@@ -50,6 +50,10 @@ jobs:
       - name: Regenerate the Prefect run's requirements
         run: uv export --frozen --no-dev --no-emit-project --no-header --format requirements.txt > requirements/prefect-run.txt
 
+      # The watchdog's zip is built from this export (D-041).
+      - name: Regenerate the watchdog's requirements
+        run: uv export --frozen --only-group watchdog --no-emit-project --no-header --format requirements.txt > requirements/watchdog.txt
+
       - name: Check for changes
         id: diff
         run: |
@@ -71,7 +75,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -C "$BRANCH"
-          git commit --quiet -m "chore(deps): weekly uv lock --upgrade" -- uv.lock requirements/prefect-run.txt
+          git commit --quiet -m "chore(deps): weekly uv lock --upgrade" -- uv.lock requirements/prefect-run.txt requirements/watchdog.txt
           git push --force origin "$BRANCH"
           {
             echo "## Changed packages"

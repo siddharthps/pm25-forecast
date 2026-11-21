@@ -1,8 +1,13 @@
-"""The scheduled job: today's forecast, then the run's compute minutes (#15, T8; D-040).
+"""The scheduled job: today's forecast, the scores, then the run's minutes (T8, T10; D-040, D-042).
 
 This is what the Prefect flow calls. It builds the real edges (S3 through the run's federated AWS
-credentials, AirNow's public hourly files) unless a test hands in fakes, runs the forecast, and
-always files the run's minutes, even when the forecast fails, before the failure is re-raised.
+credentials, AirNow's public hourly files) unless a test hands in fakes, and then:
+
+1. runs the forecast (recorded and published once);
+2. scores every settled day not yet scored, and rebuilds `history.json` so the new scores go
+   public. That happens even if a day failed to score, so the others still appear. Scoring comes
+   after the forecast, so a scoring failure can never stop or undo that morning's forecast;
+3. always files the run's minutes, even when a step fails, before the failure is re-raised.
 """
 
 import logging
@@ -15,8 +20,10 @@ from typing import Any
 import pandas as pd
 
 from airwatch.config import Settings
+from airwatch.forecast.publish import publish_history
 from airwatch.forecast.run import RunOutcome, latest_target_day, run_daily
 from airwatch.monitoring.compute import MONTHLY_ALERT_MIN, MONTHLY_FREE_MIN, Usage, record_run
+from airwatch.monitoring.score import ScoreOutcome, score_due
 from airwatch.observations.sites import TRAINING_SITES
 from airwatch.storage import S3Store
 
@@ -31,6 +38,7 @@ FetchDay = Callable[[date], tuple[pd.DataFrame, dict[str, int]]]
 class JobOutcome:
     run: RunOutcome
     usage: Usage
+    scores: tuple[ScoreOutcome, ...] = ()
 
 
 def _real_s3(settings: Settings) -> Any:  # pragma: no cover  (real AWS only)
@@ -73,9 +81,10 @@ def daily_job(  # noqa: PLR0913  (each argument is one injected edge or the run'
     now: Callable[[], datetime] = lambda: datetime.now(UTC),
     sites: Iterable[str] = TRAINING_SITES,
 ) -> JobOutcome:
-    """Run the day's forecast (a dry run unless `publish`), then file this run's minutes."""
+    """Forecast, then score (both dry runs unless `publish`), then file this run's minutes."""
     client = s3 if s3 is not None else _real_s3(settings)
     private = S3Store(client, settings.data_bucket)
+    public = S3Store(client, settings.public_bucket)
     wanted = tuple(sites)
     with ExitStack() as stack:
         fetch = fetch_day if fetch_day is not None else _real_fetch(settings, stack, wanted)
@@ -85,14 +94,21 @@ def daily_job(  # noqa: PLR0913  (each argument is one injected edge or the run'
                 target,
                 fetch_day=fetch,
                 private=private,
-                public=S3Store(client, settings.public_bucket),
+                public=public,
                 now=now,
                 tz=settings.city_tz,
                 sites=wanted,
                 publish=publish,
             )
+            try:
+                scores = score_due(
+                    fetch_day=fetch, private=private, sites=wanted, now=now, write=publish
+                )
+            finally:
+                if publish:
+                    publish_history(public, private)
         finally:
             usage = record_run(private, run_id, scheduled_start, now())
             _log_usage(usage)
     log.info("%s: %s", target, run.status)
-    return JobOutcome(run=run, usage=usage)
+    return JobOutcome(run=run, usage=usage, scores=tuple(scores))

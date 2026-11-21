@@ -19,15 +19,18 @@ from airwatch.validation.checks import ValidationResult
 
 __all__ = [
     "RECORD_VERSION",
+    "SCORE_PREFIX",
     "Store",
     "build_record",
     "encode",
     "record_key",
     "report_key",
+    "score_key",
     "write_once",
 ]
 
 RECORD_VERSION = 1
+SCORE_PREFIX = "reports/scores/"
 
 
 class Store(Protocol):
@@ -47,6 +50,11 @@ def record_key(target_day: date) -> str:
 def report_key(target_day: date) -> str:
     """The validation report of the run for `target_day` (overwritten by a rerun: versioned)."""
     return f"reports/validation/forecast_date={target_day.isoformat()}/validation.json"
+
+
+def score_key(target_day: date) -> str:
+    """The score of the forecast for `target_day` (T10, D-042), written once."""
+    return f"{SCORE_PREFIX}forecast_date={target_day.isoformat()}/score.json"
 
 
 def build_record(  # noqa: PLR0913  (each argument is one part of the record)

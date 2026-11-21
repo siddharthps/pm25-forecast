@@ -46,6 +46,7 @@ __all__ = [
     "Plan",
     "RunOutcome",
     "TooEarlyError",
+    "day_means",
     "drop_after_issue",
     "latest_target_day",
     "main",
@@ -106,11 +107,12 @@ def drop_after_issue(hourly: pd.DataFrame, issue_at_utc: datetime) -> tuple[pd.D
     return hourly[~late].reset_index(drop=True), int(late.sum())
 
 
-def persistence(
-    hourly: pd.DataFrame, observed_day: date, tz: ZoneInfo, sites: Iterable[str]
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Each site's D-1 daily mean as its forecast; the sites without a valid day, with hours."""
-    start, end = local_day_window_utc(observed_day, tz)
+def day_means(
+    hourly: pd.DataFrame, day: date, tz: ZoneInfo, sites: Iterable[str]
+) -> tuple[dict[str, tuple[float, int]], dict[str, int]]:
+    """Each site's valid mean over the local `day` (18+ hours), with its hours; and the hours of
+    each site without a valid day. The one home of the daily rule for forecast and score."""
+    start, end = local_day_window_utc(day, tz)
     in_day = hourly[(hourly["time_utc"] >= start) & (hourly["time_utc"] < end)]
     daily = daily_means(in_day, tz)
     valid = {
@@ -118,15 +120,20 @@ def persistence(
         for site, mean, n in daily[["site_id", "mean_ug_m3", "n_hours"]].itertuples(index=False)
     }
     hours = in_day.groupby("site_id")["time_utc"].nunique()
-    forecasts: list[dict[str, Any]] = []
-    missing: list[dict[str, Any]] = []
-    for site in sorted(set(sites)):
-        if site in valid:
-            mean, n = valid[site]
-            forecasts.append({"site_id": site, "forecast_ug_m3": mean, "n_hours": n})
-        else:
-            missing.append({"site_id": site, "n_hours": int(hours.get(site, 0))})
-    return forecasts, missing
+    wanted = sorted(set(sites))
+    missing = {site: int(hours.get(site, 0)) for site in wanted if site not in valid}
+    return {site: valid[site] for site in wanted if site in valid}, missing
+
+
+def persistence(
+    hourly: pd.DataFrame, observed_day: date, tz: ZoneInfo, sites: Iterable[str]
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Each site's D-1 daily mean as its forecast; the sites without a valid day, with hours."""
+    valid, missing = day_means(hourly, observed_day, tz, sites)
+    forecasts = [
+        {"site_id": site, "forecast_ug_m3": mean, "n_hours": n} for site, (mean, n) in valid.items()
+    ]
+    return forecasts, [{"site_id": site, "n_hours": n} for site, n in missing.items()]
 
 
 def _encode(data: dict[str, Any]) -> bytes:

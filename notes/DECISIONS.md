@@ -376,7 +376,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 - **Alternatives:**
   - Automatic retraining: needs a safe promotion rule and uses up the free quota. Deferred to V2.
   - Daily scoring only: rejected because it skips Evidently, a learning goal.
-- **Status:** Active.
+- **Status:** Active. *2026-11-20 (T10, D-042):* daily scoring is built. Each day is scored on
+  the T+2 morning against settled AirNow data, and its score goes public in `history.json`.
 
 ---
 
@@ -1246,6 +1247,58 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - The watchdog's logs: 4 INFO lines, with no key-shaped string and no `Bearer`.
   - The zip no longer carries uv's empty `.lock` file (#73). That changes the zip's hash
     once, so the next plan updates the Lambda's code.
+
+---
+
+## D-042 · 2026-11-20 · Daily scoring (T10, #17)
+
+- **When** (owner's choice): day T is scored by the run on the **morning of T+2** (from 06:00
+  Chicago), from a **fresh download** of all of T's AirNow hours.
+  - AirNow rewrites each hourly file for about 7.7 hours (D-034). At 06:00 on T+1, T's last hours
+    aren't final, and the forecast's strict cut drops them (20 Nov's record used 22 of 24 hours).
+  - By the T+2 morning every file for T has settled, so the score is complete, final for AirNow,
+    and the same whenever the run happens (a watchdog retry gives the same answer).
+  - `score_day` refuses a day before that moment.
+- **Actual:** each monitor's mean over the local day with the forecast's own rule. The new
+  `day_means` in `forecast/run.py` is now the one home of the 18-hour rule for forecast and score.
+  The same validation runs first. A hard failure leaves the day unscored, for a later run.
+- **Score:**
+  - per monitor: forecast minus actual (positive means the forecast was too high), and its
+    absolute value;
+  - for the city: the mean absolute error (MAE) and the mean error (bias) over the scored
+    monitors, from unrounded values;
+  - a forecast monitor without a valid actual is left out of both and listed in `no_actual`, with
+    its hours. A day with no valid actual at all is still a final score, with a null MAE.
+- **Once per day:** create-only at `reports/scores/forecast_date=<T>/score.json` (inside the
+  pipeline policy's `reports/`, so no IAM change), then reused. A racing writer's score wins. A dry
+  run computes and writes nothing.
+- **Catching up:** each run looks back 7 days, so a day missed by a failed run is scored later. A
+  failing day doesn't stop the others; the failures are raised together at the end.
+- **In the job:** scoring runs after the forecast is recorded and published, so it can never stop
+  or undo that morning's forecast. `history.json` is rebuilt afterwards, even if a day failed, so
+  the scored days still appear. A scoring failure fails the Prefect run; the watchdog stays quiet,
+  because the record exists. The email for it comes with the flags (T24).
+- **Public** (owner's choice: now, in `history.json`; D-012 already lists "recent actuals,
+  scores"):
+  - a scored day gains `score`: each monitor's actual (truncated to 1 decimal like the forecast,
+    with its AQI and category) and error (2 decimals); the city's MAE and bias (2 decimals);
+    `n_scored`; and the `no_actual` site IDs;
+  - the history schema lists every field, so nothing extra can go public. The field is optional,
+    so the page and `version` 2 are unchanged. The page draws it in T25;
+  - errors come from the unrounded values, so a published error can differ by 0.1 from the
+    published forecast minus the published actual.
+- **Preliminary:** live scores are against AirNow. The AQS re-score follows (T26, D-004).
+- **Checks:**
+  - 534 Python tests, including 16 for scoring, the history and schema tests, and four
+    integration runs on moto, with the forecast recorded on one morning and scored two days
+    later;
+  - 18 planted bugs caught (sign, MAE without abs, a day early, overwrite, dry-run write, the
+    18-hour rule, the lookback, history not republished, and others).
+- **Alternatives (rejected by the owner):** score on T+1 with the 06:00 view (usually 22 of 24
+  hours); score on T+1 with the files at run time (the answer depends on the time of the run);
+  keep the scores private until T25.
+- **Status:** Active. Owner's choices, 2026-11-20. First real score: the 2026-11-22 run scores
+  2026-11-20.
 
 ---
 

@@ -4,7 +4,10 @@
   AQI TAD, p. 13); each monitor shows PM2.5 truncated to 1 decimal, its AQI, category and
   standard colour, all from `airwatch.aqi`. Labelled preliminary (AirNow inputs, D-025).
 - `history.json`: every recorded day, newest first, rebuilt from the private records on each
-  run. The records are the source of truth, so the history can't drift from them.
+  run. The records are the source of truth, so the history can't drift from them. A scored
+  day (T10, D-042) also carries its `score`: each monitor's actual (truncated like the
+  forecast, with its AQI) and error (forecast minus actual, from the unrounded values, to 2
+  decimals), and the city's MAE and bias.
 
 Only derived values go public, never raw rows or the private records. Before any upload, the
 payload must pass a strict JSON schema (`schemas/`, no field outside the list) and a secret
@@ -32,7 +35,7 @@ from airwatch.aqi import (
     text_color,
     truncate_pm25,
 )
-from airwatch.forecast.record import Store
+from airwatch.forecast.record import SCORE_PREFIX, Store
 from airwatch.observations.sites import SITE_NAMES
 
 __all__ = [
@@ -50,6 +53,7 @@ LATEST_KEY = "latest.json"
 HISTORY_KEY = "history.json"
 PUBLIC_VERSION = 2
 RECORD_FILE = "/forecast.json"
+SCORE_FILE = "/score.json"
 
 SECRET_PATTERNS = (
     re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"),
@@ -106,19 +110,51 @@ def _brief(monitor: dict[str, Any]) -> dict[str, Any]:
     return {k: monitor[k] for k in ("site_id", "pm25_ug_m3", "aqi", "category")}
 
 
-def history_payload(records: list[dict[str, Any]]) -> dict[str, Any]:
-    """Every record, newest first, in brief."""
+def _round(value: float | None, places: int = 2) -> float | None:
+    return None if value is None else round(value, places)
+
+
+def _public_score(score: dict[str, Any]) -> dict[str, Any]:
+    """The public view of one score: actuals as displayed, errors and the city's MAE."""
+    monitors = []
+    for m in score["monitors"]:
+        actual = truncate_pm25(m["actual_ug_m3"])
+        aqi = pm25_aqi(actual)
+        monitors.append(
+            {
+                "site_id": m["site_id"],
+                "actual_ug_m3": actual,
+                "aqi": aqi,
+                "category": aqi_category(aqi).name,
+                "error_ug_m3": _round(m["error_ug_m3"]),
+            }
+        )
+    return {
+        "mae_ug_m3": _round(score["city"]["mae_ug_m3"]),
+        "bias_ug_m3": _round(score["city"]["bias_ug_m3"]),
+        "n_scored": score["city"]["n_scored"],
+        "monitors": monitors,
+        "no_actual": [{"site_id": m["site_id"]} for m in score["no_actual"]],
+    }
+
+
+def history_payload(
+    records: list[dict[str, Any]], scores: dict[str, dict[str, Any]] | None = None
+) -> dict[str, Any]:
+    """Every record, newest first, in brief; a scored day with its score."""
     days = []
     for record in sorted(records, key=lambda r: r["forecast_date"], reverse=True):
         full = public_payload(record)
-        days.append(
-            {
-                "forecast_date": full["forecast_date"],
-                "issued_at_utc": full["issued_at_utc"],
-                "city": _brief(full["city"]),
-                "forecasts": [_brief(m) for m in full["forecasts"]],
-            }
-        )
+        day: dict[str, Any] = {
+            "forecast_date": full["forecast_date"],
+            "issued_at_utc": full["issued_at_utc"],
+            "city": _brief(full["city"]),
+            "forecasts": [_brief(m) for m in full["forecasts"]],
+        }
+        score = (scores or {}).get(record["forecast_date"])
+        if score is not None:
+            day["score"] = _public_score(score)
+        days.append(day)
     return {
         "version": PUBLIC_VERSION,
         "preliminary": True,
@@ -167,13 +203,19 @@ def publish(store: Store, record: dict[str, Any]) -> bool:
 
 
 def publish_history(public: Store, private: Store) -> bool:
-    """Rebuild `history.json` from every private record. True if it changed."""
+    """Rebuild `history.json` from every private record and score. True if it changed."""
     records = []
     for key in private.list_keys("records/"):
         raw = private.get(key) if key.endswith(RECORD_FILE) else None
         if raw is not None:
             records.append(json.loads(raw))
-    payload = history_payload(records)
+    scores = {}
+    for key in private.list_keys(SCORE_PREFIX):
+        raw = private.get(key) if key.endswith(SCORE_FILE) else None
+        if raw is not None:
+            score = json.loads(raw)
+            scores[score["forecast_date"]] = score
+    payload = history_payload(records, scores)
     check_public(payload, "history")
     data = _encode(payload)
     if public.get(HISTORY_KEY) == data:

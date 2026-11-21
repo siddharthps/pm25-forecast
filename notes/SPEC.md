@@ -113,7 +113,7 @@ uv run python -m airwatch.training.cv --variant lightgbm      # one variant, CV 
 uv run python -m airwatch.training.final_test                 # reads the 2025 test ONCE (guarded)
 uv run python -m airwatch.forecast.run --target-day 2026-11-25    # a dry run; --publish acts (D-034)
 uv run prefect --no-prompt deploy --all  # deploy flows to Prefect Cloud (prefect.yaml; D-040)
-uv run zensical build                    # build the docs (exact command confirmed at setup)
+uv run --group docs zensical build --strict  # build the docs into site_build/ (D-043)
 ```
 
 ---

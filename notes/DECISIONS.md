@@ -447,7 +447,9 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 - **Alternatives:**
   - MkDocs 1.x + Material 9.7: frozen, so a migration would come later anyway.
   - Sphinx + MyST: very stable, but a heavier config and a different ecosystem.
-- **Status:** Active. Re-check Zensical's stable release around 2027-02.
+- **Status:** Active. Re-check Zensical's stable release around 2027-02. *Refined 2026-11-21
+  (D-043):* Zensical 0.1.3; its strict build fails on broken links and anchors (the open
+  point), and lychee runs offline as the separate checker.
 
 ---
 
@@ -548,7 +550,9 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   the docs grow past a handful of pages.
 - **Why:** The write-up is a README plus about 5 short pages, not a book, but the last write-up
   needed many review passes. The owner asked to start light and be able to expand.
-- **Status:** Active.
+- **Status:** Active. *Refined 2026-11-21 (D-043):* the bottom line is `docs/index.md`, the
+  outline `notes/OUTLINE.md`, the style sheet `notes/STYLE.md`; the caps are 400 and 1,000
+  words.
 
 ---
 
@@ -1322,6 +1326,49 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   keep the scores private until T25.
 - **Status:** Active. Owner's choices, 2026-11-20. First real score: the 2026-11-22 run scores
   2026-11-20.
+
+---
+
+## D-043 · 2026-11-21 · The write-up's setup (T11, #18)
+
+- **Docs tool:** Zensical **0.1.3** (PyPI, 2026-11-20), pinned with `==` in a separate `docs`
+  dependency group, so the daily job's and the watchdog's requirements stay unchanged (D-040,
+  D-041). Config in `zensical.toml`: `docs_dir = "docs"`, `site_dir = "site_build"` (the page's
+  source owns `site/`), `strict = true`.
+- **Numbers:** `results/results.json` is the one source. `airwatch.docs_macros` loads it as
+  `results` through Zensical's native macros (`modules = ["airwatch.docs_macros"]`,
+  `on_undefined = "strict"`, `on_error_fail = true`). A `show` filter prints a null as
+  *(pending)*. The file holds the design counts from the frozen decisions (variants, baselines,
+  folds) and nulls for every result. Writing it from the pipeline is a separate task.
+- **Number check** (`airwatch.devtools.docs_check`, a pre-commit hook and a core test): any digit
+  in `docs/` outside a macro fails, code blocks and HTML comments included. Allowed literals: ISO
+  dates, years 1900–2099, clock times (`06:00`, added when the first page needed the issue
+  time), decision and task IDs, issue numbers, `PM2.5`, `PM10`, `D+1`, versions with a `v`,
+  ordered-list markers, link targets. A macro naming a missing key fails too.
+- **Length cap:** 400 words for the bottom line, 1,000 for any other page.
+- **Vale 3.28.1** as a pre-commit hook (the upstream golang hook, pinned to the tag's commit), over
+  `docs/`, the README and DEVELOPMENT.md. One project style, `styles/AirWatch/Banned.yml`, at
+  `error` level. CI runs it in the pre-commit step.
+- **Links:** Zensical's strict build already fails on broken links and anchors (checked
+  2026-11-21 with a planted broken anchor), which settles D-016's open point. The separate checker
+  D-016 asks for is **lychee 0.24.2** through `lycheeverse/lychee-action` 2.9.0, **offline**
+  (`--offline --include-fragments`) over `site_build/` in a new CI `docs` job, so an outside site
+  being slow can't fail a PR.
+- **Dev commands:** one home, `DEVELOPMENT.md` at the root (owner's choice), linked from the
+  README and imported by `CLAUDE.md` with `@DEVELOPMENT.md`. Not in `docs/`, so it isn't
+  published or number-checked.
+- **Scoped, not loosened (D-029):** two discovery tests (the comment ban's folder scope, Biome's
+  file scope) walk the disk and found Zensical's bundled theme JS and CSS in the gitignored
+  `site_build/`. That is generated output we don't own, so both skip exactly that folder. A test
+  ties the skipped name to `site_dir`, so it can't drift.
+- **Alternatives:**
+  - Zensical in the `dev` group: rejected, since the docs build isn't needed for the core suite.
+  - Vale in CI only, from a downloaded binary: rejected, because the hook gives the same version
+    locally.
+  - lychee checking outside links on every PR: rejected because it would be flaky. An outside-link
+    check can come later as its own scheduled job.
+- **Status:** Active. 2026-11-21. Refines D-016 (tool and versions; its open point settled) and
+  D-022 (how its checks run).
 
 ---
 

@@ -1318,3 +1318,33 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - 2026-11-22: 06:00, the first real score (2026-11-20); 08:00 and 09:00, silent watchdog checks.
   Then close #75.
 - T11 (#18) on the owner's go.
+
+## 2026-11-21: T11 (#18) the write-up's setup, on branch `18-docs-stub` (CST, about 13:55 to 14:15)
+
+- **Morning check deferred:** the owner asked for it at 13:52 on 2026-11-21, but every item (the
+  run for 2026-11-23, the first score, the silent 08:00 and 09:00 checks) falls on 2026-11-22.
+  #75 stays open.
+- **Built, checks first:** the number check (`airwatch.devtools.docs_check`, with property tests),
+  the macros module, the config tests, then Zensical 0.1.3, `results/results.json` (design counts
+  and nulls), two skeleton pages, Vale, a CI `docs` job with lychee offline, `DEVELOPMENT.md` as
+  the commands' one home, the README skeleton, `notes/STYLE.md` and `notes/OUTLINE.md`. D-043.
+- **Proved by planting faults:** an undefined macro key and a broken anchor each abort the strict
+  build; Vale fails on "very" and "robust"; the number check caught the pages' own "06:00"
+  before clock times were allowed.
+- **Not run locally:** lychee. Downloading and running its binary was refused by the permission
+  check, so its first run is CI on the PR.
+
+### Traps found
+
+- **Zensical's macros resolve files from the working directory,** not the config's folder. The
+  macros module builds the path from `env.project_dir`.
+- **A build folder under the project shows up in disk-walking scope tests:** Zensical's theme
+  bundles JS and CSS into `site_build/`. Two tests now skip exactly that folder (D-029's rule).
+- **The core suite is at the 30 s line on main too** (28.7 s warm, against 28.8 s on this
+  branch): the property tests have grown since D-035's 15 s. That needs its own issue.
+
+### Next
+
+- Owner: open the PR; add the `Docs build and links` check to `protect-main` after it passes.
+- New issues to propose: the pipeline writes `results.json`; the core suite's 30 s budget.
+- 2026-11-22 after 09:15: the morning check, then close #75.

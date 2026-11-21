@@ -20,32 +20,9 @@ This file points to where things live. It doesn't repeat them; each fact has one
 
 ## Commands
 
-```bash
-uv sync --frozen                       # install exactly what uv.lock says
-uv run ruff check . && uv run ruff format --check .
-uv run mypy                            # strict; config in pyproject.toml
-uv run pytest                          # fast offline core suite, 4 workers (D-035; -n 0 = serial); -m slow / -m live are opt-in
-uv run pytest tests/property --hypothesis-profile=explore   # fresh random search (default is derandomized)
-uv run pre-commit run --all-files      # every hook: gitleaks, markdownlint, Biome, terraform fmt
-node --test tests/site/                # the page's JavaScript tests (Node from .nvmrc)
-terraform -chdir=infra test            # infra safety rules on the plan, mock AWS provider, offline
-aws sso login --profile pm25           # AWS access (never use long-lived keys); lasts 8 hours
-uv run pytest -m live -o log_cli=true --log-cli-level=INFO   # opt-in real-API checks, counts only
-AWS_PROFILE=pm25 uv run python scripts/aqs_bulk.py           # AQS history to S3: dry run; --apply acts
-uv run python scripts/city_check.py    # the frozen D-006 city check (reads only; cached in data/)
-AWS_PROFILE=pm25 uv run python -m airwatch.validation.report --source all  # D-033 report (reads only)
-AWS_PROFILE=pm25 uv run python -m airwatch.forecast.run   # D+1 forecast: dry run; --publish acts
-uv export --frozen --no-dev --no-emit-project --no-header --format requirements.txt > requirements/prefect-run.txt  # after any uv.lock change (D-040)
-uv export --frozen --only-group watchdog --no-emit-project --no-header --format requirements.txt > requirements/watchdog.txt  # likewise (D-041)
-uv run python -m airwatch.watchdog.build  # the watchdog Lambda's zip, into infra/build/, before any terraform plan (D-041)
-```
+Every command, with how to run it: [DEVELOPMENT.md](DEVELOPMENT.md), imported here.
 
-Run every command from the project folder (`cd ~/code/pm25-forecast`). Scripts that change
-anything outside this PC are dry runs unless given `--apply`. Keys live in the gitignored `.env`
-(names in [.env.example](.env.example); register in [notes/TOKENS.md](notes/TOKENS.md)).
-
-Infrastructure lives in `infra/`. The owner runs `plan` and `apply`, following
-[infra/README.md](infra/README.md). CI never has AWS credentials.
+@DEVELOPMENT.md
 
 ## Rules that bite (details in SPEC § Boundaries and the owner's global CLAUDE.md)
 

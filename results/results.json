@@ -1,0 +1,23 @@
+{
+  "status": "placeholder",
+  "design": {
+    "variants": 6,
+    "baselines": 3,
+    "cv_folds": 6
+  },
+  "headline": {
+    "model": null,
+    "test_mae": null,
+    "persistence_test_mae": null,
+    "skill_vs_persistence": null
+  },
+  "skew": {
+    "weather_forecast_vs_observed_mae_gap": null,
+    "airnow_vs_aqs_mae_gap": null
+  },
+  "live": {
+    "days_scored": null,
+    "mae": null,
+    "persistence_mae": null
+  }
+}

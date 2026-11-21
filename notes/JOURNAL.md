@@ -1165,3 +1165,37 @@ Start: after #70 and #71 merged; the first scheduled Prefect run is due 2026-11-
   `notes/guides/T9-WATCHDOG.md`: Prefect key, SSM parameter, two IDs, build, plan (13 to add),
   apply, confirm the email, then the drill.
 - 2026-11-21 after 06:00 Chicago: check the first scheduled run, then close #15.
+
+## 2026-11-20: T9 (#16) set up and drilled, owner-run (CST, about 21:20 to 21:45)
+
+Start: after #72 merged. The owner ran each step of `notes/guides/T9-WATCHDOG.md`; I checked each
+result with reads only.
+
+- **Key and IDs:** the Prefect key `pm25-forecast-watchdog` was created (it expires 2027-02-28)
+  and put in SSM `/pm25-forecast/prefect-api-key` (SecureString, `alias/aws/ssm`). I checked its
+  metadata, never its value. The workspace and deployment IDs went into `terraform.tfvars`.
+- **Build:** a 17 MB zip, SHA-256 `e6326c39…`. The Lambda's deployed code hash matches it.
+- **Terraform:** plan 13 to add; applied; a second plan showed no changes. The owner confirmed the
+  email subscription during the apply.
+- **Drill:** four invokes, all as designed (D-041 status). The retry drill's run,
+  `fragrant-turaco`, stopped as too early. It wrote no record and no public file, only its
+  minutes (9 of 500 this month). The repeat got `already started`, with still one run.
+- **Logs:** 4 INFO summary lines; no key-shaped string and no `Bearer`.
+- **Follow-up in #73:** the zip drops uv's empty `.lock`, and the guide gets
+  `MSYS_NO_PATHCONV=1`.
+
+### Traps found
+
+- **Git Bash rewrites a leading `/` in arguments into a Windows path.**
+  `--parameter-filters Key=Name,Values=/pm25-forecast/...` silently matched nothing. Use
+  `MSYS_NO_PATHCONV=1`, or a JMESPath `--query` on the name.
+- **The AWS SSO session had expired** (8 hours, TOKENS.md) between the morning and the evening
+  steps, so the first read failed. Log in again before each owner session.
+- **`aws s3 ls` on an empty prefix exits 1:** in a chained check, that is not a failure.
+
+### Next
+
+- 2026-11-21 after 06:00 Chicago: check the first scheduled Prefect run (11-22 record, page), then
+  close #15. At 08:00 and 09:00 the watchdog's real checks should stay silent.
+- After #73 merges, the owner rebuilds the zip and applies the 1-change plan (the Lambda's code).
+- Then T10 (#17), daily scoring.

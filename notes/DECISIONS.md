@@ -1232,7 +1232,20 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - Terraform-managed SSM value: the key would sit in state.
   - Rely on the runtime's boto3 and time-zone files: against AWS's advice, and unversioned.
 - **Status:** Active. Owner's choices, 2026-11-20. The first plan, apply and drill are the
-  owner's (`notes/guides/T9-WATCHDOG.md`, D-023).
+  owner's (`notes/guides/T9-WATCHDOG.md`, D-023). *2026-11-20, set up and drilled (#16):*
+  - Plan: 13 to add; applied. A second plan showed no changes. The email subscription is
+    confirmed.
+  - Four drill invokes, all as designed:
+    - verify for 11-21 (record present): no email;
+    - verify for 11-22 (missing): the DRILL email;
+    - retry for 11-22: one Prefect run, `fragrant-turaco` (`publish: true`, key
+      `watchdog-drill-2026-11-22`). It failed with `TooEarlyError` and wrote only a ledger
+      entry (3 min);
+    - the same retry again: `already started` and still one run. That confirms on Prefect
+      Cloud the idempotency behaviour read in the server code.
+  - The watchdog's logs: 4 INFO lines, with no key-shaped string and no `Bearer`.
+  - The zip no longer carries uv's empty `.lock` file (#73). That changes the zip's hash
+    once, so the next plan updates the Lambda's code.
 
 ---
 

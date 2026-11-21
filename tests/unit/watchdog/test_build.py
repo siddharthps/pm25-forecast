@@ -91,6 +91,7 @@ def _tree(root: Path, mtime: int) -> None:
         "boto3/__pycache__/__init__.cpython-312.pyc": b"junk",
         "tzdata/zoneinfo/America/Chicago": b"TZif",
         "bin/jp.py": b"#!python\n",
+        ".lock": b"",
     }.items():
         path = root / rel
         path.parent.mkdir(parents=True, exist_ok=True)

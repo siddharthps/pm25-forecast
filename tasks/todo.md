@@ -27,7 +27,7 @@ line** (2026-12-16) · **D: Complete**.
 | T7 | [#14](https://github.com/siddharthps/pm25-forecast/issues/14) | Public JSON and static page | B | closed (live 2026-11-20, D-039) |
 | T8 | [#15](https://github.com/siddharthps/pm25-forecast/issues/15) | Prefect daily deployment | B | open: deployed 2026-11-20 (D-040); closes after the first scheduled run is checked |
 | T9 | [#16](https://github.com/siddharthps/pm25-forecast/issues/16) | Watchdog (EventBridge → Lambda → Prefect / SNS) | B | closed (applied and drilled 2026-11-20, D-041) |
-| T10 | [#17](https://github.com/siddharthps/pm25-forecast/issues/17) | Daily scoring | B | open |
+| T10 | [#17](https://github.com/siddharthps/pm25-forecast/issues/17) | Daily scoring | B | open: built on `17-daily-scoring` (D-042); merges after the 11-21 check |
 | T11 | [#18](https://github.com/siddharthps/pm25-forecast/issues/18) | Docs stub, number check and README skeleton | B | open |
 | T14 | [#19](https://github.com/siddharthps/pm25-forecast/issues/19) | Weather ingestion | C | open |
 | T12b | [#20](https://github.com/siddharthps/pm25-forecast/issues/20) | Validation, remaining problem classes and weather sources | C | open |

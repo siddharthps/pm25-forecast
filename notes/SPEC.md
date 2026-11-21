@@ -55,8 +55,8 @@ module in the order validation → features → training → monitoring → site
   parameter 88101; co-located instruments (POCs) are averaged per hour first. Labels are built
   from AQS's *hourly* data with this rule, not from AQS's daily summary records, and only from
   continuous FEM instruments (D-032).
-- **Training labels** come from AQS. **Live labels** come from AirNow; the AQS re-score follows
-  later (D-004).
+- **Training labels** come from AQS. **Live labels** come from AirNow: day T is scored on the
+  morning of T+2, once its files have settled (D-042). The AQS re-score follows later (D-004).
 - **Weather lead mapping:** for target day D+1 issued at 06:00 on day D, weather values valid
   during D+1 are 18–42 hours ahead of issue. When rebuilding history from the Previous Runs API,
   use the offset matching that lead (`_previous_day1` for hours valid up to 24 h after issue,
@@ -135,7 +135,7 @@ pm25-forecast/                 new public repo (D-002, D-017); package name `air
 │   ├── features/              build.py (as-of-issue-time feature rows)
 │   ├── training/              split.py, baselines.py, models/, cv.py, final_test.py, registry.py
 │   ├── forecast/              run.py, record.py (conditional write), publish.py, schemas/ (D-036)
-│   ├── monitoring/            score.py, drift.py, flags.py
+│   ├── monitoring/            compute.py (Prefect minutes ledger), score.py (daily scoring, D-042), drift.py, flags.py
 │   ├── flows/                 Prefect flows (thin wrappers that call the modules above)
 │   └── watchdog/              handler.py (the backup-trigger Lambda; stdlib + boto3 only), build.py (its zip; D-041)
 ├── scripts/                   manual tools: city_check.py (reads only), aqs_bulk.py (dry run unless --apply)

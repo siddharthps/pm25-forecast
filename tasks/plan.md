@@ -105,7 +105,8 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
   closes after the first scheduled run is checked)
 - [x] T9: Watchdog: EventBridge → Lambda → Prefect API / SNS, in Terraform (D-018) (merged #72,
   applied and drilled 2026-11-20, D-041)
-- [ ] T10: Daily scoring of yesterday's forecast
+- [ ] T10: Daily scoring of each forecast day, two mornings later on settled AirNow data (D-042;
+  built 2026-11-20 on `17-daily-scoring`, merged after the first scheduled run is checked)
 - [ ] T11: Bottom line + outline + style sheet (Vale), docs stub, `results.json` number check,
   README skeleton (D-022)
 

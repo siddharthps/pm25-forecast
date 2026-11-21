@@ -1060,3 +1060,56 @@ it update every morning.
   Federated Identity, deploy, a manual dry run.
 - Then I check the ledger entry and the logs (reads only). The first scheduled run (06:00
   Chicago) should write the next day's record.
+
+## 2026-11-20: T8 (#15) first deploy, owner-run (CST, about 13:30 to 20:30)
+
+Start: after #62 merged. The owner ran each step of `notes/guides/T8-PREFECT.md`. I merged the
+fixes as they came up and checked each result with reads only.
+
+- **Terraform:** plan 3 to add, applied. The role ARN output matched `pm25-forecast-prefect-run`.
+- **Prefect:** CLI logged in (workspace `siddharthpm/default`). `managed-pool` already existed.
+  The owner set the pool's Federated Identity in the UI. Deployment `daily-forecast` created,
+  with the 06:00 America/Chicago schedule active.
+- **Fixes merged along the way:**
+  - #63/#64 (PR #65): 30-minute run timeout (owner's choice), and the terraform-fmt hook no
+    longer prints file contents;
+  - #66 (PR #67): install our package from inside the clone;
+  - #68 (PR #69): set the `airwatch` logger to INFO.
+- **Runs:**
+  - `bright-piculet`: Crashed in the pull steps (#66).
+  - `invaluable-tiger`: Completed, but logged none of our lines (#68). It reused the existing 11-21
+    record, so it fetched nothing. Ledger: 3 min.
+  - `rose-ocelot` (`target_day=2026-11-19`, no record for that day): Completed. Logs:
+    `2026-11-19: dry run, 9 monitor(s) forecast; nothing written` and the compute line (6 of
+    500 min this month). In S3: a new ledger entry, no new record, public files unchanged since
+    the 12:52 publish. No credential in the logs.
+- **The owner formatted the local `terraform.tfvars`,** the last box on #64.
+  `terraform fmt -check -recursive infra` passes.
+- **D-040 status note:** the deploy, the two fixes, the default image
+  (`prefect-client:3-latest`, so the D-026 pin matters), and a correction (`git_clone` does
+  accept `commit_sha`).
+
+### Traps found
+
+- **The Prefect CLI crashes on the Windows console's cp1252 encoding,** sometimes after the
+  action has happened (`deploy`, and `run --watch` after the run was created). Use
+  `PYTHONUTF8=1`, and list the actual state before retrying.
+- **`pip_install_requirements` and a pip target of `{{ clone.directory }}`:** the step outputs a
+  bare folder name, so pip read it as a package name from PyPI. Run the install from inside the
+  clone (`run_shell_script` with `directory`). A test now bans a bare template value as a pip
+  target.
+- **`PREFECT_LOGGING_EXTRA_LOGGERS` attaches Prefect's handler but sets no level,** so the
+  logger's inherited WARNING dropped our INFO lines. The run still showed Completed, so only
+  reading the logs caught it.
+- **`terraform fmt -diff -recursive` printed a gitignored file's private values** (#64). Never
+  use `-diff` where gitignored files sit inside the folder.
+- **A dry run that reuses an existing record proves nothing about the fetch.** Pick a past day
+  with no record to test the download.
+- **`terraform -chdir=infra fmt infra/terraform.tfvars` fails:** `-chdir` moves first, so the
+  path is relative to `infra/`.
+
+### Next
+
+- 2026-11-21 after 06:00 Chicago: check that the scheduled run wrote the 11-22 record and
+  updated the live page. If it did, close #15.
+- Then T9 (#16): the watchdog, plus the compute-minutes email.

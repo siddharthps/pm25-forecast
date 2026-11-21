@@ -1132,7 +1132,20 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 - **Deployments used:** 1 of the Hobby plan's 5 (a test caps `prefect.yaml` at 5).
 - **Status:** Active. Owner's choices, 2026-11-20. The first deploy is the owner's
   (`notes/guides/T8-PREFECT.md`, D-023). *2026-11-20 (#63):* runs time out after 30 minutes
-  (owner's choice), because the managed pool's default is 24 hours.
+  (owner's choice), because the managed pool's default is 24 hours. *2026-11-20, first deploy
+  (#15):*
+  - Deployment `daily-forecast/daily-forecast` created. The AWS role was applied, and the pool's
+    Federated Identity set.
+  - Two manual dry runs completed. The second (`rose-ocelot`, `target_day=2026-11-19`) fetched
+    AirNow on Prefect's machines and forecast 9 monitors. It wrote a ledger entry and no record
+    or public file.
+  - The managed pool's default image is `prefecthq/prefect-client:3-latest`, so the D-026 pin is
+    what keeps the run on Python 3.12.
+  - Two first-run fixes: install our package from inside the clone (#66), and set the `airwatch`
+    logger to INFO so its lines reach Prefect (#68).
+  - *Correction:* "Prefect documents no way to pin a commit" is wrong. Prefect 3.9.4's
+    `git_clone` step accepts `commit_sha`. Runs still clone `main`, because the reason above
+    (`main` changes only through CI-gated PRs) still holds.
 
 ---
 

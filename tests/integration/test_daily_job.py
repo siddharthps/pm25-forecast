@@ -3,10 +3,12 @@
 moto stands in for both buckets; AirNow is a fake fetch; the clock is frozen (#15, T8; D-040).
 """
 
+import json
 import logging
 from collections.abc import Iterator
-from datetime import timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import boto3
 import pytest
@@ -14,13 +16,16 @@ from moto import mock_aws
 
 from airwatch.config import Settings
 from airwatch.forecast.job import daily_job
-from airwatch.forecast.publish import LATEST_KEY
-from airwatch.forecast.record import record_key
+from airwatch.forecast.publish import HISTORY_KEY, LATEST_KEY
+from airwatch.forecast.record import record_key, score_key
 from airwatch.forecast.run import NoForecastError
 from airwatch.monitoring.compute import MONTHLY_ALERT_MIN, PREFIX, TEARDOWN_PAD_MIN, record_run
+from airwatch.monitoring.score import ScoringError
 from airwatch.storage import S3Store
+from airwatch.timeutil import local_day_window_utc
 from tests.unit.forecast.fakes import (
     ISSUE_AT,
+    PHOENIX,
     PRIVATE,
     PUBLIC,
     SITES,
@@ -115,3 +120,72 @@ def test_a_month_over_the_alert_line_logs_a_warning(
         r.levelno == logging.WARNING and "OVER THE ALERT LINE" in r.getMessage()
         for r in caplog.records
     )
+
+
+SCORED_DAY = TARGET
+LATER = datetime(2026, 11, 23, 6, 4, tzinfo=ZoneInfo("America/Chicago")).astimezone(UTC)
+
+
+def _fetch_days(fail: set[date] | None = None) -> Any:
+    """AirNow for each day asked; `fail` days raise, like an unreachable AirNow."""
+
+    def fetch(day: date) -> Any:
+        if day in (fail or set()):
+            raise ConnectionError("AirNow unreachable")
+        published = local_day_window_utc(day, PHOENIX)[1] + timedelta(hours=3)
+        return observed_day(day=day, available_at=published), {}
+
+    return fetch
+
+
+def _later_job(s3: Any, *, publish: bool, fail: set[date] | None = None) -> Any:
+    return daily_job(
+        Settings(_env_file=None, data_bucket=PRIVATE, public_bucket=PUBLIC),
+        run_id="22222222-3333-4444-8555-666666666666",
+        scheduled_start=LATER,
+        publish=publish,
+        s3=s3,
+        fetch_day=_fetch_days(fail),
+        now=lambda: LATER,
+        sites=SITES,
+    )
+
+
+def test_the_t_plus_2_run_scores_the_day_and_republishes_history(s3: Any) -> None:
+    _job(s3, publish=True)
+    outcome = _later_job(s3, publish=True)
+    assert outcome.run.record["forecast_date"] == "2026-11-24"
+    assert [s.status for s in outcome.scores if s.day == SCORED_DAY] == ["scored"]
+    assert object_versions(s3, PRIVATE, score_key(SCORED_DAY)) == 1
+    history = json.loads(S3Store(s3, PUBLIC).get(HISTORY_KEY) or b"")
+    days = {d["forecast_date"]: d for d in history["days"]}
+    assert days["2026-11-21"]["score"]["n_scored"] == len(SITES)
+    assert "score" not in days["2026-11-24"]
+
+
+def test_a_failed_score_fails_the_run_but_never_its_forecast(s3: Any) -> None:
+    _job(s3, publish=True)
+    with pytest.raises(ScoringError, match="2026-11-21"):
+        _later_job(s3, publish=True, fail={SCORED_DAY})
+    assert object_versions(s3, PRIVATE, record_key(date(2026, 11, 24))) == 1
+    latest = json.loads(S3Store(s3, PUBLIC).get(LATEST_KEY) or b"")
+    assert latest["forecast_date"] == "2026-11-24"
+    assert object_versions(s3, PRIVATE, score_key(SCORED_DAY)) == 0
+    assert len(_ledger(s3)) == 2
+
+
+def test_a_dry_run_scores_but_writes_no_score(s3: Any) -> None:
+    _job(s3, publish=True)
+    outcome = _later_job(s3, publish=False)
+    assert [s.status for s in outcome.scores if s.day == SCORED_DAY] == ["dry_run"]
+    assert object_versions(s3, PRIVATE, score_key(SCORED_DAY)) == 0
+
+
+def test_a_rerun_scores_nothing_twice(s3: Any) -> None:
+    _job(s3, publish=True)
+    _later_job(s3, publish=True)
+    history_versions = object_versions(s3, PUBLIC, HISTORY_KEY)
+    again = _later_job(s3, publish=True)
+    assert [s.status for s in again.scores if s.day == SCORED_DAY] == ["already_scored"]
+    assert object_versions(s3, PRIVATE, score_key(SCORED_DAY)) == 1
+    assert object_versions(s3, PUBLIC, HISTORY_KEY) == history_versions

@@ -24,6 +24,7 @@ from airwatch.forecast.publish import (
     publish_history,
 )
 from airwatch.forecast.record import encode, record_key
+from airwatch.monitoring.score import score_key
 from tests.unit.forecast.fakes import MemoryStore
 
 A, B, C = "040130019", "040131003", "040131004"
@@ -174,3 +175,95 @@ def test_latest_is_written_once_per_content() -> None:
     assert publish(store, record()) is True
     assert publish(store, record()) is False
     check_public(json.loads(store.objects[LATEST_KEY]), "latest")
+
+
+def _score(day: str = "2026-11-21") -> dict[str, Any]:
+    return {
+        "forecast_date": day,
+        "scored_at_utc": "2026-11-23T12:00:00+00:00",
+        "actual_source": "airnow",
+        "city_tz": "America/Phoenix",
+        "monitors": [
+            {
+                "site_id": A,
+                "forecast_ug_m3": 8.4567,
+                "actual_ug_m3": 7.6789,
+                "error_ug_m3": 0.7778,
+                "abs_error_ug_m3": 0.7778,
+                "n_hours": 24,
+            },
+            {
+                "site_id": B,
+                "forecast_ug_m3": 35.97,
+                "actual_ug_m3": 38.0,
+                "error_ug_m3": -2.03,
+                "abs_error_ug_m3": 2.03,
+                "n_hours": 23,
+            },
+        ],
+        "no_actual": [],
+        "city": {"n_scored": 2, "mae_ug_m3": 1.4039, "bias_ug_m3": -0.6261},
+    }
+
+
+def test_a_scored_day_carries_its_actuals_and_errors() -> None:
+    hist = history_payload([record(), record("2026-11-20", a=5.0, b=6.0)], {"2026-11-21": _score()})
+    scored, unscored = hist["days"]
+    assert "score" not in unscored
+    assert scored["score"] == {
+        "mae_ug_m3": 1.4,
+        "bias_ug_m3": -0.63,
+        "n_scored": 2,
+        "monitors": [
+            {"site_id": A, "actual_ug_m3": 7.6, "aqi": 42, "category": "Good", "error_ug_m3": 0.78},
+            {
+                "site_id": B,
+                "actual_ug_m3": 38.0,
+                "aqi": 107,
+                "category": "Unhealthy for Sensitive Groups",
+                "error_ug_m3": -2.03,
+            },
+        ],
+        "no_actual": [],
+    }
+    check_public(hist, "history")
+
+
+def test_a_day_with_no_valid_actual_publishes_a_null_mae() -> None:
+    empty = _score() | {
+        "monitors": [],
+        "no_actual": [{"site_id": A, "n_hours": 3}, {"site_id": B, "n_hours": 0}],
+        "city": {"n_scored": 0, "mae_ug_m3": None, "bias_ug_m3": None},
+    }
+    hist = history_payload([record()], {"2026-11-21": empty})
+    assert hist["days"][0]["score"]["mae_ug_m3"] is None
+    assert hist["days"][0]["score"]["no_actual"] == [{"site_id": A}, {"site_id": B}]
+    check_public(hist, "history")
+
+
+@pytest.mark.parametrize(
+    ("change", "why"),
+    [
+        (lambda s: s["monitors"][0].update(n_hours=24), "a private field"),
+        (lambda s: s.update(scored_by="me"), "an extra field"),
+        (lambda s: s.update(n_scored=-1), "a negative count"),
+        (lambda s: s["monitors"][0].update(site_id="1"), "a bad site id"),
+    ],
+)
+def test_the_history_schema_refuses_a_score_off_the_list(change: Any, why: str) -> None:
+    hist = history_payload([record()], {"2026-11-21": _score()})
+    change(hist["days"][0]["score"])
+    with pytest.raises(PublishRefusedError, match="schema"):
+        check_public(hist, "history")
+    assert why
+
+
+def test_history_picks_up_the_private_scores() -> None:
+    private, public = MemoryStore(), MemoryStore()
+    for r in (record("2026-11-20", a=5.0, b=6.0), record("2026-11-21")):
+        private.put(record_key(date.fromisoformat(r["forecast_date"])), encode(r))
+    private.put(score_key(date(2026, 11, 21)), json.dumps(_score()).encode())
+    private.put("reports/scores/notes.txt", b"not a score")
+    assert publish_history(public, private) is True
+    days = json.loads(public.objects[HISTORY_KEY])["days"]
+    assert [("score" in d) for d in days] == [True, False]

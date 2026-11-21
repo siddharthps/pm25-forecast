@@ -1199,3 +1199,62 @@ result with reads only.
   close #15. At 08:00 and 09:00 the watchdog's real checks should stay silent.
 - After #73 merges, the owner rebuilds the zip and applies the 1-change plan (the Lambda's code).
 - Then T10 (#17), daily scoring.
+
+## 2026-11-20: T10 (#17) daily scoring, on branch `17-daily-scoring` (CST, about 21:55 to 22:40)
+
+Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
+
+- **Found first:** the run already computes each monitor's valid daily mean, because that's the
+  persistence forecast. So `persistence` now calls a new `day_means`, the one home of the 18-hour
+  rule for forecast and score.
+- **Owner's choices:**
+  - score day T on the T+2 morning from a fresh download, so all of T's hours have settled;
+  - publish the actuals and errors in `history.json` now.
+- **Built:**
+  - `monitoring/score.py`: create-once scores under `reports/scores/`, a 7-day catch-up, and
+    failures raised together at the end;
+  - `publish.py` and the history schema: an optional `score` per day;
+  - `job.py`: scoring after the forecast, and `history.json` rebuilt even after a failed day.
+  - D-042 records it all; D-013's status updated.
+- **Checks:** 534 Python and 13 page tests pass; scoring is fully covered; 18 planted bugs were
+  all caught.
+
+### Traps found
+
+- **Backticks inside a `bash -c "..."` run as commands:** a docstring lost its word `day`. Use the
+  Edit tool, or a scratch script, for any text with backticks.
+- **A test fake published days before they happened:** the schema refused `available_at_utc`
+  before `time_utc`. Each fake day is now published 3 hours after it ends.
+- **The first 18-hour plant was in the wrong place:** it changed a reported count, not the rule,
+  so no test could notice. The rule lives in `observations/aqs.py` (`MIN_HOURS`), and a plant
+  there was caught.
+- **An import cycle was avoided:** `publish` can't import `monitoring.score` (score → run →
+  publish), so `score_key` lives with the other S3 keys in `forecast/record.py`.
+
+### Next
+
+- **Merge after the 2026-11-21 morning check, not before.** The first scheduled run then tests
+  exactly the code that was deployed and drilled.
+- 2026-11-21 after 06:00: check the scheduled run, then close #15. The watchdog stays quiet at
+  08:00 and 09:00.
+- 2026-11-22 06:00: the first real score (2026-11-20).
+- Then T11 (#18), then the milestone-B follow-ups.
+
+## 2026-11-21: the first scheduled run (#15), checked (CST, about 06:25)
+
+- **`jade-seahorse`**, scheduled for 06:00 Chicago with `publish: true`, ended Completed. Its log
+  reads `2026-11-22: recorded, 10 monitor(s), 0 without a valid day (published: True)`, and it
+  took about 3 minutes (12 of 500 this month).
+- **S3:** the record for 2026-11-22 was written at 06:01:26, with `latest.json` and `history.json`
+  in the same second, after it.
+- **The page** loads (HTTP 200). The public file it reads is served with the page's CORS origin,
+  modified 12:01:26 UTC. It shows 2026-11-22: AQI 54, Moderate, 10 monitors.
+- **Checkpoint B:** "a real forecast by the scheduled run, with no manual action" is met.
+- #15 closes with T10's merge (#74), which adds scoring to the job, its last box.
+
+### Next
+
+- The watchdog's first real checks, 08:00 and 09:00, should stay silent.
+- After 09:00: the owner rebuilds the watchdog zip and applies the 1-change plan (#73's `.lock`).
+- 2026-11-22 06:00: the first real score (2026-11-20).
+- Then T11 (#18), then the milestone-B follow-ups.

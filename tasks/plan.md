@@ -101,18 +101,19 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
   record for 2026-11-20)
 - [x] T7: Public JSON + static page on GitHub Pages (merged #54, 2026-11-19; **live 2026-11-20**,
   D-039)
-- [ ] T8: Prefect daily deployment (Managed pool, 06:00 Chicago) (deployed 2026-11-20, D-040; #15
-  closes after the first scheduled run is checked)
+- [x] T8: Prefect daily deployment (Managed pool, 06:00 Chicago) (deployed 2026-11-20, D-040;
+  first scheduled run 2026-11-21)
 - [x] T9: Watchdog: EventBridge → Lambda → Prefect API / SNS, in Terraform (D-018) (merged #72,
   applied and drilled 2026-11-20, D-041)
-- [ ] T10: Daily scoring of yesterday's forecast
+- [ ] T10: Daily scoring of each forecast day, two mornings later on settled AirNow data (D-042;
+  built 2026-11-20 on `17-daily-scoring`, merged after the first scheduled run is checked)
 - [ ] T11: Bottom line + outline + style sheet (Vale), docs stub, `results.json` number check,
   README skeleton (D-022)
 
 ### Checkpoint B: Skeleton live (2026-11-25), plus the D-014 review
 
-- [ ] The page shows a real D+1 persistence forecast produced by the scheduled run, with no manual
-  action
+- [x] The page shows a real D+1 persistence forecast produced by the scheduled run, with no manual
+  action (2026-11-21: the forecast for 2026-11-22)
 - [x] The watchdog dry drill passes (record present → no action; record absent → trigger)
   (2026-11-20, four drill invokes, D-041)
 - [ ] **Re-evaluate the timeline (D-014)**; any change becomes a new D-entry before results are seen

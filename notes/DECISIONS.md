@@ -1265,6 +1265,11 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
       the literal placeholder (it failed on the old code), and the guide reads each
       schedule's stored input after apply. The error email now names the value it got
       (at most 60 characters; it holds no secret).
+    - *Applied 2026-11-21 (0 added, 3 changed)*. Both stored inputs read back with literal
+      `<` and `>`. A one-time schedule (13:45 Chicago, deleted after completion) then ran a
+      drill verify through the real scheduler. It logged `target_day 2026-11-22, record
+      present` (so a real time was substituted), sent no email, and deleted itself. The
+      guide now has this test as step 7b.
 
 ---
 

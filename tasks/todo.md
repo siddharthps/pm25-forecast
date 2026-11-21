@@ -9,7 +9,7 @@ drafts.
 Milestones: **A: Foundation** (due 2026-11-20) · **B: Skeleton live** (2026-11-25) · **C: Cut
 line** (2026-12-16) · **D: Complete**.
 
-| Task | Issue | Title | Milestone | State (2026-11-19, from GitHub) |
+| Task | Issue | Title | Milestone | State (2026-11-20, from GitHub) |
 | --- | --- | --- | --- | --- |
 | T0a | [#1](https://github.com/siddharthps/pm25-forecast/issues/1) | AirNow API account + read the gated docs | A | closed |
 | T0b | [#2](https://github.com/siddharthps/pm25-forecast/issues/2) | Prefect Cloud Hobby account + workspace | A | closed |
@@ -24,8 +24,8 @@ line** (2026-12-16) · **D: Complete**.
 | T13 | [#11](https://github.com/siddharthps/pm25-forecast/issues/11) | AQS bulk history download | B | closed |
 | T12a | [#12](https://github.com/siddharthps/pm25-forecast/issues/12) | Validation module, first three problem classes | B | closed |
 | T6 | [#13](https://github.com/siddharthps/pm25-forecast/issues/13) | Persistence forecast and at-most-once durable record | B | closed |
-| T7 | [#14](https://github.com/siddharthps/pm25-forecast/issues/14) | Public JSON and static page | B | open: merged (#54); **live 2026-11-20** (D-039); closes with this branch's PR |
-| T8 | [#15](https://github.com/siddharthps/pm25-forecast/issues/15) | Prefect daily deployment | B | open |
+| T7 | [#14](https://github.com/siddharthps/pm25-forecast/issues/14) | Public JSON and static page | B | closed (live 2026-11-20, D-039) |
+| T8 | [#15](https://github.com/siddharthps/pm25-forecast/issues/15) | Prefect daily deployment | B | open: deployed 2026-11-20 (D-040); closes after the first scheduled run is checked |
 | T9 | [#16](https://github.com/siddharthps/pm25-forecast/issues/16) | Watchdog (EventBridge → Lambda → Prefect / SNS) | B | open |
 | T10 | [#17](https://github.com/siddharthps/pm25-forecast/issues/17) | Daily scoring | B | open |
 | T11 | [#18](https://github.com/siddharthps/pm25-forecast/issues/18) | Docs stub, number check and README skeleton | B | open |
@@ -55,6 +55,10 @@ line** (2026-12-16) · **D: Complete**.
 | [#42](https://github.com/siddharthps/pm25-forecast/issues/42) | Mutation testing (mutmut) on the existing core logic | T3b | B |
 | [#43](https://github.com/siddharthps/pm25-forecast/issues/43) | uv-lock job: idempotency and step-failure tests | T3b | B |
 | [#52](https://github.com/siddharthps/pm25-forecast/issues/52) | Log timestamps in UTC with the zone shown (one logging setup) | T12a | B |
+| [#56](https://github.com/siddharthps/pm25-forecast/issues/56) | Forecast failure log prints the exception message, not only its type | comment audit (#55) | B |
+| [#57](https://github.com/siddharthps/pm25-forecast/issues/57) | AirNow POC: replace the 0 sentinel or record it | comment audit (#55) | B |
+| [#58](https://github.com/siddharthps/pm25-forecast/issues/58) | test_publish: pytest ids instead of a dummy 'assert why' | comment audit (#55) | B |
+| [#59](https://github.com/siddharthps/pm25-forecast/issues/59) | Leakage property test: assume() instead of an early return | comment audit (#55) | B |
 
 The **State** column is a snapshot. GitHub is the source of truth, and this column is not kept in
 sync.

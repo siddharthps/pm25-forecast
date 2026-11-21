@@ -1292,3 +1292,29 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   code with #73's `.lock` cleanup). Then read the stored inputs.
 - 2026-11-22: 06:00 brings the first real score; 08:00 and 09:00 are the watchdog's real
   end-to-end test.
+
+## 2026-11-21: the watchdog fix applied and tested through the real scheduler (CST, to about 13:50)
+
+- **#76 merged.** The owner rebuilt the zip (`f32c3b94…`, now without uv's `.lock`) and applied: 0
+  added, 3 changed (the two schedules, and the Lambda's code). Terraform labelled the input
+  change "whitespace changes", because it compares decoded JSON, the same blind spot as the old
+  test. The stored inputs read back with literal `<` and `>`.
+- **End-to-end test:** a one-time schedule, `at(2026-11-21T13:45:00)` America/Chicago, deleted
+  after completion. It invoked a drill verify through the real scheduler. The log at 19:45:34Z
+  reads `target_day 2026-11-22, record present`. No email; only the two real schedules remain.
+- #75: four of five boxes ticked. The last is a silent 2026-11-22 morning. The test is now step
+  7b of the T9 guide.
+
+### Traps found
+
+- **Terraform's plan hides an escaping-only change:** it shows "# whitespace changes", with the
+  same decoded contents on both sides. A change shown there with no visible difference is still
+  real.
+- **A one-time schedule (`at(...)` plus `ActionAfterCompletion=DELETE`)** is a clean end-to-end
+  test of any scheduler target: it fires once and leaves nothing behind.
+
+### Next
+
+- 2026-11-22: 06:00, the first real score (2026-11-20); 08:00 and 09:00, silent watchdog checks.
+  Then close #75.
+- T11 (#18) on the owner's go.

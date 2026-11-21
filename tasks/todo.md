@@ -59,6 +59,7 @@ line** (2026-12-16) · **D: Complete**.
 | [#57](https://github.com/siddharthps/pm25-forecast/issues/57) | AirNow POC: replace the 0 sentinel or record it | comment audit (#55) | B |
 | [#58](https://github.com/siddharthps/pm25-forecast/issues/58) | test_publish: pytest ids instead of a dummy 'assert why' | comment audit (#55) | B |
 | [#59](https://github.com/siddharthps/pm25-forecast/issues/59) | Leakage property test: assume() instead of an early return | comment audit (#55) | B |
+| [#75](https://github.com/siddharthps/pm25-forecast/issues/75) | Watchdog schedules send the time placeholder escaped (fixed in #76) | the first real watchdog checks (T9) | B |
 
 The **State** column is a snapshot. GitHub is the source of truth, and this column is not kept in
 sync.

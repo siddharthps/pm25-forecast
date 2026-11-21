@@ -149,6 +149,33 @@ AWS_PROFILE=pm25 MSYS_NO_PATHCONV=1 aws lambda invoke --function-name pm25-forec
 
 Then `rm infra/build/drill-out.json`.
 
+## 7b. One test through the real scheduler (5 min)
+
+The drill above calls the Lambda directly, so it skips the scheduler. On 2026-11-21 the
+scheduler turned out to send its placeholder unsubstituted (#75), and only the real 08:00
+check showed it. So after any change to the schedules, create a **one-time** schedule a few
+minutes ahead. It fires once, runs a drill verify through the real scheduler, then deletes
+itself.
+
+Replace **TODAY** with today's date and **HH:MM** with a time about 10 minutes away (Chicago
+time; AWS refuses one in the past):
+
+```bash
+AWS_PROFILE=pm25 MSYS_NO_PATHCONV=1 aws scheduler create-schedule --region us-east-1 \
+  --name pm25-forecast-watchdog-e2e --group-name pm25-forecast \
+  --schedule-expression "at(TODAYTHH:MM:00)" --schedule-expression-timezone America/Chicago \
+  --flexible-time-window Mode=OFF --action-after-completion DELETE \
+  --target '{"Arn":"arn:aws:lambda:us-east-1:<ACCOUNT>:function:pm25-forecast-watchdog","RoleArn":"arn:aws:iam::<ACCOUNT>:role/pm25-forecast-watchdog-scheduler","Input":"{\"mode\":\"verify\",\"scheduled_time\":\"<aws.scheduler.scheduled-time>\",\"drill\":true}"}'
+```
+
+`<ACCOUNT>` is the AWS account ID (it appears in `terraform output alerts_topic_arn`).
+
+**Expect:** no email. A minute after the time, the watchdog's log has one line,
+`watchdog {"mode": "verify", "target_day": "<tomorrow>", "record": "present"}`, which only a
+substituted time can produce. `aws scheduler list-schedules --group-name pm25-forecast` lists
+only the two real schedules again. A DRILL email instead means the substitution failed, and
+the email names what the watchdog received.
+
 ## 8. From then on
 
 **After any change to the handler or `uv.lock`:** rebuild the zip (step 4), then `plan`. It

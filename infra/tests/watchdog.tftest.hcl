@@ -49,6 +49,13 @@ run "two_daily_checks_in_chicago_time" {
   }
 
   assert {
+    # The raw text, not jsondecode: the scheduler substitutes only the literal placeholder, and
+    # jsonencode writes < and > as < and >, which decode back and hid this (2026-11-21).
+    condition     = alltrue([for s in aws_scheduler_schedule.watchdog : strcontains(one(s.target).input, "\"<aws.scheduler.scheduled-time>\"")])
+    error_message = "The input must hold the literal <aws.scheduler.scheduled-time>, or the scheduler sends the placeholder itself."
+  }
+
+  assert {
     condition     = alltrue([for s in aws_scheduler_schedule.watchdog : one(s.target).arn == aws_lambda_function.watchdog.arn])
     error_message = "Both schedules invoke the watchdog Lambda."
   }

@@ -1258,3 +1258,37 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - After 09:00: the owner rebuilds the watchdog zip and applies the 1-change plan (#73's `.lock`).
 - 2026-11-22 06:00: the first real score (2026-11-20).
 - Then T11 (#18), then the milestone-B follow-ups.
+
+## 2026-11-21: the watchdog's first real checks failed, and the fix (CST, about 09:15)
+
+- **What the owner got:** at 08:00 and 09:00, "The watchdog failed: the event needs
+  scheduled_time as UTC", plus the error alarm. The fail-closed design worked; the backup didn't.
+  The forecast was already recorded (06:01), and the watchdog started nothing.
+- **The cause** (read from the schedules, `aws scheduler get-schedule`): their input held
+  `\u003caws.scheduler.scheduled-time\u003e`. Terraform's `jsonencode` escapes `<` and `>`, and
+  the scheduler substitutes only the literal placeholder. So the Lambda received the placeholder.
+- **Why it got through:**
+  - the Terraform test compared `jsondecode(input)`, which turns the escapes back;
+  - the drill invoked the Lambda directly, skipping the scheduler-to-Lambda step;
+  - the plan output showed `&lt;aws.scheduler.scheduled-time&gt;`, and I read that as HTML
+    escaping in the terminal paste, not as a sign.
+- **The fix, test first:**
+  - the input is plain text;
+  - a Terraform test checks the raw string (it failed on the old code);
+  - the error email names the value it received;
+  - the guide reads each stored input after apply.
+
+### Traps found
+
+- **Terraform's `jsonencode` escapes `<`, `>` and `&` as `\u003c`, `\u003e` and `\u0026`.** Any
+  service that looks for a literal placeholder (EventBridge Scheduler's context attributes) won't
+  see it. Test the raw string, never a decoded one.
+- **A drill that skips the real trigger proves the target, not the wiring.** After apply, read
+  what the trigger will actually send.
+
+### Next
+
+- The owner applies: rebuild the zip, then a plan of 3 changes (the two schedules, and the Lambda's
+  code with #73's `.lock` cleanup). Then read the stored inputs.
+- 2026-11-22: 06:00 brings the first real score; 08:00 and 09:00 are the watchdog's real
+  end-to-end test.

@@ -7,6 +7,10 @@ flow has to be there first.
 Commands are bash. In Claude Code, type each one after `!` so its output lands in the chat. Run
 every command from the repo folder (`cd ~/code/pm25-forecast`).
 
+**On Windows, start every `prefect` command with `PYTHONUTF8=1`.** The Prefect CLI prints
+characters the Windows console's default encoding (cp1252) can't show, and crashes on them.
+Sometimes it crashes after the action has already happened (2026-11-20: the run was created).
+
 **Golden rule:** never paste the Prefect API key into the chat or a file. Paste it only into the
 login prompt in step 3.
 
@@ -52,22 +56,25 @@ Keep the role ARN (`arn:aws:iam::…:role/pm25-forecast-prefect-run`) for step 5
 ## 3. Log the Prefect CLI in (2 min)
 
 ```bash
-uv run prefect cloud login
+PYTHONUTF8=1 uv run prefect cloud login
 ```
 
 Choose **Paste an API key**, then paste the `pm25-forecast-cli` key from your password manager
-(TOKENS.md). Pick the `pm25-forecast` workspace if asked. Check it with:
+(TOKENS.md). Pick the workspace if asked (ours is `siddharthpm/default`). Check it with:
 
 ```bash
-uv run prefect cloud workspace ls
+PYTHONUTF8=1 uv run prefect cloud workspace ls
 ```
 
 ## 4. Create the managed work pool (2 min)
 
 ```bash
-uv run prefect work-pool create managed-pool --type prefect:managed
-uv run prefect work-pool inspect managed-pool
+PYTHONUTF8=1 uv run prefect work-pool create managed-pool --type prefect:managed
+PYTHONUTF8=1 uv run prefect work-pool inspect managed-pool
 ```
+
+If `create` says the pool **already exists**, that's fine: a Prefect Cloud workspace can come with
+one (ours did). Go on to `inspect`.
 
 In the `inspect` output, under `base_job_template` → `variables` → `properties`, check that
 **`image`** and **`env`** are listed. The deployment sets both. Paste me that `properties` part
@@ -83,8 +90,8 @@ In the `inspect` output, under `base_job_template` → `variables` → `properti
 ## 6. Deploy (2 min)
 
 ```bash
-uv run prefect --no-prompt deploy --all
-uv run prefect deployment ls
+PYTHONUTF8=1 uv run prefect --no-prompt deploy --all
+PYTHONUTF8=1 uv run prefect deployment ls
 ```
 
 Expect one deployment, `daily-forecast/daily-forecast`. In the UI, its **Schedules** should show
@@ -95,13 +102,22 @@ Expect one deployment, `daily-forecast/daily-forecast`. In the UI, its **Schedul
 A manual run uses the deployment's parameters, so it's a dry run: no record, no public file.
 
 ```bash
-uv run prefect deployment run daily-forecast/daily-forecast --watch
+PYTHONUTF8=1 uv run prefect deployment run daily-forecast/daily-forecast
 ```
 
-Expect the run to end **Completed**, with log lines like:
+It prints the run's name and ID, then returns. Don't add `--watch`, which crashed on Windows;
+tell me the run's name and I'll follow it. Expect the run to end **Completed**, with log lines
+like:
 
 - `2026-11-21: dry run, 10 monitor(s) forecast; nothing written`;
 - `compute: this run about N min; this month N of 500 free min (alert line 300)`.
+
+If tomorrow's record already exists, the run reuses it and doesn't fetch AirNow. To test the
+download too, do a second dry run for a past day that has no record:
+
+```bash
+PYTHONUTF8=1 uv run prefect deployment run daily-forecast/daily-forecast --param target_day=2026-11-19
+```
 
 Then tell me, and I'll check, using reads only:
 

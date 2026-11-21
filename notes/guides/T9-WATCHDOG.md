@@ -102,10 +102,12 @@ own Prefect idempotency key and says DRILL in its emails. A drill retry must tar
 In the events below, replace **TODAY** and **TOMORROW** with the real dates (`YYYY-MM-DD`,
 Chicago). `14:00Z` and `15:00Z` are 08:00 and 09:00 Chicago in winter.
 
-The invoke command (each step changes only the `--payload`):
+The invoke command (each step changes only the `--payload`). `MSYS_NO_PATHCONV=1` stops Git
+Bash from rewriting an argument that starts with `/` into a Windows path (2026-11-20: it hid
+the SSM parameter from a name filter):
 
 ```bash
-AWS_PROFILE=pm25 aws lambda invoke --function-name pm25-forecast-watchdog \
+AWS_PROFILE=pm25 MSYS_NO_PATHCONV=1 aws lambda invoke --function-name pm25-forecast-watchdog \
   --cli-binary-format raw-in-base64-out \
   --payload '{"mode":"verify","scheduled_time":"TODAYT15:00:00Z","drill":true}' \
   infra/build/drill-out.json && cat infra/build/drill-out.json
@@ -127,7 +129,7 @@ AWS_PROFILE=pm25 aws lambda invoke --function-name pm25-forecast-watchdog \
 5. **Logs:** tell me, and I'll read them, or:
 
    ```bash
-   AWS_PROFILE=pm25 aws logs tail /aws/lambda/pm25-forecast-watchdog --since 30m
+   AWS_PROFILE=pm25 MSYS_NO_PATHCONV=1 aws logs tail /aws/lambda/pm25-forecast-watchdog --since 30m
    ```
 
    Expect one `watchdog {...}` line per invoke, and no key.
@@ -135,6 +137,9 @@ AWS_PROFILE=pm25 aws lambda invoke --function-name pm25-forecast-watchdog \
 Then `rm infra/build/drill-out.json`.
 
 ## 8. From then on
+
+**After any change to the handler or `uv.lock`:** rebuild the zip (step 4), then `plan`. It
+shows 1 change, the Lambda's code. Apply it as in step 5.
 
 Every day at 08:00 and 09:00 Chicago the watchdog checks the record. On a normal day it's silent.
 You get an email only when the 06:00 run was missed (and what the retry did), when the record is

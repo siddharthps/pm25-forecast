@@ -31,6 +31,7 @@ PYTHON = "3.12"
 FIXED_TIME = (1980, 1, 1, 0, 0, 0)
 FILE_MODE = 0o100644
 SCRIPTS_DIR = "bin"
+INSTALLER_FILES = {".lock"}
 
 
 def install_command(target: Path) -> list[str]:
@@ -54,8 +55,14 @@ def install_command(target: Path) -> list[str]:
 
 
 def _shipped(rel: Path) -> bool:
-    """Not bytecode, and not the console scripts pip puts in a top-level bin/."""
-    return "__pycache__" not in rel.parts and rel.suffix != ".pyc" and rel.parts[0] != SCRIPTS_DIR
+    """Not bytecode, not the console scripts in a top-level bin/, and not the empty `.lock`
+    uv leaves in the install folder."""
+    return (
+        "__pycache__" not in rel.parts
+        and rel.suffix != ".pyc"
+        and rel.parts[0] != SCRIPTS_DIR
+        and rel.as_posix() not in INSTALLER_FILES
+    )
 
 
 def _files(root: Path) -> list[Path]:

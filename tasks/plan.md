@@ -99,10 +99,12 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
   #51, 2026-11-19)
 - [x] T6: Persistence forecast + at-most-once durable record (merged #53, 2026-11-19; first real
   record for 2026-11-20)
-- [ ] T7: Public JSON + static page on GitHub Pages (merged #54, 2026-11-19; **live 2026-11-20**,
+- [x] T7: Public JSON + static page on GitHub Pages (merged #54, 2026-11-19; **live 2026-11-20**,
   D-039)
-- [ ] T8: Prefect daily deployment (Managed pool, 06:00 Chicago)
-- [ ] T9: Watchdog: EventBridge → Lambda → Prefect API / SNS, in Terraform (D-018)
+- [ ] T8: Prefect daily deployment (Managed pool, 06:00 Chicago) (deployed 2026-11-20, D-040; #15
+  closes after the first scheduled run is checked)
+- [x] T9: Watchdog: EventBridge → Lambda → Prefect API / SNS, in Terraform (D-018) (merged #72,
+  applied and drilled 2026-11-20, D-041)
 - [ ] T10: Daily scoring of yesterday's forecast
 - [ ] T11: Bottom line + outline + style sheet (Vale), docs stub, `results.json` number check,
   README skeleton (D-022)
@@ -111,7 +113,8 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
 
 - [ ] The page shows a real D+1 persistence forecast produced by the scheduled run, with no manual
   action
-- [ ] The watchdog dry drill passes (record present → no action; record absent → trigger)
+- [x] The watchdog dry drill passes (record present → no action; record absent → trigger)
+  (2026-11-20, four drill invokes, D-041)
 - [ ] **Re-evaluate the timeline (D-014)**; any change becomes a new D-entry before results are seen
 
 ### Phase 3: Deepen (weeks 2–5)

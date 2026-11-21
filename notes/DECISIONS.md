@@ -1151,6 +1151,12 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
     (`main` changes only through CI-gated PRs) still holds.
   - *2026-11-20 (T9, D-041):* the email at 300 minutes is built: the watchdog sends it once a
     month.
+  - *2026-11-21, the first scheduled run:* `jade-seahorse`, scheduled for 06:00 Chicago
+    (12:00 UTC) with `publish: true`, Completed.
+    - It recorded 2026-11-22 for 10 monitors, all with a valid day, then published
+      `latest.json` and `history.json` in the same second, after the record.
+    - The page shows AQI 54, Moderate. About 3 minutes; 12 of 500 this month.
+    - No manual action (Checkpoint B).
 
 ---
 

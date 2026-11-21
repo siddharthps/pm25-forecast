@@ -1239,3 +1239,22 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   08:00 and 09:00.
 - 2026-11-22 06:00: the first real score (2026-11-20).
 - Then T11 (#18), then the milestone-B follow-ups.
+
+## 2026-11-21: the first scheduled run (#15), checked (CST, about 06:25)
+
+- **`jade-seahorse`**, scheduled for 06:00 Chicago with `publish: true`, ended Completed. Its log
+  reads `2026-11-22: recorded, 10 monitor(s), 0 without a valid day (published: True)`, and it
+  took about 3 minutes (12 of 500 this month).
+- **S3:** the record for 2026-11-22 was written at 06:01:26, with `latest.json` and `history.json`
+  in the same second, after it.
+- **The page** loads (HTTP 200). The public file it reads is served with the page's CORS origin,
+  modified 12:01:26 UTC. It shows 2026-11-22: AQI 54, Moderate, 10 monitors.
+- **Checkpoint B:** "a real forecast by the scheduled run, with no manual action" is met.
+- #15 closes with T10's merge (#74), which adds scoring to the job, its last box.
+
+### Next
+
+- The watchdog's first real checks, 08:00 and 09:00, should stay silent.
+- After 09:00: the owner rebuilds the watchdog zip and applies the 1-change plan (#73's `.lock`).
+- 2026-11-22 06:00: the first real score (2026-11-20).
+- Then T11 (#18), then the milestone-B follow-ups.

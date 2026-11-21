@@ -329,7 +329,9 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - Two full triggers where the first wins: rejected because the code would run in two places.
 - **Status:** Active. Settles Q-4b. S3 conditional writes: verified against AWS's docs and on real
   S3 in T6, recorded in D-034. Still to verify (T9): how a Lambda calls the Prefect API (key stored
-  in SSM Parameter Store as a SecureString).
+  in SSM Parameter Store as a SecureString). *2026-11-20 (T9, D-041):* settled. The Lambda POSTs
+  to the deployment's `create_flow_run` with a Bearer user API key read from SSM, and an
+  idempotency key per target day. The owner's drill confirms it on Prefect Cloud.
 
 ---
 
@@ -1146,6 +1148,91 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - *Correction:* "Prefect documents no way to pin a commit" is wrong. Prefect 3.9.4's
     `git_clone` step accepts `commit_sha`. Runs still clone `main`, because the reason above
     (`main` changes only through CI-gated PRs) still holds.
+  - *2026-11-20 (T9, D-041):* the email at 300 minutes is built: the watchdog sends it once a
+    month.
+
+---
+
+## D-041 · 2026-11-20 · The watchdog (T9, #16)
+
+- **Shape** (refines D-011): EventBridge Scheduler invokes one Lambda twice a day, in
+  America/Chicago time (08:00 and 09:00 exist every day; DST changes happen at 02:00).
+  - **08:00, retry:** no record for the target day (D+1, D-034) → start the deployment through
+    the Prefect API, with `publish: true`, the explicit `target_day`, and the idempotency key
+    `watchdog-<day>`, then email. A repeated call returns the same run (HTTP 200, per Prefect's
+    server code). A failed start emails and fails.
+  - **09:00, verify** (owner's choice): the record still missing → email. It starts nothing and
+    never reads the key.
+  - **Drill** (`"drill": true` in a hand-made test event):
+    - it uses its own idempotency key, `watchdog-drill-<day>`, so a test never uses up a real
+      day's key, and its emails say DRILL;
+    - a drill retry must target a day whose 06:00 issue time hasn't come. The run it starts then
+      stops as too early, before writing anything, so a drill can't publish.
+  - "Done" is the S3 record, checked by listing the exact key (D-011).
+  - A late retry is safe: `run_daily` accepts any time after 06:00, uses only AirNow rows
+    published by 06:00, and reuses an existing record (D-034).
+- **Compute-minutes email** (moved from T8, D-040; owner's choice: once a month): at 08:00 the
+  Lambda sums the month's ledger the same way `record_run` does. Over 300 of the free 500, it
+  creates `reports/compute-alerts/month=YYYY-MM/over-300.json` only if absent, then emails.
+  - The marker sits outside the ledger folder, because `record_run` sums every file in that
+    folder.
+  - Record first, then email (owner's global rule). If the email then fails, the run fails, and
+    the error alarm below emails instead.
+- **Fails closed:**
+  - every error emails its kind (an AWS error code or an exception type, never the text) and is
+    re-raised;
+  - a CloudWatch alarm on the Lambda's `Errors` (which counts timeouts) emails through the same
+    topic;
+  - Lambda's own async retries are off, because a failed check has already emailed; the
+    scheduler retries a failed invoke twice, within an hour.
+  - Known gap: if the scheduler itself stopped invoking, nothing would email. The page's date
+    shows it.
+- **Credentials:**
+  - Hobby has no service accounts (Prefect's pricing page and service-account docs, read
+    2026-11-20). So the key is a dedicated user API key, `pm25-forecast-watchdog`, with an
+    expiry date (TOKENS.md).
+  - It's a SecureString at `/pm25-forecast/prefect-api-key`, created by the owner outside
+    Terraform, so its value is never in Terraform's state. The role may read that one parameter.
+    The `aws/ssm` key already lets every principal in the account decrypt (SSM docs), so no KMS
+    grant is added.
+  - **The SDK's loggers are pinned at WARNING.** At DEBUG, botocore logs response bodies, and a
+    test showed the SSM reply's key in them. The Lambda logs at INFO.
+- **Least privilege:**
+  - the Lambda: list `records/` and `reports/compute/`, read the ledger, create the alert
+    marker, read the one parameter, publish to the one topic, write its own logs;
+  - the scheduler role: invoke this Lambda only, trusted only for this account;
+  - no deletes, no wildcard resources (Terraform tests, with planted bugs caught).
+- **Packaging:**
+  - `src/airwatch/watchdog/handler.py` imports only the standard library and boto3 (a test
+    checks), because `airwatch/__init__.py` needs the installed package's metadata.
+  - Its record key, ledger rules and target day are tested equal to the forecast's. The target
+    day is checked by a property test across 2026–2040, DST days included.
+  - `python -m airwatch.watchdog.build` zips it as `handler.py`, plus boto3 and tzdata from
+    `requirements/watchdog.txt` (a `watchdog` dependency group, exported with hashes, checked
+    for drift, and regenerated by the weekly lock job). The wheels are for Linux arm64 and
+    Python 3.12.
+  - AWS recommends shipping the SDK (Lambda runtimes page). AWS doesn't document whether the
+    image has time-zone files, so tzdata is bundled.
+  - The zip is reproducible: two real builds give the same SHA-256, so `plan` shows no change
+    until the code or lock does.
+- **Runtime:** `python3.12` on arm64 (D-026), with 128 MB and a 60 s timeout. Deprecation:
+  2028-10-31 (Lambda runtimes page, read 2026-11-20).
+- **Cost** (AWS pricing pages, read 2026-11-20):
+  - Lambda: 1M requests free a month.
+  - EventBridge Scheduler: 14M invocations free.
+  - SSM standard parameters: free.
+  - SNS: 1,000 email notifications free.
+  - CloudWatch: 10 alarm metrics and 5 GB of logs free.
+  - About 60 invocations a month: $0.
+- **Alternatives:**
+  - Wait in the Lambda for the retry's record: up to 15 minutes billed, and a false alarm if
+    Prefect starts slowly.
+  - Email only when the start fails: a retry that starts and then fails would go unnoticed.
+  - Email every day over 300: up to about 30 emails a month.
+  - Terraform-managed SSM value: the key would sit in state.
+  - Rely on the runtime's boto3 and time-zone files: against AWS's advice, and unversioned.
+- **Status:** Active. Owner's choices, 2026-11-20. The first plan, apply and drill are the
+  owner's (`notes/guides/T9-WATCHDOG.md`, D-023).
 
 ---
 

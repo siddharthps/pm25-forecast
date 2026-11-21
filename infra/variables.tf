@@ -52,3 +52,29 @@ variable "prefect_account_id" {
     error_message = "prefect_account_id must be a lower-case UUID (Prefect Cloud → account settings)."
   }
 }
+
+variable "prefect_workspace_id" {
+  description = "Prefect Cloud workspace ID (a UUID) the watchdog calls (D-041)."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", var.prefect_workspace_id))
+    error_message = "prefect_workspace_id must be a lower-case UUID (the part after /workspace/ in the Prefect URL)."
+  }
+}
+
+variable "prefect_deployment_id" {
+  description = "ID (a UUID) of the daily-forecast deployment the watchdog starts (D-041)."
+  type        = string
+
+  validation {
+    condition     = can(regex("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", var.prefect_deployment_id))
+    error_message = "prefect_deployment_id must be a lower-case UUID (prefect deployment inspect daily-forecast/daily-forecast)."
+  }
+}
+
+variable "watchdog_zip" {
+  description = "The watchdog Lambda's zip, relative to infra/ (built by `python -m airwatch.watchdog.build`)."
+  type        = string
+  default     = "build/watchdog.zip"
+}

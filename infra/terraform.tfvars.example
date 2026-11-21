@@ -6,3 +6,8 @@ alert_email = "you@example.com"
 
 # Your Prefect Cloud account ID (a UUID, not secret): the Prefect run role trusts only it (T8).
 prefect_account_id = "00000000-0000-0000-0000-000000000000"
+
+# The watchdog (T9): your Prefect workspace ID (the part after /workspace/ in the Prefect URL) and
+# the daily-forecast deployment's ID (`prefect deployment inspect daily-forecast/daily-forecast`).
+prefect_workspace_id  = "00000000-0000-0000-0000-000000000000"
+prefect_deployment_id = "00000000-0000-0000-0000-000000000000"

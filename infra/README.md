@@ -12,6 +12,7 @@ and `terraform test` with a mock AWS provider. **CI never has AWS credentials.**
 | Lifecycle on the private bucket | Superseded versions under `raw/` expire after 30 days. `records/`, `models/` and `reports/` keep every version. Failed multipart uploads are cleaned up after 7 days |
 | Public bucket `pm25-forecast-public-65bc08` | Derived JSON for the page only (D-012, D-028). Anonymous `GetObject` on objects, no listing, ACLs still blocked, CORS for `https://siddharthps.github.io` only, TLS only, versioned (old versions expire after 30 days) |
 | IAM policy `pm25-forecast-pipeline` | Read/write on the private prefixes, put `*.json` on the public bucket, **no deletes**. Attached to the Prefect run role (T8) |
+| Watchdog (T9, #16): Lambda `pm25-forecast-watchdog`, two EventBridge schedules (08:00 and 09:00 America/Chicago, group `pm25-forecast`), SNS topic `pm25-forecast-alerts` with the owner's email, an alarm on the Lambda's errors, a 30-day log group, and two roles | The backup trigger (D-011, D-041). If the record is missing it starts one Prefect run, then emails. It also emails once a month above 300 Prefect minutes. The Lambda may list `records/` and the ledger, read the ledger, create the alert marker, read one SSM parameter and publish to the one topic. No deletes. The Prefect key's SSM parameter is created by the owner, not Terraform. Free tier |
 | OIDC provider `api.prefect.cloud/oidc-provider` and role `pm25-forecast-prefect-run` (T8, #15) | Keyless AWS access for Prefect Managed runs: web identity federation, trusted only for our Prefect account and the `prefect-cloud` audience, 1-hour sessions, only the pipeline policy (D-040). Free |
 
 State lives in `s3://pm25-forecast-tfstate-65bc08/pm25-forecast/base.tfstate` (created in T0c),
@@ -28,6 +29,7 @@ Prices are from the AWS Pricing API (us-east-1, looked up 2026-11-18).
 | GET requests | about 30,000 (page views, pipeline reads) | $0.004 per 10,000 | about $0.01 |
 | Data out | well under 1 GB of JSON | inside AWS's 100 GB/month free allowance | $0 |
 | IAM policy | | free | $0 |
+| Watchdog (T9) | about 60 Lambda runs and schedule invocations, a few emails, under 1 MB of logs | inside the free tiers: Lambda 1M requests, Scheduler 14M invocations, SNS 1,000 emails, CloudWatch 10 alarms and 5 GB of logs, SSM standard parameters free (pricing pages, read 2026-11-20) | $0 |
 
 The total is **under $0.10 a month**, well inside the $5 budget alarm (success criterion 7).
 
@@ -95,3 +97,7 @@ AWS_PROFILE=pm25 terraform -chdir=infra apply tfplan
 
 Edit the `.tf` files on a branch. CI runs the format, validation and mock tests. Then run
 `plan` and `apply` as in steps 1, 3, 4 and 5, and check that `plan` shows "No changes" afterwards.
+
+**Since T9, build the watchdog's zip before every `plan`:** `uv run python -m airwatch.watchdog.build`.
+Terraform hashes `infra/build/watchdog.zip`, and a fresh checkout doesn't have it. The build is
+reproducible, so an unchanged handler and lock give the same zip and no change in the plan.

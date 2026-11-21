@@ -47,6 +47,10 @@ dev = [
     { name = "types-jsonschema" },
     { name = "types-pyyaml" },
 ]
+watchdog = [
+    { name = "boto3" },
+    { name = "tzdata" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -75,6 +79,10 @@ dev = [
     { name = "ruff", specifier = ">=0.17.5" },
     { name = "types-jsonschema", specifier = ">=4.26.0.20261006" },
     { name = "types-pyyaml", specifier = ">=6.0.12.20261113" },
+]
+watchdog = [
+    { name = "boto3", specifier = ">=1.44.6" },
+    { name = "tzdata", specifier = ">=2026.6" },
 ]
 
 [[package]]

@@ -2,18 +2,15 @@
 # provider: offline, no credentials, nothing created. Run: terraform -chdir=infra test
 
 mock_provider "aws" {
-  # Realistic ARNs: the provider checks the format of an ARN passed between resources.
-  mock_resource "aws_iam_policy" {
-    defaults = { arn = "arn:aws:iam::123456789012:policy/pm25-forecast-pipeline" }
-  }
-  mock_resource "aws_iam_openid_connect_provider" {
-    defaults = { arn = "arn:aws:iam::123456789012:oidc-provider/api.prefect.cloud/oidc-provider" }
-  }
+  source = "./tests/mocks"
 }
 
 variables {
-  alert_email        = "owner@example.invalid"
-  prefect_account_id = "1d2c3b4a-5f6e-4a7b-8c9d-0e1f2a3b4c5d"
+  alert_email           = "owner@example.invalid"
+  prefect_account_id    = "1d2c3b4a-5f6e-4a7b-8c9d-0e1f2a3b4c5d"
+  prefect_workspace_id  = "2e3d4c5b-6a7f-4b8c-9d0e-1f2a3b4c5d6e"
+  prefect_deployment_id = "3f4e5d6c-7b8a-4c9d-8e1f-2a3b4c5d6e7f"
+  watchdog_zip          = "README.md"
 }
 
 run "the_oidc_provider_is_prefect_clouds" {

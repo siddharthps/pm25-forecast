@@ -68,6 +68,41 @@ jobs:
           SKIP: ruff-check,ruff-format,mypy,terraform-fmt,gitleaks
         run: uv run --frozen pre-commit run --all-files --show-diff-on-failure
 
+  # The write-up (T11, D-016): a strict Zensical build (undefined macros, broken links and
+  # anchors abort it), then lychee as the separate offline link and anchor checker over the
+  # built site. Offline, so a slow outside site can't fail a PR.
+  docs:
+    name: Docs build and links
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
+        with:
+          version: "0.13.9"
+          enable-cache: true
+
+      - name: Install the project with the docs group
+        run: uv sync --frozen --group docs
+
+      - name: Zensical build (strict)
+        run: uv run --frozen zensical build --strict
+
+      - name: Links and anchors (lychee, offline)
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8  # v2.9.0
+        with:
+          lycheeVersion: v0.24.2
+          args: >-
+            --offline --include-fragments --no-progress
+            --index-files index.html
+            --root-dir ${{ github.workspace }}/site_build
+            site_build
+          fail: true
+          jobSummary: true
+
   terraform:
     name: Terraform
     runs-on: ubuntu-latest

@@ -27,6 +27,14 @@ repos:
     hooks:
       - id: markdownlint-cli2
 
+  # Vale checks the write-up against the style sheet (notes/STYLE.md, D-022). The golang hook
+  # builds Vale at this commit, so local runs and CI use the same version.
+  - repo: https://github.com/vale-cli/vale
+    rev: 58f0dbfbce70bb23008a55ae64427858f788ef2e  # frozen: v3.28.1
+    hooks:
+      - id: vale
+        files: ^(docs/.*\.md|README\.md|DEVELOPMENT\.md)$
+
   # The page's JavaScript and CSS (T7, D-036). Scoped to the page's own files; markdownlint
   # and the hooks above keep Markdown, YAML and JSON.
   - repo: https://github.com/biomejs/pre-commit
@@ -58,6 +66,12 @@ repos:
         entry: uv run --frozen python -m airwatch.devtools.comments
         language: system
         files: ^(src|scripts|tests|site)/|^comment-baseline\.json$
+        pass_filenames: false
+      - id: docs-check
+        name: docs check (typed numbers, macros, page length; D-022)
+        entry: uv run --frozen python -m airwatch.devtools.docs_check
+        language: system
+        files: ^(docs/|results/results\.json$|src/airwatch/devtools/docs_check\.py$)
         pass_filenames: false
       - id: mypy
         name: mypy (strict)

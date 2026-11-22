@@ -28,6 +28,7 @@ from airwatch.devtools.comments import (
 ROOT = Path(__file__).resolve().parents[3]
 NOT_CODE = {".git", ".venv", ".claude", "notes", "tasks", "docs", "node_modules", "infra"}
 CODE_SUFFIXES = {".py", ".js", ".mjs", ".css"}
+GENERATED_DOCS = "site_build"
 
 
 def test_python_counts_own_line_and_trailing_comments() -> None:
@@ -176,6 +177,7 @@ def test_every_folder_with_code_is_in_scope() -> None:
         and p.relative_to(ROOT).parts[0] not in NOT_CODE
         and not p.relative_to(ROOT).parts[0].startswith(".")
         and "__pycache__" not in p.parts
+        and p.relative_to(ROOT).parts[0] != GENERATED_DOCS
     }
     assert {"src", "scripts", "tests", "site"} <= folders, "discovery broke: nothing to guard"
     assert folders <= set(SCOPE), f"code outside the comment ban: {sorted(folders - set(SCOPE))}"

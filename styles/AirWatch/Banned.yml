@@ -1,0 +1,26 @@
+extends: existence
+message: "'%s' is banned in the write-up (notes/STYLE.md): say what happened, with a number from results.json."
+level: error
+ignorecase: true
+tokens:
+  - obviously
+  - clearly
+  - simply
+  - basically
+  - very
+  - really
+  - robust
+  - leverage
+  - utilize
+  - seamless(?:ly)?
+  - cutting-edge
+  - state-of-the-art
+  - best-in-class
+  - world-class
+  - game-changer
+  - revolutionary
+  - powerful
+  - delve
+  - crucial
+  - significant(?:ly)?
+  - highly accurate

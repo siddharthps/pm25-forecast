@@ -1,0 +1,16 @@
+extends: existence
+message: "'%s' is a count written as a word: use a macro from results.json (notes/STYLE.md)."
+level: error
+ignorecase: true
+tokens:
+  - two
+  - three
+  - four
+  - five
+  - six
+  - seven
+  - eight
+  - nine
+  - ten
+  - eleven
+  - twelve

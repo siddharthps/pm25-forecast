@@ -55,6 +55,7 @@ def test_every_code_folder_is_linted() -> None:
 
 
 WEB_SUFFIXES = {".js", ".mjs", ".css"}
+GENERATED_DOCS = "site_build"
 
 
 def _biome_pattern() -> re.Pattern[str]:
@@ -74,6 +75,7 @@ def _web_files() -> list[str]:
         and not path.relative_to(ROOT).parts[0].startswith(".")
         and "node_modules" not in path.parts
         and "htmlcov" not in path.parts
+        and path.relative_to(ROOT).parts[0] != GENERATED_DOCS
     )
 
 

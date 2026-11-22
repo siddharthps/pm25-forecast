@@ -1318,3 +1318,47 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - 2026-11-22: 06:00, the first real score (2026-11-20); 08:00 and 09:00, silent watchdog checks.
   Then close #75.
 - T11 (#18) on the owner's go.
+
+## 2026-11-21: T11 (#18) the write-up's setup, on branch `18-docs-stub` (CST, about 13:55 to 18:20)
+
+- **Morning check deferred:** the owner asked for it at 13:52 on 2026-11-21, but every item (the
+  run for 2026-11-23, the first score, the silent 08:00 and 09:00 checks) falls on 2026-11-22.
+  #75 stays open.
+- **Built, checks first:** the number check (`airwatch.devtools.docs_check`, with property tests),
+  the macros module, the config tests, then Zensical 0.1.3, `results/results.json` (design counts
+  and nulls), two skeleton pages, Vale, a CI `docs` job with lychee offline, `DEVELOPMENT.md` as
+  the commands' one home, the README skeleton, `notes/STYLE.md` and `notes/OUTLINE.md`. D-043.
+- **Proved by planting faults:** an undefined macro key and a broken anchor each abort the strict
+  build; Vale fails on "very" and "robust"; the number check caught the pages' own "06:00"
+  before clock times were allowed.
+- **Not run locally:** lychee. Downloading and running its binary was refused by the permission
+  check, so its first run is CI on the PR.
+- **The write-up's plan, settled with the owner** (13 questions, one at a time, before any
+  result): live numbers as a dated snapshot; count words banned in `docs/`; four charts drawn at
+  build from pipeline data; a separate "How it runs" page; two reader levels; publishing at
+  `/report/`, off until T28; live compared with all three baselines (CAMS saved daily) and
+  split by forecaster; a reported-only bootstrap interval with a verdict rule. D-044, D-045
+  (Frozen), D-009's status line. The bottom line now shows all three baselines (SPEC
+  criterion 4).
+
+### Traps found
+
+- **Zensical's macros resolve files from the working directory,** not the config's folder. The
+  macros module builds the path from `env.project_dir`.
+- **A build folder under the project shows up in disk-walking scope tests:** Zensical's theme
+  bundles JS and CSS into `site_build/`. Two tests now skip exactly that folder (D-029's rule).
+- **The core suite is at the 30 s line on main too** (28.7 s warm, against 28.8 s on this
+  branch): the property tests have grown since D-035's 15 s. That needs its own issue.
+- **Git Bash's `sed` reads `\|` as "or":** a replace meant for a literal `\|` matched at every
+  space and wrecked a page. Edit files with Edit or a scratch script, as the owner's rule says.
+- **A Jinja filter inside a Markdown table cell breaks the row** (its `|` splits the cell).
+  Nulls now show as *(pending)* without a filter.
+
+### Next
+
+- Issues created with the owner's OK: #78 CAMS saved daily (**next**, time-sensitive), #79
+  `results.json` from the pipeline, #80 charts at build, #81 intervals and verdicts, #82 the
+  `/report/` deploy kept off, #83 the 30 s budget. In todo.md's "Added along the way" table; T10
+  ticked in plan.md (merged #74).
+- Owner: open the PR; add `Docs build and links` to `protect-main` once it passes.
+- 2026-11-22 after 09:15: the morning check, then close #75.

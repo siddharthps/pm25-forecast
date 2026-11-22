@@ -1,0 +1,17 @@
+[project]
+site_name = "AirWatch"
+site_description = "Next-day PM2.5 forecasts for the Phoenix metro area, with an honest public track record"
+repo_url = "https://github.com/siddharthps/pm25-forecast"
+docs_dir = "docs"
+site_dir = "site_build"
+strict = true
+nav = [
+    { "Bottom line" = "index.md" },
+    { "The forecast" = "forecast.md" },
+]
+
+[project.plugins.macros]
+modules = ["airwatch.docs_macros"]
+module_name = ""
+on_undefined = "strict"
+on_error_fail = true

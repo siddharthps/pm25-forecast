@@ -261,6 +261,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
     convincing bar to beat.
 - **Status:** Active. **Frozen.** Persistence on a thin day (a monitor without a valid D−1 is
   skipped and listed, never filled from an older day): D-034.
+  *Refined 2026-11-21 (D-045):* a reported-only 95% interval and verdict per baseline;
+  the metrics and the selection are unchanged.
 - **Clarification (2026-11-18, before any result was seen; no change to the decision):**
   **Persistence** means *the forecast for D+1 equals the last complete day's observed mean, which
   is D−1*. At the 06:00 issue time (D-019), day D is not yet observed, so using D would leak. In
@@ -447,7 +449,9 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 - **Alternatives:**
   - MkDocs 1.x + Material 9.7: frozen, so a migration would come later anyway.
   - Sphinx + MyST: very stable, but a heavier config and a different ecosystem.
-- **Status:** Active. Re-check Zensical's stable release around 2027-02.
+- **Status:** Active. Re-check Zensical's stable release around 2027-02. *Refined 2026-11-21
+  (D-043):* Zensical 0.1.3; its strict build fails on broken links and anchors (the open
+  point), and lychee runs offline as the separate checker.
 
 ---
 
@@ -548,7 +552,9 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   the docs grow past a handful of pages.
 - **Why:** The write-up is a README plus about 5 short pages, not a book, but the last write-up
   needed many review passes. The owner asked to start light and be able to expand.
-- **Status:** Active.
+- **Status:** Active. *Refined 2026-11-21 (D-043):* the bottom line is `docs/index.md`, the
+  outline `notes/OUTLINE.md`, the style sheet `notes/STYLE.md`; the caps are 400 and 1,000
+  words.
 
 ---
 
@@ -1322,6 +1328,124 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   keep the scores private until T25.
 - **Status:** Active. Owner's choices, 2026-11-20. First real score: the 2026-11-22 run scores
   2026-11-20.
+
+---
+
+## D-043 · 2026-11-21 · The write-up's setup (T11, #18)
+
+- **Docs tool:** Zensical **0.1.3** (PyPI, 2026-11-20), pinned with `==` in a separate `docs`
+  dependency group, so the daily job's and the watchdog's requirements stay unchanged (D-040,
+  D-041). Config in `zensical.toml`: `docs_dir = "docs"`, `site_dir = "site_build"` (the page's
+  source owns `site/`), `strict = true`.
+- **Numbers:** `results/results.json` is the one source. `airwatch.docs_macros` loads it as
+  `results` through Zensical's native macros (`modules = ["airwatch.docs_macros"]`,
+  `on_undefined = "strict"`, `on_error_fail = true`). A null shows as *(pending)*, with no
+  filter needed, because a filter's `|` breaks a table row. The file holds the design counts
+  from the frozen decisions (variants, baselines, folds) and nulls for every result. Writing it
+  from the pipeline is a separate task.
+- **Number check** (`airwatch.devtools.docs_check`, a pre-commit hook and a core test): any digit
+  in `docs/` outside a macro's `results.…` path fails, code blocks, HTML comments and the rest of
+  each macro included (so `{{ 4.2 }}` fails; found in the PR #84 review). Allowed literals: ISO
+  dates, years 1900–2099, clock times (`06:00`, added when the first page needed the issue
+  time), decision and task IDs, issue numbers, `PM2.5`, `PM10`, `D+1`, versions with a `v`,
+  ordered-list markers, link targets. A macro naming a missing key fails too.
+- **Length cap:** 400 words for the bottom line, 1,000 for any other page.
+- **Vale 3.28.1** as a pre-commit hook (the upstream golang hook, pinned to the tag's commit), over
+  `docs/`, the README and DEVELOPMENT.md. One project style, `styles/AirWatch/Banned.yml`, at
+  `error` level. CI runs it in the pre-commit step.
+- **Links:** Zensical's strict build already fails on broken links and anchors (checked
+  2026-11-21 with a planted broken anchor), which settles D-016's open point. The separate checker
+  D-016 asks for is **lychee 0.24.2** through `lycheeverse/lychee-action` 2.9.0, **offline**
+  (`--offline --include-fragments`) over `site_build/` in a new CI `docs` job, so an outside site
+  being slow can't fail a PR.
+- **Dev commands:** one home, `DEVELOPMENT.md` at the root (owner's choice), linked from the
+  README and imported by `CLAUDE.md` with `@DEVELOPMENT.md`. Not in `docs/`, so it isn't
+  published or number-checked.
+- **Scoped, not loosened (D-029):** two discovery tests (the comment ban's folder scope, Biome's
+  file scope) walk the disk and found Zensical's bundled theme JS and CSS in the gitignored
+  `site_build/`. That is generated output we don't own, so both skip exactly that folder. A test
+  ties the skipped name to `site_dir`, so it can't drift.
+- **Alternatives:**
+  - Zensical in the `dev` group: rejected, since the docs build isn't needed for the core suite.
+  - Vale in CI only, from a downloaded binary: rejected, because the hook gives the same version
+    locally.
+  - lychee checking outside links on every PR: rejected because it would be flaky. An outside-link
+    check can come later as its own scheduled job.
+- **Status:** Active. 2026-11-21. Refines D-016 (tool and versions; its open point settled) and
+  D-022 (how its checks run).
+
+---
+
+## D-044 · 2026-11-21 · The write-up's plan: pages, readers, charts, live record, publishing (#18)
+
+Settled with the owner one question at a time, before any result was seen. The plan itself lives
+in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
+
+- **Live numbers are a dated snapshot,** taken at the end of T29's 14-day window and quoted "as
+  of" that date, with a link to the live page for today's numbers. *Why:* the prose is written
+  once; a live number that keeps updating would move under it.
+- **Counts written as words are banned in `docs/`** ("two" to "twelve"; Vale, error level). "One"
+  stays allowed. *Why:* "six variants" dodged the digit check.
+- **Four charts, declared now:** models against the baselines, error by month, the live forecast
+  against what happened, and bad-air recall. Each is drawn **at build time** from a data file the
+  pipeline writes into `results/`, and the images are never committed. *Why:* a chart saved by
+  hand goes stale like a typed number, and declaring the charts before the results stops us from
+  choosing only the flattering ones.
+- **Seven pages:** a separate "How it runs" page for the engineering (record before publish, one
+  record a day, the watchdog and its drill, tests, cost). *Why:* it is a main point for
+  interviewers and was squeezed into half a page.
+- **Two levels of reader:** the bottom line and the README in plain words for anyone; the
+  chapters for a technical reader, with each term defined at first use.
+- **Published at `/report/`** on the existing GitHub Pages site, by the same deploy. Built and
+  dry-run early but switched off until T28's write-up is in, and switched on only at the owner's
+  go. *Why:* the docs need a built site (raw Markdown shows the macros), and a half-empty
+  report shouldn't be anyone's first impression.
+- **The live record is compared with all three baselines,** so the daily job saves CAMS's D+1
+  forecast each morning as issued. *Why:* SPEC criterion 4 asks for all three, and a CAMS
+  forecast downloaded later may have been revised, which would be an unfair comparison. This is
+  the one time-sensitive item: every day not saved is a day without a CAMS comparison.
+- **The live record is split by forecaster:** the headline model is scored only on the days it
+  issued (each record's `method`); the persistence launch period is shown apart. *Why:* pooling
+  would mix persistence's days into the model's score.
+- **The bottom line shows all three baselines,** not only persistence (SPEC criterion 4).
+- **Alternatives (each offered, not chosen):** live numbers always current; number words left to
+  review or warned only; charts saved by the pipeline or drawn in the browser; one live page for
+  both topics; one reader level throughout; a separate docs host; publishing the skeleton now or
+  page by page; live compared with persistence and climatology only; pooling the live days.
+- **Status:** Active. Owner's choices, 2026-11-21. The build work is in its own issues.
+
+---
+
+## D-045 · 2026-11-21 · How sure the result is: intervals and verdicts, reported only
+
+- **Decision:** each comparison with a baseline, on the 2025 test year and on the live snapshot,
+  reports the MAE gap (baseline MAE minus model MAE; positive means the model is better) with a
+  **95% interval** from a **circular block bootstrap**:
+  - blocks of 7 consecutive days, with every monitor on a resampled day kept together (nearby
+    days and monitors share the same air);
+  - 10,000 resamples, a fixed seed, and the percentile interval.
+- **Verdict, fixed before any result:**
+  - `better` if the whole interval is above zero;
+  - `worse` if it is wholly below zero;
+  - `no clear difference` otherwise.
+  The pipeline writes the verdict into `results.json`, and the write-up quotes it. If the
+  interval includes zero, the page says "no clear difference", whatever the point estimate.
+- **Reported only:** the intervals and verdicts never affect model choice. D-010's selection
+  rule, D-009's metrics and the one-time test read (D-008) are unchanged. The test-year
+  intervals are computed in the same single run that reads the test set (T27), never by a
+  second read.
+- **Why:** with one test year, a gap of a fraction of a µg/m³ could be luck. The interval shows
+  that, and a wording rule fixed in advance stops the prose from being softened after the result
+  is known.
+- **Note:** the live snapshot covers only a few weeks, so its intervals will be wide. That is
+  reported as it is, not worked around.
+- **Wording:** the owner chose "say 'not clearly better'". Vale bans "clearly", so the label is
+  "no clear difference", with the same meaning. A third label, `worse`, covers an interval wholly
+  below zero.
+- **Alternatives:** no interval, with the limits page saying the comparison has no error bars
+  (offered, not chosen); report the range with no wording rule (offered, not chosen).
+- **Status:** Active. **Frozen.** Owner's choice, 2026-11-21, before any result was seen. Adds to
+  D-009 without changing it.
 
 ---
 

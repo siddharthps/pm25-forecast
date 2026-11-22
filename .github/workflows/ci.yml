@@ -47,8 +47,11 @@ jobs:
       - name: mypy (strict)
         run: uv run --frozen mypy
 
-      # Fails below the 85% floor (pyproject [tool.coverage.report] fail_under; SPEC).
+      # Fails below the 85% floor (pyproject [tool.coverage.report] fail_under; SPEC), and when
+      # the run takes over 75 s (tests/suite_budget.py, D-046).
       - name: Core tests with coverage
+        env:
+          SUITE_BUDGET_S: "75"
         run: uv run --frozen pytest --cov --cov-report=term-missing
 
       # The page's JavaScript tests (T7), with the Node version in .nvmrc.

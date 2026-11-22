@@ -14,6 +14,8 @@ from types import ModuleType
 import pytest
 from hypothesis import settings
 
+pytest_plugins = ["pytester", "tests.suite_budget"]
+
 settings.register_profile("default", derandomize=True, print_blob=True)
 settings.register_profile("explore", max_examples=2_000, print_blob=True)
 settings.load_profile("default")

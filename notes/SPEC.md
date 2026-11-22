@@ -239,7 +239,8 @@ Every task states its check before its code. The checks:
 - **Coverage:** ≥ 85% line coverage on `src/airwatch` (excluding `flows/`), enforced in CI as a
   floor. It is a floor, not the goal; placeholder tests like v1's `assert True` are banned.
 - **Speed:** the core suite is offline and seeded, runs in under 30 seconds on 4 parallel workers
-  (D-035), and starts no Prefect server.
+  (D-035), and starts no Prefect server. CI fails the run past 75 s, its own noisier limit
+  (D-046).
 - **The page's JavaScript** is tested with `node --test` and linted by Biome, both in CI (D-036).
 
 ---

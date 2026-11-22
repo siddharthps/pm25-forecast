@@ -171,7 +171,39 @@ filterwarnings = ["error"]
 [tool.mutmut]
 source_paths = ["src/"]
 only_mutate = ["src/airwatch/timeutil.py", "src/airwatch/config.py"]
-also_copy = ["tests/", "pyproject.toml"]
+also_copy = [
+    ".claude/",
+    ".env.example",
+    ".gitattributes",
+    ".github/",
+    ".gitignore",
+    ".markdownlint-cli2.yaml",
+    ".nvmrc",
+    ".pre-commit-config.yaml",
+    ".python-version",
+    ".vale.ini",
+    "CLAUDE.md",
+    "DEVELOPMENT.md",
+    "LICENSE",
+    "README.md",
+    "biome.json",
+    "comment-baseline.json",
+    "docs/",
+    "infra/",
+    "notes/",
+    "prefect.yaml",
+    "pyproject.toml",
+    "requirements/",
+    "results/",
+    "scripts/",
+    "site/",
+    "skills-lock.json",
+    "styles/",
+    "tasks/",
+    "tests/",
+    "uv.lock",
+    "zensical.toml",
+]
 pytest_add_cli_args_test_selection = ["tests/unit", "tests/property"]
 pytest_add_cli_args = ["-n", "0", "-p", "no:cacheprovider"]
 

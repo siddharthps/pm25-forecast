@@ -17,6 +17,7 @@ from zoneinfo import ZoneInfo
 import pandas as pd
 import pytest
 
+from airwatch.observations.schema import POC_NOT_GIVEN
 from airwatch.validation.checks import (
     COVERAGE_MIN_SHARE,
     FLATLINE_MIN_HOURS,
@@ -155,7 +156,7 @@ def test_an_unverified_method_is_a_hard_failure_and_excluded() -> None:
 def test_airnow_rows_use_the_widest_verified_range() -> None:
     vals = varying(24)
     vals[1], vals[2] = 9000.0, 10_000.1
-    result = check(frame(vals, method=None, poc=0, source="airnow"))
+    result = check(frame(vals, method=None, poc=POC_NOT_GIVEN, source="airnow"))
     assert result.finding("outside_valid_range").count == 1
     assert result.finding("unverified_method").count == 0
 
@@ -270,7 +271,7 @@ def test_rows_outside_the_window_are_not_counted_as_coverage() -> None:
 
 
 def test_airnow_drop_counts_are_reported_for_information() -> None:
-    df = frame(varying(24), method=None, poc=0, source="airnow")
+    df = frame(varying(24), method=None, poc=POC_NOT_GIVEN, source="airnow")
     result = check(df, ingest_drops={"not_an_aqs_site_id": 5, "unmatched_site": 3})
     assert result.finding("airnow_not_aqs_id").count == 5
     assert result.finding("airnow_unmatched_site").count == 3

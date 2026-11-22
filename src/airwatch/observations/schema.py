@@ -5,6 +5,9 @@ One row per instrument-hour. Every timestamp is timezone-aware UTC; every row ca
 Validation here is structural only and blocks on any violation. Values are never judged here:
 raw data is kept as received, and readings outside a crude range are only counted (D-031). The
 data-quality rules, with sourced bounds, are in `airwatch.validation` (D-033).
+
+`poc` names the instrument at a site. AQS gives a one- or two-digit number; AirNow gives none,
+so its rows carry `POC_NOT_GIVEN`, which no real instrument can have (D-047).
 """
 
 from __future__ import annotations
@@ -16,6 +19,7 @@ import pandas as pd
 __all__ = [
     "CRUDE_RANGE_UG_M3",
     "HOURLY_COLUMNS",
+    "POC_NOT_GIVEN",
     "concat_hourly",
     "count_outside_crude_range",
     "empty_hourly",
@@ -34,6 +38,8 @@ HOURLY_COLUMNS: dict[str, str] = {
 }
 
 CRUDE_RANGE_UG_M3 = (-10.0, 1000.0)
+POC_NOT_GIVEN = -1
+AQS_POCS = range(100)
 
 
 def validate_hourly(df: pd.DataFrame) -> None:
@@ -51,6 +57,11 @@ def validate_hourly(df: pd.DataFrame) -> None:
         raise ValueError("site_id must be 9 digits")
     if (df["available_at_utc"] <= df["time_utc"]).any():
         raise ValueError("available_at_utc must be after time_utc")
+    airnow = df["source"] == "airnow"
+    if (df.loc[airnow, "poc"] != POC_NOT_GIVEN).any():
+        raise ValueError(f"poc: AirNow rows must carry POC_NOT_GIVEN ({POC_NOT_GIVEN})")
+    if not df.loc[~airnow, "poc"].between(AQS_POCS.start, AQS_POCS.stop - 1).all():
+        raise ValueError("poc: AQS instruments are numbered 0 to 99")
 
 
 def empty_hourly() -> pd.DataFrame:

@@ -46,6 +46,7 @@ crash.log
 
 # Docs build output
 site_build/
+mutants/
 
 # OS and editors
 .DS_Store

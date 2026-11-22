@@ -24,6 +24,7 @@ dev = [
     "boto3-stubs[s3]>=1.44.6",
     "hypothesis>=6.170.15",
     "moto>=5.2.5",
+    "mutmut>=3.8.1",
     "mypy>=2.4.1",
     "pandas-stubs>=3.1.0.261029",
     "pre-commit>=4.7.0",
@@ -166,6 +167,13 @@ markers = [
 ]
 xfail_strict = true
 filterwarnings = ["error"]
+
+[tool.mutmut]
+source_paths = ["src/"]
+only_mutate = ["src/airwatch/timeutil.py", "src/airwatch/config.py"]
+also_copy = ["tests/", "pyproject.toml"]
+pytest_add_cli_args_test_selection = ["tests/unit", "tests/property"]
+pytest_add_cli_args = ["-n", "0", "-p", "no:cacheprovider"]
 
 [tool.coverage.run]
 source = ["airwatch"]

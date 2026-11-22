@@ -107,10 +107,8 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
   applied and drilled 2026-11-20, D-041)
 - [x] T10: Daily scoring of each forecast day, two mornings later on settled AirNow data (D-042;
   merged #74, 2026-11-21)
-- [ ] T11: Bottom line + outline + style sheet (Vale), docs stub, `results.json` number check,
-  README skeleton (D-022)
-- [ ] #78: Save CAMS's D+1 forecast each morning, as issued (D-044). **Next after T11:** every
-  day not saved is a day the live record can't compare with CAMS
+- [x] T11: Bottom line + outline + style sheet (Vale), docs stub, `results.json` number check,
+  README skeleton (D-022) (merged #84, 2026-11-22 UTC)
 - [ ] #83: Core test suite back under its 30 s budget
 
 ### Checkpoint B: Skeleton live (2026-11-25), plus the D-014 review
@@ -124,6 +122,9 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
 ### Phase 3: Deepen (weeks 2–5)
 
 - [ ] T14: Weather ingestion: ERA5 history, Previous Runs archive, live forecast, CAMS
+- [ ] #78: Save CAMS's D+1 forecast each morning, as issued (D-044). **With T14**, which builds
+  the CAMS download; running and verified about a week **before T23**, since the live record
+  scores the model only on days it issued itself
 - [ ] The write-up's build work (D-044, D-045): #79 the pipeline writes `results.json` and the
   chart data; #80 the charts drawn at build; #81 the bootstrap intervals and verdicts (before
   T27); #82 the `/report/` deploy, dry-run and kept off until T28

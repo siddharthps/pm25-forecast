@@ -1362,3 +1362,26 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   ticked in plan.md (merged #74).
 - Owner: open the PR; add `Docs build and links` to `protect-main` once it passes.
 - 2026-11-22 after 09:15: the morning check, then close #75.
+
+## 2026-11-21: #84 reviewed and merged; #78's timing corrected (CST, about 18:20 to 23:55)
+
+- **Review of #84 found a hole:** a number typed inside a macro (`{{ 4.2 }}`,
+  `{% if results.x > 5 %}`) passed the number check, because macros were skipped whole. Failing
+  tests first, then the fix (dc610bc): only a macro's `results.…` path may hold digits. D-043
+  updated to match.
+- Merged as 7ae5b53 (2026-11-22 UTC), all four checks green; lychee's first run checked the
+  site's links with no errors. #18 closed; T11 ticked in plan.md and todo.md.
+- The owner added `Docs build and links` to `protect-main`; read back, it lists four required
+  checks.
+
+### Traps found
+
+- **#78 was called time-sensitive, which overstated it.** The live record scores the model only
+  on days it issued itself (D-044, question 12), and that starts at T23. So CAMS saving must be
+  running before T23, not now. With the owner's OK, #78 moved next to T14 (which builds the CAMS
+  download anyway), with a deadline of running and verified about a week before T23.
+
+### Next
+
+- 2026-11-22 after 09:15 CST: the morning check, then close #75.
+- By 2026-11-25: the D-014 timeline review (Checkpoint B).

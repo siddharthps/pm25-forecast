@@ -84,7 +84,7 @@ comment.
 | Cloud | AWS: S3 (private and public prefixes), EventBridge Scheduler, Lambda, SNS, SSM Parameter Store |
 | Infrastructure as code | Terraform, remote state in versioned private S3, region us-east-1 (D-018) |
 | Site | Static HTML/JS on GitHub Pages; one pinned chart library from an allowed CDN |
-| Docs | Zensical (pinned; numbers via native macros or markdownextradata) + a separate link and anchor checker in CI (D-016) |
+| Docs | Zensical, pinned in a `docs` dependency group; numbers from `results/results.json` via native macros (`airwatch.docs_macros`); Vale for the style sheet; lychee, offline, as the separate link and anchor checker in CI (D-016, D-043) |
 | Scaffold | `uv init --package` src layout + the folders below; not CCDS (D-015) |
 | Quality | Ruff (lint and format), mypy (strict on `src/`), pytest, Hypothesis, moto, time-machine, mutmut, pre-commit, gitleaks |
 
@@ -97,8 +97,8 @@ confirmed when added (pydantic-settings, httpx, pyarrow, SSM Parameter Store).
 
 ## Commands
 
-The commands that work today live in [CLAUDE.md § Commands](../CLAUDE.md#commands), their one
-home. Below are the target commands, which become real as each module lands:
+The commands that work today live in [DEVELOPMENT.md](../DEVELOPMENT.md), their one home
+(D-043; `CLAUDE.md` imports it). Below are the target commands, which become real as each module lands:
 
 ```bash
 uv sync --frozen                         # install exactly what the lockfile says
@@ -137,7 +137,9 @@ pm25-forecast/                 new public repo (D-002, D-017); package name `air
 │   ├── forecast/              run.py, record.py (conditional write), publish.py, schemas/ (D-036)
 │   ├── monitoring/            compute.py (Prefect minutes ledger), score.py (daily scoring, D-042), drift.py, flags.py
 │   ├── flows/                 Prefect flows (thin wrappers that call the modules above)
-│   └── watchdog/              handler.py (the backup-trigger Lambda; stdlib + boto3 only), build.py (its zip; D-041)
+│   ├── watchdog/              handler.py (the backup-trigger Lambda; stdlib + boto3 only), build.py (its zip; D-041)
+│   ├── devtools/              comments.py (the comment ban, D-037), docs_check.py (the docs rules, D-043)
+│   └── docs_macros.py         results.json → the docs' `results` variable (D-043)
 ├── scripts/                   manual tools: city_check.py (reads only), aqs_bulk.py (dry run unless --apply)
 ├── data/                      local cache of downloads (gitignored; raw data never committed)
 ├── infra/                     Terraform (D-018); the watchdog's zip is built into infra/build/ (gitignored)
@@ -151,10 +153,14 @@ pm25-forecast/                 new public repo (D-002, D-017); package name `air
 │   ├── integration/           moto S3, frozen clock, fake APIs (recorded fixtures)
 │   ├── site/                  the page's JavaScript tests (node --test)
 │   └── regressions/           shrunk failing cases saved from Hypothesis
-├── notes/                     INTENT, SPEC, DECISIONS, JOURNAL (moved from the old repo)
-├── docs/                      the published write-up (Zensical); numbers read from results.json
-├── results/                   results.json: the single source for every number in the prose
-└── .github/workflows/         CI only: lint, type checks, tests, docs build, Pages deploy
+├── notes/                     INTENT, SPEC, DECISIONS, JOURNAL, TOKENS, STYLE and OUTLINE (the write-up's rules
+│                              and plan, D-044), guides/ (owner-run steps)
+├── docs/                      the write-up (Zensical); numbers via macros; built into site_build/ (gitignored)
+├── results/                   results.json, the single source for every number in the prose, and the charts' data
+├── zensical.toml              the docs site config (D-043)
+├── .vale.ini, styles/         Vale: the banned words, and count words in docs/ (D-043, D-044)
+├── DEVELOPMENT.md             every command, its one home; imported by CLAUDE.md (D-043)
+└── .github/workflows/         CI only: lint, type checks, tests, docs build and links, Pages deploy
 ```
 
 Rule: flows contain no logic. Everything testable lives in `src/airwatch/<module>` and is tested
@@ -219,8 +225,10 @@ Every task states its check before its code. The checks:
 | The page keeps AirNow's terms | Unit: D-025's labels, notice, link and credits are checked on the page's text; no AQI colour is typed into the site (D-036) |
 | No duplicate or rescaled features | Unit test: no two feature columns are identical or exact linear rescalings of each other |
 | Test set read once | `final_test.py` refuses to run without a freeze flag and writes a one-time marker; CI fails if test-period metrics appear anywhere else |
-| Prose matches results | CI: every number in `docs/` resolves to `results/results.json` (Zensical macros or extra-data); none is typed by hand |
-| Docs links | CI: a link and anchor checker over the built site fails on any broken link or anchor (D-016) |
+| Prose matches results | CI: no digit in `docs/` outside a macro except allow-listed literals, every macro resolves in `results/results.json`, and count words (two to twelve) fail in Vale (D-043, D-044) |
+| Charts match results | Each chart is drawn at build time from its data file in `results/`; a test ties the declared charts to their data files (D-044) |
+| Wins are verdicts | Each baseline comparison quotes the pipeline's verdict from D-045's interval; the interval code reproduces a planted gap on simulated data first |
+| Docs links | CI: the strict Zensical build, then lychee offline over the built site, fails on any broken link or anchor (D-016, D-043) |
 | New evaluation code reproduces a known number | The CV harness must reproduce hand-computed persistence MAE on a small fixture before any model result is trusted |
 
 - **Outside world:** the clock, S3, the AirNow, AQS and Open-Meteo APIs, the Prefect API and SNS
@@ -282,7 +290,8 @@ V1 is done when all of the following hold. Each is checkable.
    - The headline model was chosen by the frozen rule (D-010).
    - The 2025 test was read once, and the marker proves it.
 4. **Baselines:** the page and the write-up show the headline model against persistence,
-   climatology and CAMS on MAE, whatever the result. If it loses, the write-up says so.
+   climatology and CAMS on MAE, whatever the result, each with its D-045 interval and verdict,
+   on the test year and on the live snapshot (D-044). If it loses, the write-up says so.
 5. **Skew measured:** the observed-weather vs forecasts-only variant (D-007) and the AirNow vs AQS
    gap (D-004) are each reported with a number.
 6. **Checks green:** lint, `mypy --strict`, the core suite under 30 s, coverage ≥ 85%, the
@@ -303,7 +312,8 @@ V1 is done when all of the following hold. Each is checkable.
 - More than one city at a time: the intent limits V1 to one.
 - Other pollutants such as ozone: same reason.
 - Prediction intervals or quantile forecasts: valuable, but they add to the metric surface; a V2
-  candidate.
+  candidate. (D-045's interval is different: it is on the MAE gap between two forecasters,
+  reported only.)
 - A Temporal Fusion Transformer or other large models: excluded (D-010).
 - A real-time API or user accounts: out of scope in the intent.
 - Running on AWS ECS: only if Prefect's free plan changes (D-011).

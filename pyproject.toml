@@ -204,7 +204,12 @@ also_copy = [
     "uv.lock",
     "zensical.toml",
 ]
-pytest_add_cli_args_test_selection = ["tests/unit", "tests/property"]
+pytest_add_cli_args_test_selection = [
+    "tests/unit",
+    "tests/property",
+    "--deselect",
+    "tests/unit/devtools/test_comments.py::test_the_repository_keeps_to_its_baseline",
+]
 pytest_add_cli_args = ["-n", "0", "-p", "no:cacheprovider"]
 
 [tool.coverage.run]

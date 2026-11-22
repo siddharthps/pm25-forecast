@@ -261,6 +261,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
     convincing bar to beat.
 - **Status:** Active. **Frozen.** Persistence on a thin day (a monitor without a valid D−1 is
   skipped and listed, never filled from an older day): D-034.
+  *Refined 2026-11-21 (D-045):* a reported-only 95% interval and verdict per baseline;
+  the metrics and the selection are unchanged.
 - **Clarification (2026-11-18, before any result was seen; no change to the decision):**
   **Persistence** means *the forecast for D+1 equals the last complete day's observed mean, which
   is D−1*. At the 06:00 issue time (D-019), day D is not yet observed, so using D would leak. In
@@ -1337,9 +1339,10 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   source owns `site/`), `strict = true`.
 - **Numbers:** `results/results.json` is the one source. `airwatch.docs_macros` loads it as
   `results` through Zensical's native macros (`modules = ["airwatch.docs_macros"]`,
-  `on_undefined = "strict"`, `on_error_fail = true`). A `show` filter prints a null as
-  *(pending)*. The file holds the design counts from the frozen decisions (variants, baselines,
-  folds) and nulls for every result. Writing it from the pipeline is a separate task.
+  `on_undefined = "strict"`, `on_error_fail = true`). A null shows as *(pending)*, with no
+  filter needed, because a filter's `|` breaks a table row. The file holds the design counts
+  from the frozen decisions (variants, baselines, folds) and nulls for every result. Writing it
+  from the pipeline is a separate task.
 - **Number check** (`airwatch.devtools.docs_check`, a pre-commit hook and a core test): any digit
   in `docs/` outside a macro fails, code blocks and HTML comments included. Allowed literals: ISO
   dates, years 1900–2099, clock times (`06:00`, added when the first page needed the issue
@@ -1369,6 +1372,79 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
     check can come later as its own scheduled job.
 - **Status:** Active. 2026-11-21. Refines D-016 (tool and versions; its open point settled) and
   D-022 (how its checks run).
+
+---
+
+## D-044 · 2026-11-21 · The write-up's plan: pages, readers, charts, live record, publishing (#18)
+
+Settled with the owner one question at a time, before any result was seen. The plan itself lives
+in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
+
+- **Live numbers are a dated snapshot,** taken at the end of T29's 14-day window and quoted "as
+  of" that date, with a link to the live page for today's numbers. *Why:* the prose is written
+  once; a live number that keeps updating would move under it.
+- **Counts written as words are banned in `docs/`** ("two" to "twelve"; Vale, error level). "One"
+  stays allowed. *Why:* "six variants" dodged the digit check.
+- **Four charts, declared now:** models against the baselines, error by month, the live forecast
+  against what happened, and bad-air recall. Each is drawn **at build time** from a data file the
+  pipeline writes into `results/`, and the images are never committed. *Why:* a chart saved by
+  hand goes stale like a typed number, and declaring the charts before the results stops us from
+  choosing only the flattering ones.
+- **Seven pages:** a separate "How it runs" page for the engineering (record before publish, one
+  record a day, the watchdog and its drill, tests, cost). *Why:* it is a main point for
+  interviewers and was squeezed into half a page.
+- **Two levels of reader:** the bottom line and the README in plain words for anyone; the
+  chapters for a technical reader, with each term defined at first use.
+- **Published at `/report/`** on the existing GitHub Pages site, by the same deploy. Built and
+  dry-run early but switched off until T28's write-up is in, and switched on only at the owner's
+  go. *Why:* the docs need a built site (raw Markdown shows the macros), and a half-empty
+  report shouldn't be anyone's first impression.
+- **The live record is compared with all three baselines,** so the daily job saves CAMS's D+1
+  forecast each morning as issued. *Why:* SPEC criterion 4 asks for all three, and a CAMS
+  forecast downloaded later may have been revised, which would be an unfair comparison. This is
+  the one time-sensitive item: every day not saved is a day without a CAMS comparison.
+- **The live record is split by forecaster:** the headline model is scored only on the days it
+  issued (each record's `method`); the persistence launch period is shown apart. *Why:* pooling
+  would mix persistence's days into the model's score.
+- **The bottom line shows all three baselines,** not only persistence (SPEC criterion 4).
+- **Alternatives (each offered, not chosen):** live numbers always current; number words left to
+  review or warned only; charts saved by the pipeline or drawn in the browser; one live page for
+  both topics; one reader level throughout; a separate docs host; publishing the skeleton now or
+  page by page; live compared with persistence and climatology only; pooling the live days.
+- **Status:** Active. Owner's choices, 2026-11-21. The build work is in its own issues.
+
+---
+
+## D-045 · 2026-11-21 · How sure the result is: intervals and verdicts, reported only
+
+- **Decision:** each comparison with a baseline, on the 2025 test year and on the live snapshot,
+  reports the MAE gap (baseline MAE minus model MAE; positive means the model is better) with a
+  **95% interval** from a **circular block bootstrap**:
+  - blocks of 7 consecutive days, with every monitor on a resampled day kept together (nearby
+    days and monitors share the same air);
+  - 10,000 resamples, a fixed seed, and the percentile interval.
+- **Verdict, fixed before any result:**
+  - `better` if the whole interval is above zero;
+  - `worse` if it is wholly below zero;
+  - `no clear difference` otherwise.
+  The pipeline writes the verdict into `results.json`, and the write-up quotes it. If the
+  interval includes zero, the page says "no clear difference", whatever the point estimate.
+- **Reported only:** the intervals and verdicts never affect model choice. D-010's selection
+  rule, D-009's metrics and the one-time test read (D-008) are unchanged. The test-year
+  intervals are computed in the same single run that reads the test set (T27), never by a
+  second read.
+- **Why:** with one test year, a gap of a fraction of a µg/m³ could be luck. The interval shows
+  that, and a wording rule fixed in advance stops the prose from being softened after the result
+  is known.
+- **Note:** the live snapshot covers only a few weeks, so its intervals will be wide. That is
+  reported as it is, not worked around.
+- **Wording:** the owner chose "say 'not clearly better'". Vale bans "clearly", so the label is
+  "no clear difference", with the same meaning. A third label, `worse`, covers an interval wholly
+  below zero.
+- **Alternatives:** no interval, with the limits page saying the comparison has no error bars
+  (offered, not chosen); report the range with no wording rule (offered, not chosen).
+- **Status:** Active. **Frozen.** Owner's choice, 2026-11-21, before any result was seen. Adds to
+  D-009 without changing it.
 
 ---
 

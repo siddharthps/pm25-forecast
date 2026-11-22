@@ -3,21 +3,41 @@
   "design": {
     "variants": 6,
     "baselines": 3,
-    "cv_folds": 6
+    "cv_folds": 6,
+    "ci_level": 95,
+    "bootstrap_block_days": 7,
+    "bootstrap_resamples": 10000
   },
   "headline": {
     "model": null,
     "test_mae": null,
-    "persistence_test_mae": null,
     "skill_vs_persistence": null
+  },
+  "test_vs": {
+    "persistence": { "mae": null, "gap": null, "ci_low": null, "ci_high": null, "verdict": null },
+    "climatology": { "mae": null, "gap": null, "ci_low": null, "ci_high": null, "verdict": null },
+    "cams": { "mae": null, "gap": null, "ci_low": null, "ci_high": null, "verdict": null }
   },
   "skew": {
     "weather_forecast_vs_observed_mae_gap": null,
     "airnow_vs_aqs_mae_gap": null
   },
   "live": {
-    "days_scored": null,
-    "mae": null,
-    "persistence_mae": null
+    "as_of": null,
+    "model": {
+      "first_day": null,
+      "days_scored": null,
+      "mae": null
+    },
+    "model_vs": {
+      "persistence": { "mae": null, "gap": null, "ci_low": null, "ci_high": null, "verdict": null },
+      "climatology": { "mae": null, "gap": null, "ci_low": null, "ci_high": null, "verdict": null },
+      "cams": { "mae": null, "gap": null, "ci_low": null, "ci_high": null, "verdict": null }
+    },
+    "launch_period": {
+      "first_day": null,
+      "days_scored": null,
+      "mae": null
+    }
   }
 }

@@ -114,7 +114,7 @@ def test_vale_uses_the_project_style_on_markdown() -> None:
     ini = (ROOT / ".vale.ini").read_text(encoding="utf-8")
     assert re.search(r"^StylesPath\s*=\s*styles$", ini, re.MULTILINE)
     assert re.search(r"^BasedOnStyles\s*=\s*AirWatch$", ini, re.MULTILINE)
-    rules = list((ROOT / "styles" / "AirWatch").glob("*.yml"))
+    rules = list((ROOT / "styles").glob("*/*.yml"))
     assert rules, "the AirWatch style has no rules"
     for rule in rules:
         data = yaml.safe_load(rule.read_text(encoding="utf-8"))
@@ -132,3 +132,13 @@ def test_dev_commands_have_one_home_imported_by_claude_md() -> None:
 
 def test_the_scope_tests_skip_exactly_the_docs_build_output() -> None:
     assert test_comments.GENERATED_DOCS == test_lint_config.GENERATED_DOCS == _project()["site_dir"]
+
+
+def test_count_words_are_banned_in_docs_only() -> None:
+    ini = (ROOT / ".vale.ini").read_text(encoding="utf-8")
+    docs_section = ini.split("[docs/**/*.md]", 1)[1]
+    assert re.search(r"^BasedOnStyles\s*=\s*AirWatch,\s*AirWatchDocs$", docs_section, re.MULTILINE)
+    rule = yaml.safe_load((ROOT / "styles" / "AirWatchDocs" / "NumberWords.yml").read_text("utf-8"))
+    assert rule["level"] == "error"
+    assert {"two", "six", "twelve"} <= set(rule["tokens"])
+    assert "one" not in rule["tokens"]

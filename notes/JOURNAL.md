@@ -1319,7 +1319,7 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   Then close #75.
 - T11 (#18) on the owner's go.
 
-## 2026-11-21: T11 (#18) the write-up's setup, on branch `18-docs-stub` (CST, about 13:55 to 14:15)
+## 2026-11-21: T11 (#18) the write-up's setup, on branch `18-docs-stub` (CST, about 13:55 to 18:20)
 
 - **Morning check deferred:** the owner asked for it at 13:52 on 2026-11-21, but every item (the
   run for 2026-11-23, the first score, the silent 08:00 and 09:00 checks) falls on 2026-11-22.
@@ -1333,6 +1333,13 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   before clock times were allowed.
 - **Not run locally:** lychee. Downloading and running its binary was refused by the permission
   check, so its first run is CI on the PR.
+- **The write-up's plan, settled with the owner** (13 questions, one at a time, before any
+  result): live numbers as a dated snapshot; count words banned in `docs/`; four charts drawn at
+  build from pipeline data; a separate "How it runs" page; two reader levels; publishing at
+  `/report/`, off until T28; live compared with all three baselines (CAMS saved daily) and
+  split by forecaster; a reported-only bootstrap interval with a verdict rule. D-044, D-045
+  (Frozen), D-009's status line. The bottom line now shows all three baselines (SPEC
+  criterion 4).
 
 ### Traps found
 
@@ -1342,9 +1349,14 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   bundles JS and CSS into `site_build/`. Two tests now skip exactly that folder (D-029's rule).
 - **The core suite is at the 30 s line on main too** (28.7 s warm, against 28.8 s on this
   branch): the property tests have grown since D-035's 15 s. That needs its own issue.
+- **Git Bash's `sed` reads `\|` as "or":** a replace meant for a literal `\|` matched at every
+  space and wrecked a page. Edit files with Edit or a scratch script, as the owner's rule says.
+- **A Jinja filter inside a Markdown table cell breaks the row** (its `|` splits the cell).
+  Nulls now show as *(pending)* without a filter.
 
 ### Next
 
-- Owner: open the PR; add the `Docs build and links` check to `protect-main` after it passes.
-- New issues to propose: the pipeline writes `results.json`; the core suite's 30 s budget.
+- Owner: OK the drafted issues (results.json and chart data, charts at build, intervals and
+  verdicts, CAMS saved daily (first, time-sensitive), the `/report/` deploy kept off, the 30 s
+  budget). Then open the PR, and add `Docs build and links` to `protect-main` once it passes.
 - 2026-11-22 after 09:15: the morning check, then close #75.

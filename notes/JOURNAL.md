@@ -1415,3 +1415,32 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   can't conflict between two PRs. Tick #83 in plan.md once it's merged.
 - 2026-11-22 after 09:15 CST: the morning check, then close #75.
 - Then T14 (weather ingestion, with #78); the D-014 review by 2026-11-25.
+
+## 2026-11-22: the morning check, #75 closed, #83 ticked (CST, about 12:25 to 13:00)
+
+- **The 06:00 run, `nano-pony`,** ended Completed. Its log reads
+  `2026-11-23: recorded, 10 monitor(s), 0 without a valid day (published: True)`; about 3 minutes,
+  15 of 500 this month.
+- **The first real score:** the same run logged `2026-11-20: scored, 10 monitor(s)`. In the public
+  `history.json`, 2026-11-20 has a `score` block: 10 scored, none without an actual. Its MAE and
+  bias match a hand recomputation from the ten per-monitor errors (error = forecast − actual).
+- **The page** loads (HTTP 200). `latest.json` (12:01:41 UTC) and `history.json` (12:01:51 UTC) are
+  served with the page's CORS origin; `latest.json` shows 2026-11-23.
+- **The watchdog stayed silent:** at 08:00 (retry) and 09:00 (verify), both logged
+  `target_day 2026-11-23, record present`. The error alarm stayed OK, last changed 2026-11-21
+  15:16 UTC. #75's last box ticked, and #75 closed with this evidence.
+- **#83 ticked** in plan.md and todo.md (merged #85, 2026-11-22 06:36 UTC, D-046).
+
+### Traps found
+
+- **Prefect's CLI log output contains a non-ASCII byte (`µ`),** so `grep` called it a binary file
+  and dropped the scoring line. `grep -a` reads it as text.
+- **`aws logs filter-log-events --output text` splits multi-line messages,** which breaks
+  line-by-line parsing. Read `--output json` instead, and compute epoch start times in code, not
+  by hand (a hand-typed one returned nothing).
+- **The AWS SSO session had expired** (it lasts 8 hours). A morning check needs
+  `aws sso login --profile pm25` first.
+
+### Next
+
+- T14 (weather ingestion, with #78); the D-014 timeline review by 2026-11-25 (Checkpoint B).

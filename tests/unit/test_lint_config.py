@@ -13,20 +13,17 @@ from pathlib import Path
 
 import yaml
 
+from tests.project_files import walk
+
 ROOT = Path(__file__).resolve().parents[2]
 NOT_CODE = {".git", ".venv", ".claude", "notes", "tasks", "docs"}
 
 
 def _code_folders() -> set[str]:
     folders = set()
-    for path in ROOT.rglob("*.py"):
-        top = path.relative_to(ROOT).parts[0]
-        if (
-            len(path.relative_to(ROOT).parts) > 1
-            and top not in NOT_CODE
-            and not top.startswith(".")
-        ):
-            folders.add(top)
+    for path in walk(ROOT, NOT_CODE):
+        if path.suffix == ".py" and len(path.relative_to(ROOT).parts) > 1:
+            folders.add(path.relative_to(ROOT).parts[0])
     return folders
 
 
@@ -69,13 +66,10 @@ def _biome_pattern() -> re.Pattern[str]:
 def _web_files() -> list[str]:
     return sorted(
         path.relative_to(ROOT).as_posix()
-        for path in ROOT.rglob("*")
+        for path in walk(ROOT, NOT_CODE | {GENERATED_DOCS})
         if path.suffix in WEB_SUFFIXES
-        and path.relative_to(ROOT).parts[0] not in NOT_CODE
-        and not path.relative_to(ROOT).parts[0].startswith(".")
         and "node_modules" not in path.parts
         and "htmlcov" not in path.parts
-        and path.relative_to(ROOT).parts[0] != GENERATED_DOCS
     )
 
 

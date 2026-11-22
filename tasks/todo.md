@@ -66,6 +66,9 @@ line** (2026-12-16) · **D: Complete**.
 | [#81](https://github.com/siddharthps/pm25-forecast/issues/81) | Block-bootstrap intervals and verdicts (D-045) | the write-up plan (T11, D-045) | C |
 | [#82](https://github.com/siddharthps/pm25-forecast/issues/82) | Publish the write-up at /report/, kept switched off until T28 | the write-up plan (T11, D-044) | C |
 | [#83](https://github.com/siddharthps/pm25-forecast/issues/83) | Core test suite back under its 30 s budget (merged #85, 2026-11-22 UTC, D-046) | T11 timing checks | B |
+| [#86](https://github.com/siddharthps/pm25-forecast/issues/86) | Scheduled run: report a failed step's error by type, as #56 did for the CLI | #56 | C |
+| [#87](https://github.com/siddharthps/pm25-forecast/issues/87) | Leakage property: why the unfinished-day test discards 1,220 of 3,220 examples | #59 | C |
+| [#88](https://github.com/siddharthps/pm25-forecast/issues/88) | One process-zone test helper for the time-zone tests (after #52 and #42 merge) | #42 | C |
 
 The **State** column is a snapshot. GitHub is the source of truth, and this column is not kept in
 sync.

@@ -49,3 +49,12 @@ Every command, with how to run it: [DEVELOPMENT.md](DEVELOPMENT.md), imported he
   the docs check and Vale fail the build otherwise (notes/STYLE.md, D-043, D-044).
 - Fix a failing check's cause; never loosen it. The only exception is scoping one check away from
   files we don't own (vendored, generated), recorded as a D-entry (D-029).
+- Report errors by type. Only our own `ReportableError`s (`airwatch.errors`) may print their
+  message, which holds dates, paths, rule names and counts, never a data value (#56).
+- This PC and WSL run on America/Chicago, the issue zone, so a dropped time zone passes here.
+  A zone-sensitive test moves the process zone (`TZ` + `tzset`; POSIX, so it runs in WSL and CI).
+  mutmut runs on Linux only: WSL or the `mutmut.yml` job (DEVELOPMENT.md, D-048).
+- Several issue branches in one session: none touches `notes/JOURNAL.md` (the session's entry
+  goes on one records branch); a branch adding a D-entry stacks on the one before it. Before the
+  PRs, dry-merge every pair (`git merge-tree --write-tree a b`) and run the suite on all of
+  them merged together.

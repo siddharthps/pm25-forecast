@@ -1465,6 +1465,16 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
     `AdministratorAccess` role. Its last box waits for 2026-11-25.
 - **All nine branches merged together** in a scratch worktree: 666 passed, Ruff and mypy clean.
   Every pair also merges without conflict.
+- **The owner delegated the open choices** (about 13:35: "you choose what is best and let me
+  know"). Chosen: PRs for all nine branches, CI waited for by PR number, merges left to the
+  owner; the three findings filed as #86 (scheduled run's error by type), #87 (the
+  unfinished-day property's invalid examples) and #88 (one process-zone test helper), all in
+  milestone C so Phase 2 doesn't grow; #78 moved to milestone C (label phase-3), matching
+  todo.md. #3's "pipeline's narrow identity" box ticked after reading the role back:
+  `pm25-forecast-prefect-run`, one attached policy `pm25-forecast-pipeline`.
+- **CLAUDE.md** gained three rules from today: errors by type through `ReportableError`; this
+  PC and WSL sit on the issue zone, so zone tests move the process zone; and how to run several
+  issue branches in one session without journal or D-entry conflicts.
 
 ### Traps found
 
@@ -1487,13 +1497,11 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 
 ### Next
 
-- Owner: the PRs for the nine branches (#42 after #57). After #43 merges, one hand-dispatched
+- Owner: merge the nine PRs (#42's after #57's). After #43 merges, one hand-dispatched
   lock run shows the new module working for real.
 - Tonight, Monday 06:17 UTC (00:17 CST): the first scheduled lock run (still the inline script);
   it can close #6 and #43's last box.
 - 2026-11-25: #3's old key and IAM user deleted, the owner confirming first. Then the D-014
   timeline review, the last item of Checkpoint B.
-- Found today, for issues if the owner agrees: Prefect stores a failed run's full exception
-  message; the unfinished-day property's invalid examples; one `process_zone` test helper for
-  #52's and #42's tests after both merge; #78 is still in GitHub milestone B (todo.md says C).
+- Follow-ups filed: #86, #87, #88 (milestone C); #88 after #52's and #42's PRs merge.
 - Then T14 (weather ingestion, with #78).

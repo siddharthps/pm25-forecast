@@ -33,6 +33,7 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
+from airwatch.errors import ReportableError
 from airwatch.forecast.publish import publish as publish_latest
 from airwatch.forecast.publish import publish_history
 from airwatch.forecast.record import Store, build_record, record_key, report_key, write_once
@@ -61,11 +62,11 @@ FetchDay = Callable[[date], tuple[pd.DataFrame, dict[str, int]]]
 Status = Literal["dry_run", "recorded", "already_recorded"]
 
 
-class TooEarlyError(RuntimeError):
+class TooEarlyError(ReportableError):
     """The run started before its issue time: D-1 isn't complete yet."""
 
 
-class NoForecastError(RuntimeError):
+class NoForecastError(ReportableError):
     """No monitor had a valid D-1, so there is nothing to forecast from (no record written)."""
 
 
@@ -217,6 +218,12 @@ def run_daily(  # noqa: PLR0913  (each argument is one injected edge or the run'
     return RunOutcome("recorded" if created else "already_recorded", record, published)
 
 
+def failure_line(target: date, exc: BaseException) -> str:
+    """The log line for a failed run: always the type; the message only if it's ours (#56)."""
+    line = f"{target}: forecast FAILED: {type(exc).__name__}"
+    return f"{line}: {exc}" if isinstance(exc, ReportableError) else line
+
+
 def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover  (real edges only)
     import boto3  # noqa: PLC0415
     import httpx  # noqa: PLC0415
@@ -252,7 +259,7 @@ def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover  (real e
                 publish=args.publish,
             )
         except Exception as exc:
-            log.error("%s: forecast FAILED: %s: %s", target, type(exc).__name__, exc)
+            log.error(failure_line(target, exc))
             return 1
     log.info("%s: %s", target, outcome.status)
     return 0

@@ -128,6 +128,7 @@ pm25-forecast/                 new public repo (D-002, D-017); package name `air
 │   ├── timeutil.py            UTC/local conversion, issue-time rules (single home)
 │   ├── aqi.py                 EPA's AQI rules and colours (single home; D-036)
 │   ├── storage.py             S3 get/put/list and create-only-if-absent (D-034)
+│   ├── errors.py              ReportableError: errors whose message is safe to log (#56)
 │   ├── observations/          aqs.py, airnow.py, schema.py, sites.py (D-030 sites, D-032 methods),
 │   │                          metadata.py (city check, HTTP retries), aqs_bulk.py (T13)
 │   ├── weather/               openmeteo.py, cams.py

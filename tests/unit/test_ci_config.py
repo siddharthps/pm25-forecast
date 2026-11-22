@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = ROOT / ".github" / "workflows"
 CI = WORKFLOWS / "ci.yml"
 LOCK_UPGRADE = WORKFLOWS / "uv-lock-upgrade.yml"
+MUTMUT = WORKFLOWS / "mutmut.yml"
 DEPENDABOT = ROOT / ".github" / "dependabot.yml"
 
 PINNED = re.compile(r"^\s*-?\s*uses:\s*[\w.-]+/[\w./-]+@[0-9a-f]{40}\s+#\s*v\d+\.\d+\.\d+\s*$")
@@ -203,6 +204,19 @@ def test_lock_upgrade_job_is_scheduled_and_dispatches_ci() -> None:
     runs = _run_lines(workflow)
     assert "uv lock --upgrade" in runs
     assert "gh workflow run ci.yml" in runs
+
+
+def test_mutation_testing_runs_only_when_started_by_hand() -> None:
+    """D-048: on demand, never on a schedule or a PR, so a survivor never blocks a merge."""
+    workflow = _load(MUTMUT)
+    assert set(_triggers(workflow)) == {"workflow_dispatch"}
+    (job,) = workflow["jobs"].values()
+    assert job["runs-on"] == "ubuntu-latest"
+    runs = _run_lines(workflow)
+    assert "uv sync --frozen" in runs
+    assert "uv run mutmut run" in runs
+    assert "uv run mutmut results" in runs
+    assert "GITHUB_STEP_SUMMARY" in runs
 
 
 def test_terraform_fmt_never_prints_file_contents() -> None:

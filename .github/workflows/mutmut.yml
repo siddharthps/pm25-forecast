@@ -1,0 +1,46 @@
+# Mutation testing, started by hand (D-048). mutmut needs fork, so it runs on Linux: here, on
+# UTC, or in WSL on the owner's PC (DEVELOPMENT.md). The paths it mutates are in pyproject.toml's
+# [tool.mutmut]. It reports survivors in the run summary and never blocks a merge: each survivor
+# is killed by a new test or explained in the journal.
+name: Mutation testing
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutmut
+  cancel-in-progress: true
+
+jobs:
+  mutmut:
+    name: mutmut
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
+        with:
+          version: "0.13.9"
+
+      - name: Install exactly what uv.lock says
+        run: uv sync --frozen
+
+      - name: Run mutmut
+        run: uv run mutmut run
+
+      - name: Report every mutant that wasn't killed
+        if: always()
+        run: |
+          {
+            echo "## Mutants not killed"
+            echo
+            echo '```'
+            uv run mutmut results
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

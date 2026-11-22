@@ -107,7 +107,7 @@ uv run mypy src
 uv run pytest -m "not slow and not live"  # core suite: offline, seeded, < 30 s
 uv run pytest -m slow                     # model smoke tests on small data
 uv run pytest -m live                     # opt-in calls to the real APIs, never in CI
-uv run mutmut run --paths-to-mutate src/airwatch/features src/airwatch/forecast
+uv run mutmut run                        # Linux only (WSL or CI); paths in [tool.mutmut] (D-048)
 uv run python -m airwatch.validation.report --source all     # data-quality report
 uv run python -m airwatch.training.cv --variant lightgbm      # one variant, CV only
 uv run python -m airwatch.training.final_test                 # reads the 2025 test ONCE (guarded)
@@ -163,7 +163,7 @@ pm25-forecast/                 new public repo (D-002, D-017); package name `air
 ├── zensical.toml              the docs site config (D-043)
 ├── .vale.ini, styles/         Vale: the banned words, and count words in docs/ (D-043, D-044)
 ├── DEVELOPMENT.md             every command, its one home; imported by CLAUDE.md (D-043)
-└── .github/workflows/         CI only: lint, type checks, tests, docs build and links, Pages deploy
+└── .github/workflows/         CI, Pages deploy, weekly lock upgrade, mutmut on demand
 ```
 
 Rule: flows contain no logic. Everything testable lives in `src/airwatch/<module>` and is tested
@@ -237,7 +237,8 @@ Every task states its check before its code. The checks:
 - **Outside world:** the clock, S3, the AirNow, AQS and Open-Meteo APIs, the Prefect API and SNS
   are all faked. Recorded API responses are fixtures, and each fake has a test that fails at
   every step in turn.
-- **Mutation testing** (mutmut) on `features/`, `forecast/record.py` and `training/split.py`.
+- **Mutation testing** (mutmut) on `timeutil.py` and `config.py` from #42, then `features/`,
+  `forecast/record.py` and `training/split.py` as they land (D-048).
   Every surviving mutant is either killed by a new test or explained in the journal.
 - **Coverage:** ≥ 85% line coverage on `src/airwatch` (excluding `flows/`), enforced in CI as a
   floor. It is a floor, not the goal; placeholder tests like v1's `assert True` are banned.

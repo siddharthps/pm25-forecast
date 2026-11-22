@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 import yaml
 
+from airwatch.devtools import uv_lock_pr
 from airwatch.watchdog import build
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -59,8 +60,8 @@ def test_the_weekly_lock_upgrade_regenerates_it_too() -> None:
     )
     runs = [str(s.get("run", "")) for job in workflow["jobs"].values() for s in job["steps"]]
     assert " ".join(EXPORT) + " > requirements/watchdog.txt" in [r.strip() for r in runs]
-    commit = next(r for r in runs if "git commit" in r)
-    assert "requirements/watchdog.txt" in commit
+    assert "requirements/watchdog.txt" in uv_lock_pr.FILES
+    assert any("src/airwatch/devtools/uv_lock_pr.py" in r for r in runs)
 
 
 def test_the_install_is_hash_checked_and_for_lambdas_platform(tmp_path: Path) -> None:

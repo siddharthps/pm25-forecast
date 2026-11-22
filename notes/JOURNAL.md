@@ -1362,3 +1362,33 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   ticked in plan.md (merged #74).
 - Owner: open the PR; add `Docs build and links` to `protect-main` once it passes.
 - 2026-11-22 after 09:15: the morning check, then close #75.
+
+## 2026-11-22: #83 the core suite's speed, on branch `83-suite-budget` (CST, about 00:00 to 00:30)
+
+- **Measured first:** three warm runs on `main`, 24–25 s as pytest reports it and 30–31 s wall.
+  The tests themselves add up to 58 s across 4 workers (about 15 s each); the rest was fixed
+  cost per worker.
+- **Causes found:** the scope tests walked all of `.venv` (39,478 files) before dropping it,
+  about 2 s per scan, five scans a run; and every worker imported Prefect (about 2 s) to
+  collect two flow test files.
+- **Fixed** with the same tests and examples: a pruned walk (`tests/project_files.py`, old and new
+  results diffed, identical) and a `daily` fixture, with a static test against top-level Prefect
+  imports. Collection 4.3 s to 2.2 s; paired with `main`, about 4.7 s faster; 26–28 s wall.
+- **The limit (owner's choice, D-046):** CI fails the core test step past 75 s, through
+  `tests/suite_budget.py`. Shown failing at 5 s, with and without coverage, and passing at 75 s.
+
+### Traps found
+
+- **This PC's speed drifts by a third within an hour** (validation properties at 2.9 s, then
+  4.2 s), so a before-and-after timing is only fair in alternating pairs.
+- **CI's runner varies even more:** the same commit took 26 to 45 s. A tight time limit there
+  would be a flaky test.
+- **Don't trust `-X importtime` under pytest:** test modules load through pytest's own importer
+  and don't show up. cProfile on `--collect-only` found Prefect.
+
+### Next
+
+- Owner: PR for `83-suite-budget` when wanted; `78-cams-timing` (records only) can ride along or
+  go alone.
+- 2026-11-22 after 09:15 CST: the morning check, then close #75.
+- Then T14 (weather ingestion, with #78); the D-014 review by 2026-11-25.

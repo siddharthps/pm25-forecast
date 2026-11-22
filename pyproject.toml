@@ -146,9 +146,9 @@ disallow_incomplete_defs = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 # Tests run in parallel (pytest-xdist; owner, 2026-11-19, D-035) to keep the core suite under
-# the SPEC's 30 s: 4 workers handed single tests (`load`) measured fastest here (about 15 s,
-# against 33 s serial; 12 workers spend longer starting up than they save). Pass -n 0 to run
-# serially, e.g. when debugging one test.
+# the SPEC's 30 s: 4 workers handed single tests (`load`) measured fastest here (D-035; 6 were
+# no better when re-measured in D-046; 12 spend longer starting up than they save). Pass -n 0 to
+# run serially, e.g. when debugging one test. CI fails a run past 75 s (SUITE_BUDGET_S, D-046).
 addopts = [
     "-ra",
     "--strict-markers",

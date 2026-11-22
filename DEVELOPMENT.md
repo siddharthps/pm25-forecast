@@ -14,6 +14,7 @@ uv sync --frozen                       # install exactly what uv.lock says
 uv run ruff check . && uv run ruff format --check .
 uv run mypy                            # strict; config in pyproject.toml
 uv run pytest                          # fast offline core suite, 4 workers (D-035; -n 0 = serial); -m slow / -m live are opt-in
+SUITE_BUDGET_S=75 uv run pytest        # as CI does: fails if the run takes over 75 s (D-046)
 uv run pytest tests/property --hypothesis-profile=explore   # fresh random search (default is derandomized)
 uv run pre-commit run --all-files      # every hook: gitleaks, markdownlint, Vale, Biome, docs check, terraform fmt
 node --test tests/site/                # the page's JavaScript tests (Node from .nvmrc)

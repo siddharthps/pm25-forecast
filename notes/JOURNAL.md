@@ -1362,3 +1362,56 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   ticked in plan.md (merged #74).
 - Owner: open the PR; add `Docs build and links` to `protect-main` once it passes.
 - 2026-11-22 after 09:15: the morning check, then close #75.
+
+## 2026-11-21: #84 reviewed and merged; #78's timing corrected (CST, about 18:20 to 23:55)
+
+- **Review of #84 found a hole:** a number typed inside a macro (`{{ 4.2 }}`,
+  `{% if results.x > 5 %}`) passed the number check, because macros were skipped whole. Failing
+  tests first, then the fix (dc610bc): only a macro's `results.…` path may hold digits. D-043
+  updated to match.
+- Merged as 7ae5b53 (2026-11-22 UTC), all four checks green; lychee's first run checked the
+  site's links with no errors. #18 closed; T11 ticked in plan.md and todo.md.
+- The owner added `Docs build and links` to `protect-main`; read back, it lists four required
+  checks.
+
+### Traps found
+
+- **#78 was called time-sensitive, which overstated it.** The live record scores the model only
+  on days it issued itself (D-044, question 12), and that starts at T23. So CAMS saving must be
+  running before T23, not now. With the owner's OK, #78 moved next to T14 (which builds the CAMS
+  download anyway), with a deadline of running and verified about a week before T23.
+
+### Next
+
+- 2026-11-22 after 09:15 CST: the morning check, then close #75.
+- By 2026-11-25: the D-014 timeline review (Checkpoint B).
+
+## 2026-11-22: #83 the core suite's speed, on branch `83-suite-budget` (CST, about 00:00 to 00:30)
+
+- **Measured first:** three warm runs on `main`, 24–25 s as pytest reports it and 30–31 s wall.
+  The tests themselves add up to 58 s across 4 workers (about 15 s each); the rest was fixed
+  cost per worker.
+- **Causes found:** the scope tests walked all of `.venv` (39,478 files) before dropping it,
+  about 2 s per scan, five scans a run; and every worker imported Prefect (about 2 s) to
+  collect two flow test files.
+- **Fixed** with the same tests and examples: a pruned walk (`tests/project_files.py`, old and new
+  results diffed, identical) and a `daily` fixture, with a static test against top-level Prefect
+  imports. Collection 4.3 s to 2.2 s; paired with `main`, about 4.7 s faster; 26–28 s wall.
+- **The limit (owner's choice, D-046):** CI fails the core test step past 75 s, through
+  `tests/suite_budget.py`. Shown failing at 5 s, with and without coverage, and passing at 75 s.
+
+### Traps found
+
+- **This PC's speed drifts by a third within an hour** (validation properties at 2.9 s, then
+  4.2 s), so a before-and-after timing is only fair in alternating pairs.
+- **CI's runner varies even more:** the same commit took 26 to 45 s. A tight time limit there
+  would be a flaky test.
+- **Don't trust `-X importtime` under pytest:** test modules load through pytest's own importer
+  and don't show up. cProfile on `--collect-only` found Prefect.
+
+### Next
+
+- One PR for `83-suite-budget`, with `78-cams-timing` (records only) merged in, so the journal
+  can't conflict between two PRs. Tick #83 in plan.md once it's merged.
+- 2026-11-22 after 09:15 CST: the morning check, then close #75.
+- Then T14 (weather ingestion, with #78); the D-014 review by 2026-11-25.

@@ -30,7 +30,7 @@ delivery path was built last and its bugs surfaced three days before the deadlin
 | Evaluation | Develop on 2009–2024 with rolling CV, test on 2025 read once, then live (D-008); MAE + 3 baselines (D-009); 6 frozen variants (D-010); reported-only intervals and verdicts, Frozen (D-045) |
 | Runtime | Prefect Cloud Managed + EventBridge→Lambda watchdog, S3 conditional write (D-011, verified in D-034); issue 06:00 Chicago for D+1 (D-019); AWS access keyless or a rotated narrow key (D-024) |
 | Infra and repo | Terraform (D-018); `siddharthps/pm25-forecast` (D-017); skills in the repo (D-020) |
-| Ways of working | Validation split T12a/T12b (D-021, rules in D-033); light write-up rules (D-022); owner drives each new tool first (D-023); tests in parallel (D-035) |
+| Ways of working | Validation split T12a/T12b (D-021, rules in D-033); light write-up rules (D-022); owner drives each new tool first (D-023); tests in parallel (D-035), the suite's speed and CI limit (D-046) |
 | Page | GitHub Pages + public JSON in its own bucket (D-012, D-028); AQI per EPA's TAD, schema-checked files, a go-live gate (D-036) |
 | Monitoring | Daily scoring, weekly drift, retraining by hand (D-013) |
 | Scaffold and docs | uv src layout (D-015); Zensical + a separate link checker (D-016); the docs setup and its checks (D-043); the write-up's plan: pages, charts, live snapshot, `/report/` (D-044) |
@@ -107,10 +107,8 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
   applied and drilled 2026-11-20, D-041)
 - [x] T10: Daily scoring of each forecast day, two mornings later on settled AirNow data (D-042;
   merged #74, 2026-11-21)
-- [ ] T11: Bottom line + outline + style sheet (Vale), docs stub, `results.json` number check,
-  README skeleton (D-022)
-- [ ] #78: Save CAMS's D+1 forecast each morning, as issued (D-044). **Next after T11:** every
-  day not saved is a day the live record can't compare with CAMS
+- [x] T11: Bottom line + outline + style sheet (Vale), docs stub, `results.json` number check,
+  README skeleton (D-022) (merged #84, 2026-11-22 UTC)
 - [ ] #83: Core test suite back under its 30 s budget
 
 ### Checkpoint B: Skeleton live (2026-11-25), plus the D-014 review
@@ -124,6 +122,9 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
 ### Phase 3: Deepen (weeks 2–5)
 
 - [ ] T14: Weather ingestion: ERA5 history, Previous Runs archive, live forecast, CAMS
+- [ ] #78: Save CAMS's D+1 forecast each morning, as issued (D-044). **With T14**, which builds
+  the CAMS download; running and verified about a week **before T23**, since the live record
+  scores the model only on days it issued itself
 - [ ] The write-up's build work (D-044, D-045): #79 the pipeline writes `results.json` and the
   chart data; #80 the charts drawn at build; #81 the bootstrap intervals and verdicts (before
   T27); #82 the `/report/` deploy, dry-run and kept off until T28

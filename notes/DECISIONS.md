@@ -896,7 +896,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
     24 s, because starting workers costs more than it saves.
 - **Alternatives (rejected by the owner):** fewer property examples in the everyday run (it
   checks less); a separate CI step for these tests (locally they'd only run on request).
-- **Status:** Active. Owner's choice, 2026-11-19.
+- **Status:** Active. Owner's choice, 2026-11-19. Refined by D-046 (2026-11-22): the suite's
+  creep fixed, 4 workers re-measured, and CI's 75 s limit.
 
 ---
 
@@ -1446,6 +1447,35 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
   (offered, not chosen); report the range with no wording rule (offered, not chosen).
 - **Status:** Active. **Frozen.** Owner's choice, 2026-11-21, before any result was seen. Adds to
   D-009 without changing it.
+
+---
+
+## D-046 · 2026-11-22 · The core suite's speed: what was cut, and CI's 75 s limit (#83)
+
+- **Found:** the core suite had crept to 29–31 s wall on the owner's PC (about 25 s as pytest
+  reports it), at D-035's 30 s line. Measured, not guessed:
+  - the lint, Biome and comment-ban scope tests walked all of `.venv` (39,478 files) before
+    dropping it, about 2 s per scan, five scans a run;
+  - each of the 4 workers imported Prefect (about 2 s) just to collect two flow test files.
+  - The rest is spread across pandas inside the property tests, as D-035 found; no hotspot.
+- **Fixed, same tests and the same Hypothesis examples:** the scans skip ignored top-level
+  folders before entering them (`tests/project_files.py`; old and new results diffed, identical),
+  and the flow module comes through a `daily` fixture, with a static test keeping Prefect out of
+  test files' top-level imports. Collection went from 4.3 s to 2.2 s. Paired runs against `main`
+  saved about 4.7 s; wall time on the owner's PC is now about 26–28 s.
+- **Worker count re-measured:** 6 workers were no better than 4 within the noise (26–28 s
+  each); D-035's 4 stands.
+- **The limit:** CI fails the core test step when it runs over **75 s** (`SUITE_BUDGET_S`, read
+  by the plugin in `tests/suite_budget.py`; timing starts before collection). The same commit
+  took 26–52 s on CI's shared runners, with coverage, so a 30 s limit there would fail at
+  random. 75 s is about 1.45 times the slowest run seen: it catches real creep, such as a heavy
+  import or a slow new test, without flaking. A bad value is a usage error, so a typo can't
+  switch the check off. Unset, as on the owner's PC, nothing is timed.
+- **The 30 s goal stays** (SPEC § Testing), measured by hand on the owner's PC.
+- **Alternatives:** a 30 s limit on full local runs (it would fail now and then on a busy PC);
+  both limits; report the time without failing (all offered, not chosen). Fewer property
+  examples stays rejected (D-035).
+- **Status:** Active. Owner's choice, 2026-11-22 (the CI limit). Refines D-035.
 
 ---
 

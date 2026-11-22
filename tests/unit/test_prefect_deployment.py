@@ -8,11 +8,11 @@ import re
 import shutil
 import subprocess
 from pathlib import Path
+from types import ModuleType
 from typing import Any
 
 import yaml
 
-from airwatch.flows import daily
 from airwatch.timeutil import ISSUE_HOUR_LOCAL, ISSUE_TZ
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -71,8 +71,9 @@ def test_only_the_schedule_publishes() -> None:
     assert deployment["schedules"][0]["parameters"] == {"publish": True}
 
 
-def test_the_entrypoint_is_the_thin_flow() -> None:
+def test_the_entrypoint_is_the_thin_flow(daily: ModuleType) -> None:
     path, _, name = _daily()["entrypoint"].partition(":")
+    assert daily.__file__ is not None
     assert (ROOT / path).resolve() == Path(daily.__file__).resolve()
     assert getattr(daily, name).name == "daily-forecast"
 

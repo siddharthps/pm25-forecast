@@ -28,6 +28,7 @@ import httpx
 import pandas as pd
 
 from airwatch.config import get_settings
+from airwatch.logutil import configure
 from airwatch.observations.airnow import fetch_local_day
 from airwatch.observations.aqs_bulk import FIRST_YEAR, MANIFEST_KEY
 from airwatch.observations.schema import HOURLY_COLUMNS, concat_hourly, validate_hourly
@@ -238,9 +239,7 @@ def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover  (real e
     )
     parser.add_argument("--out", type=Path, default=REPORT_DIR)
     args = parser.parse_args(argv)
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
-    for name in ("botocore", "boto3", "urllib3"):
-        logging.getLogger(name).setLevel(logging.ERROR)
+    configure()
 
     settings = get_settings()
     tz = settings.city_tz

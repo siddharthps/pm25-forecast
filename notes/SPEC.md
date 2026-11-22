@@ -148,6 +148,9 @@ pm25-forecast/                 new public repo (D-002, D-017); package name `air
 ├── prefect.yaml               the Prefect deployment: schedule, image, pull steps (D-040)
 ├── requirements/              exported from uv.lock: prefect-run.txt (the Prefect run, D-040), watchdog.txt (D-041)
 ├── tests/
+│   ├── conftest.py            Hypothesis profiles, the `daily` flow fixture; loads suite_budget.py (D-046)
+│   ├── suite_budget.py        fails a run past SUITE_BUDGET_S seconds (CI: 75 s, D-046)
+│   ├── project_files.py       the scope tests' walk, skipping ignored folders (D-046)
 │   ├── unit/                  one file per module
 │   ├── property/              Hypothesis: leakage, time and DST, per-group, idempotency
 │   ├── integration/           moto S3, frozen clock, fake APIs (recorded fixtures)
@@ -295,7 +298,8 @@ V1 is done when all of the following hold. Each is checkable.
    on the test year and on the live snapshot (D-044). If it loses, the write-up says so.
 5. **Skew measured:** the observed-weather vs forecasts-only variant (D-007) and the AirNow vs AQS
    gap (D-004) are each reported with a number.
-6. **Checks green:** lint, `mypy --strict`, the core suite under 30 s, coverage ≥ 85%, the
+6. **Checks green:** lint, `mypy --strict`, the core suite under 30 s (on the owner's PC; CI
+   fails it past 75 s, D-046), coverage ≥ 85%, the
    property tests, mutation testing with no unexplained survivors, the docs number check, and
    secret scanning, all in CI.
 7. **Cost:** the AWS bill stays under **$5 a month**, with a billing alarm set at $5. Prefect

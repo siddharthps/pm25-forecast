@@ -30,7 +30,7 @@ delivery path was built last and its bugs surfaced three days before the deadlin
 | Evaluation | Develop on 2009–2024 with rolling CV, test on 2025 read once, then live (D-008); MAE + 3 baselines (D-009); 6 frozen variants (D-010); reported-only intervals and verdicts, Frozen (D-045) |
 | Runtime | Prefect Cloud Managed + EventBridge→Lambda watchdog, S3 conditional write (D-011, verified in D-034); issue 06:00 Chicago for D+1 (D-019); AWS access keyless or a rotated narrow key (D-024) |
 | Infra and repo | Terraform (D-018); `siddharthps/pm25-forecast` (D-017); skills in the repo (D-020) |
-| Ways of working | Validation split T12a/T12b (D-021, rules in D-033); light write-up rules (D-022); owner drives each new tool first (D-023); tests in parallel (D-035) |
+| Ways of working | Validation split T12a/T12b (D-021, rules in D-033); light write-up rules (D-022); owner drives each new tool first (D-023); tests in parallel (D-035), the suite's speed and CI limit (D-046) |
 | Page | GitHub Pages + public JSON in its own bucket (D-012, D-028); AQI per EPA's TAD, schema-checked files, a go-live gate (D-036) |
 | Monitoring | Daily scoring, weekly drift, retraining by hand (D-013) |
 | Scaffold and docs | uv src layout (D-015); Zensical + a separate link checker (D-016); the docs setup and its checks (D-043); the write-up's plan: pages, charts, live snapshot, `/report/` (D-044) |

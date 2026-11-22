@@ -1344,7 +1344,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   from the frozen decisions (variants, baselines, folds) and nulls for every result. Writing it
   from the pipeline is a separate task.
 - **Number check** (`airwatch.devtools.docs_check`, a pre-commit hook and a core test): any digit
-  in `docs/` outside a macro fails, code blocks and HTML comments included. Allowed literals: ISO
+  in `docs/` outside a macro's `results.…` path fails, code blocks, HTML comments and the rest of
+  each macro included (so `{{ 4.2 }}` fails; found in the PR #84 review). Allowed literals: ISO
   dates, years 1900–2099, clock times (`06:00`, added when the first page needed the issue
   time), decision and task IDs, issue numbers, `PM2.5`, `PM10`, `D+1`, versions with a `v`,
   ordered-list markers, link targets. A macro naming a missing key fails too.

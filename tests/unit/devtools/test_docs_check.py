@@ -76,6 +76,32 @@ def test_numbers_outside_macros_fail(text: str, found: list[str]) -> None:
     assert _numbers(text) == found
 
 
+@pytest.mark.parametrize(
+    ("text", "found"),
+    [
+        ("MAE was {{ 4.2 }} here.", ["4.2"]),
+        ("{{ results.headline.mae or 3 }}", ["3"]),
+        ("{% if results.headline.mae > 5 %}y{% endif %}", ["5"]),
+        ('{{ "%.1f" | format(results.headline.mae) }}', ["1"]),
+        ("{# a note with 12 in it #}", ["12"]),
+    ],
+)
+def test_numbers_typed_inside_a_macro_fail(text: str, found: list[str]) -> None:
+    assert _numbers(text) == found
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "{{ results.items[3] }}",
+        "{{ results.design.ci_level }}%",
+        "{{ results.test_vs.cams.ci_low }} to {{ results.test_vs.cams.ci_high }}",
+    ],
+)
+def test_results_paths_inside_macros_pass(text: str) -> None:
+    assert _numbers(text) == []
+
+
 @given(
     n=st.integers(min_value=0, max_value=10**9).filter(lambda n: not 1900 <= n <= 2099),
     before=st.sampled_from(["The MAE was ", "About ", "(", "— "]),

@@ -1,10 +1,12 @@
 """The docs rules (T11, D-022): no hand-typed numbers, macros that resolve, a length cap.
 
 Every number in `docs/` comes from `results/results.json` through a macro such as
-`{{ results.design.variants }}`. Outside macros, a digit is allowed only as part of a listed
-literal: an ISO date, a year from 1900 to 2099, a clock time (`06:00`), a decision or task ID
-(`D-008`, `T12b`), an issue number (`#18`), `PM2.5`, `PM10`, `D+1`, a version with a leading `v`,
-an ordered-list marker, or a link target. Code blocks, inline code and HTML comments are checked
+`{{ results.design.variants }}`. A macro's `results.…` path is the only place a digit may hide;
+the rest of a macro is checked like prose, so `{{ 4.2 }}` or `{% if results.x > 5 %}` fail.
+Elsewhere, a digit is allowed only as part of a listed literal: an ISO date, a year from 1900
+to 2099, a clock time (`06:00`), a decision or task ID (`D-008`, `T12b`), an issue number
+(`#18`), `PM2.5`, `PM10`, `D+1`, a version with a leading `v`, an ordered-list marker, or a link
+target. Code blocks, inline code and HTML comments are checked
 like prose.
 
 Each macro's `results.…` path must exist in the file (a null placeholder counts), and each page
@@ -28,6 +30,7 @@ MAX_WORDS: dict[str, int] = {"index.md": 400}
 
 MACRO = re.compile(r"\{\{.*?\}\}|\{%.*?%\}|\{#.*?#\}", re.DOTALL)
 REF = re.compile(r"\bresults\.([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)")
+RESULT_PATH = re.compile(r"\bresults(?:\.[A-Za-z_]\w*|\[\d+\])+")
 LINK_TARGET = re.compile(r"\]\([^)\s]*\)|<https?://[^>\s]+>|https?://\S+")
 ALLOWED = re.compile(
     r"\b\d{4}-\d{2}-\d{2}\b"
@@ -60,9 +63,13 @@ def _line(text: str, index: int) -> int:
     return text.count("\n", 0, index) + 1
 
 
+def _blank_result_paths(match: re.Match[str]) -> str:
+    return RESULT_PATH.sub(_blank, match.group(0))
+
+
 def prose_numbers(text: str) -> list[tuple[int, str]]:
-    stripped = text
-    for pattern in (MACRO, LINK_TARGET, ALLOWED):
+    stripped = MACRO.sub(_blank_result_paths, text)
+    for pattern in (LINK_TARGET, ALLOWED):
         stripped = pattern.sub(_blank, stripped)
     return [(_line(stripped, m.start()), m.group(0)) for m in NUMBER.finditer(stripped)]
 

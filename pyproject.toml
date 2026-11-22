@@ -209,6 +209,8 @@ pytest_add_cli_args_test_selection = [
     "tests/property",
     "--deselect",
     "tests/unit/devtools/test_comments.py::test_the_repository_keeps_to_its_baseline",
+    "--deselect",
+    "tests/unit/test_mutmut_config.py::test_every_tracked_top_level_entry_is_copied",
 ]
 pytest_add_cli_args = ["-n", "0", "-p", "no:cacheprovider"]
 

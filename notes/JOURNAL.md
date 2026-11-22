@@ -1356,7 +1356,9 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 
 ### Next
 
-- Owner: OK the drafted issues (results.json and chart data, charts at build, intervals and
-  verdicts, CAMS saved daily (first, time-sensitive), the `/report/` deploy kept off, the 30 s
-  budget). Then open the PR, and add `Docs build and links` to `protect-main` once it passes.
+- Issues created with the owner's OK: #78 CAMS saved daily (**next**, time-sensitive), #79
+  `results.json` from the pipeline, #80 charts at build, #81 intervals and verdicts, #82 the
+  `/report/` deploy kept off, #83 the 30 s budget. In todo.md's "Added along the way" table; T10
+  ticked in plan.md (merged #74).
+- Owner: open the PR; add `Docs build and links` to `protect-main` once it passes.
 - 2026-11-22 after 09:15: the morning check, then close #75.

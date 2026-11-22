@@ -105,10 +105,13 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
   first scheduled run 2026-11-21)
 - [x] T9: Watchdog: EventBridge → Lambda → Prefect API / SNS, in Terraform (D-018) (merged #72,
   applied and drilled 2026-11-20, D-041)
-- [ ] T10: Daily scoring of each forecast day, two mornings later on settled AirNow data (D-042;
-  built 2026-11-20 on `17-daily-scoring`, merged after the first scheduled run is checked)
+- [x] T10: Daily scoring of each forecast day, two mornings later on settled AirNow data (D-042;
+  merged #74, 2026-11-21)
 - [ ] T11: Bottom line + outline + style sheet (Vale), docs stub, `results.json` number check,
   README skeleton (D-022)
+- [ ] #78: Save CAMS's D+1 forecast each morning, as issued (D-044). **Next after T11:** every
+  day not saved is a day the live record can't compare with CAMS
+- [ ] #83: Core test suite back under its 30 s budget
 
 ### Checkpoint B: Skeleton live (2026-11-25), plus the D-014 review
 
@@ -121,6 +124,9 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
 ### Phase 3: Deepen (weeks 2–5)
 
 - [ ] T14: Weather ingestion: ERA5 history, Previous Runs archive, live forecast, CAMS
+- [ ] The write-up's build work (D-044, D-045): #79 the pipeline writes `results.json` and the
+  chart data; #80 the charts drawn at build; #81 the bootstrap intervals and verdicts (before
+  T27); #82 the `/report/` deploy, dry-run and kept off until T28
 - [ ] T12b: Validation: remaining problem classes + weather sources (D-021)
 - [ ] T15: Leakage-safe features + property tests + mutation testing
 - [ ] T16: CV harness + 3 baselines (must reproduce a hand-computed persistence MAE first)

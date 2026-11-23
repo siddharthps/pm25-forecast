@@ -11,15 +11,11 @@ import tomllib
 from pathlib import Path
 from typing import Any
 
-import yaml
-
+from tests.repo_config import ROOT, load_yaml, precommit_hook, workflow
 from tests.unit import test_lint_config
 from tests.unit.devtools import test_comments
 
-ROOT = Path(__file__).resolve().parents[2]
 ZENSICAL = ROOT / "zensical.toml"
-CI = ROOT / ".github" / "workflows" / "ci.yml"
-PRE_COMMIT = ROOT / ".pre-commit-config.yaml"
 DOCS_PAGES = ("docs/index.md", "README.md", "DEVELOPMENT.md")
 
 
@@ -30,20 +26,6 @@ def _toml(path: Path) -> dict[str, Any]:
 def _project() -> dict[str, Any]:
     project: dict[str, Any] = _toml(ZENSICAL)["project"]
     return project
-
-
-def _hooks() -> dict[str, dict[str, Any]]:
-    config = yaml.safe_load(PRE_COMMIT.read_text(encoding="utf-8"))
-    return {
-        hook["id"]: {**hook, "repo": repo["repo"]}
-        for repo in config["repos"]
-        for hook in repo["hooks"]
-    }
-
-
-def _ci_job(name: str) -> dict[str, Any]:
-    job: dict[str, Any] = yaml.safe_load(CI.read_text(encoding="utf-8"))["jobs"][name]
-    return job
 
 
 def _nav_pages(nav: list[Any]) -> set[str]:
@@ -86,7 +68,7 @@ def test_every_docs_page_is_in_the_nav_and_back() -> None:
 
 
 def test_ci_builds_the_docs_strictly_then_checks_links_offline() -> None:
-    steps = _ci_job("docs")["steps"]
+    steps = workflow("ci.yml")["jobs"]["docs"]["steps"]
     runs = "\n".join(str(s.get("run", "")) for s in steps)
     assert "uv sync --frozen --group docs" in runs
     assert "uv run --frozen zensical build --strict" in runs
@@ -101,13 +83,13 @@ def test_ci_builds_the_docs_strictly_then_checks_links_offline() -> None:
 
 
 def test_vale_and_the_docs_check_run_as_hooks_over_the_docs() -> None:
-    hooks = _hooks()
-    assert hooks["vale"]["repo"] == "https://github.com/vale-cli/vale"
-    pattern = re.compile(hooks["vale"]["files"])
+    vale, docs_check = precommit_hook("vale"), precommit_hook("docs-check")
+    assert vale["repo"] == "https://github.com/vale-cli/vale"
+    pattern = re.compile(vale["files"])
     for page in DOCS_PAGES:
         assert pattern.search(page), page
-    assert "airwatch.devtools.docs_check" in hooks["docs-check"]["entry"]
-    assert re.compile(hooks["docs-check"]["files"]).search("results/results.json")
+    assert "airwatch.devtools.docs_check" in docs_check["entry"]
+    assert re.compile(docs_check["files"]).search("results/results.json")
 
 
 def test_vale_uses_the_project_style_on_markdown() -> None:
@@ -117,7 +99,7 @@ def test_vale_uses_the_project_style_on_markdown() -> None:
     rules = list((ROOT / "styles").glob("*/*.yml"))
     assert rules, "the AirWatch style has no rules"
     for rule in rules:
-        data = yaml.safe_load(rule.read_text(encoding="utf-8"))
+        data = load_yaml(rule)
         assert data["level"] == "error", f"{rule.name}: only errors fail the hook"
 
 
@@ -138,7 +120,7 @@ def test_count_words_are_banned_in_docs_only() -> None:
     ini = (ROOT / ".vale.ini").read_text(encoding="utf-8")
     docs_section = ini.split("[docs/**/*.md]", 1)[1]
     assert re.search(r"^BasedOnStyles\s*=\s*AirWatch,\s*AirWatchDocs$", docs_section, re.MULTILINE)
-    rule = yaml.safe_load((ROOT / "styles" / "AirWatchDocs" / "NumberWords.yml").read_text("utf-8"))
+    rule = load_yaml(ROOT / "styles" / "AirWatchDocs" / "NumberWords.yml")
     assert rule["level"] == "error"
     assert {"two", "six", "twelve"} <= set(rule["tokens"])
     assert "one" not in rule["tokens"]

@@ -1,9 +1,19 @@
 """The site list is D-030's, exactly (one home: observations/sites.py)."""
 
+import csv
+import io
 import re
 from pathlib import Path
 
-from airwatch.observations.sites import TRAINING_SITES, VERIFIED_METHODS, unverified_methods
+from airwatch.observations.sites import (
+    AGENCIES,
+    SITE_AGENCY,
+    SITE_NAMES,
+    TRAINING_SITES,
+    VERIFIED_METHODS,
+    unverified_methods,
+)
+from tests.unit.observations.airnow_fakes import text
 
 
 def test_training_sites_are_exactly_d030s() -> None:
@@ -32,8 +42,6 @@ def test_unverified_method_codes_are_reported() -> None:
 
 
 def test_every_training_site_has_a_name_and_an_agency() -> None:
-    from airwatch.observations.sites import AGENCIES, SITE_AGENCY, SITE_NAMES  # noqa: PLC0415
-
     assert set(SITE_NAMES) == set(TRAINING_SITES)
     assert set(SITE_AGENCY) == set(TRAINING_SITES)
     assert AGENCIES == (
@@ -44,17 +52,7 @@ def test_every_training_site_has_a_name_and_an_agency() -> None:
 
 
 def test_names_and_agencies_match_the_recorded_airnow_file() -> None:
-    import csv  # noqa: PLC0415
-    import io  # noqa: PLC0415
-    from pathlib import Path  # noqa: PLC0415
-
-    from airwatch.observations.sites import SITE_AGENCY, SITE_NAMES  # noqa: PLC0415
-
-    fixture = (
-        Path(__file__).resolve().parents[2] / "fixtures" / "airnow" / "HourlyAQObs_2026111901.dat"
-    )
-    text = fixture.read_text(encoding="utf-8")
-    rows = {r["AQSID"]: r for r in csv.DictReader(io.StringIO(text))}
+    rows = {r["AQSID"]: r for r in csv.DictReader(io.StringIO(text()))}
     for site in TRAINING_SITES:
         assert (SITE_NAMES[site], SITE_AGENCY[site]) == (
             rows[site]["SiteName"],

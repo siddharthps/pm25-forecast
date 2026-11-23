@@ -5,7 +5,6 @@ It can fail any step, and its create can fail *after* opening the PR (a failed A
 still have happened).
 """
 
-import ast
 import subprocess
 import sys
 from collections.abc import Sequence
@@ -16,6 +15,7 @@ import pytest
 
 from airwatch.devtools import uv_lock_pr
 from airwatch.devtools.uv_lock_pr import BRANCH, StepFailedError, open_pr
+from tests.project_files import import_roots
 
 LOCK_DIFF = (
     "diff --git a/uv.lock b/uv.lock\n"
@@ -209,12 +209,6 @@ def test_no_command_carries_a_token() -> None:
 
 
 def test_the_module_needs_only_the_standard_library() -> None:
-    tree = ast.parse(Path(uv_lock_pr.__file__).read_text(encoding="utf-8"))
-    roots: set[str] = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            roots.update(alias.name.split(".")[0] for alias in node.names)
-        elif isinstance(node, ast.ImportFrom) and node.module:
-            roots.add(node.module.split(".")[0])
-    assert roots
-    assert roots <= set(sys.stdlib_module_names)
+    roots = import_roots(Path(uv_lock_pr.__file__))
+    assert roots, "guards the guard: no imports found"
+    assert roots <= set(sys.stdlib_module_names), roots - set(sys.stdlib_module_names)

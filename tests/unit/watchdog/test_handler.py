@@ -7,7 +7,6 @@
 - Any error emails its type and is re-raised (fail closed); the key never reaches an email or log.
 """
 
-import ast
 import contextlib
 import dataclasses
 import json
@@ -31,6 +30,7 @@ from airwatch.forecast.record import record_key
 from airwatch.monitoring import compute
 from airwatch.storage import S3Store
 from airwatch.watchdog import handler as wd
+from tests.project_files import import_roots
 
 REGION = "us-east-1"
 BUCKET = "pm25-forecast-data-test"
@@ -364,14 +364,8 @@ def test_config_comes_from_the_environment() -> None:
 
 def test_it_imports_only_the_standard_library_and_boto3() -> None:
     """The zip ships this file alone with boto3 and tzdata, so it can't import airwatch."""
-    tree = ast.parse(Path(wd.__file__).read_text(encoding="utf-8"))
-    roots = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            roots |= {a.name.split(".")[0] for a in node.names}
-        elif isinstance(node, ast.ImportFrom):
-            assert node.level == 0, "no relative imports"
-            roots.add((node.module or "").split(".")[0])
+    roots = import_roots(Path(wd.__file__))
+    assert roots, "guards the guard: no imports found"
     allowed = set(sys.stdlib_module_names) | {"boto3", "botocore"}
     assert roots <= allowed, roots - allowed
 

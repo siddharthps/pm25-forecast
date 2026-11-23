@@ -163,6 +163,19 @@ def test_fetching_logs_no_url_query(caplog: pytest.LogCaptureFixture) -> None:
     assert "files.airnowtech.org" not in caplog.text
 
 
+def test_a_file_without_a_publication_time_is_refused() -> None:
+    """Last-Modified is when the hour became known; the issue-time cut can't do without it."""
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text=text())
+
+    with (
+        httpx.Client(transport=httpx.MockTransport(handler)) as c,
+        pytest.raises(RuntimeError, match="no Last-Modified header"),
+    ):
+        fetch_hour(c, datetime(2026, 11, 19, 1, tzinfo=UTC))
+
+
 def test_a_local_day_is_fetched_hour_by_hour_for_the_training_sites() -> None:
     with httpx.Client(transport=day_transport()) as c:
         df, drops = fetch_local_day(c, date(2026, 11, 18), PHOENIX, TRAINING_SITES)

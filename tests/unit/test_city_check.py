@@ -130,6 +130,11 @@ def test_a_duplicate_instrument_day_stops_the_check() -> None:
         site_days([row(), row()], keep_values=True)
 
 
+def test_a_malformed_site_id_stops_the_check() -> None:
+    with pytest.raises(ValueError, match="unexpected AQS site id"):
+        site_days([row(site="00A1")], keep_values=True)
+
+
 def test_values_can_be_dropped_on_read() -> None:
     (day,) = site_days([row(mean=99.0)], keep_values=False).values()
     assert day.mean is None

@@ -32,6 +32,7 @@ STEPS = ("push", "list", "create", "edit", "dispatch")
 @dataclass
 class FakeGitHub:
     lock_changed: bool = True
+    diff_exit: int | None = None
     open_prs: list[int] = field(default_factory=list)
     fail: str | None = None
     create_fails_after_opening: bool = False
@@ -65,7 +66,8 @@ class FakeGitHub:
             return subprocess.CompletedProcess(cmd, 1, "", "boom")
         out = ""
         if cmd[:4] == ["git", "diff", "--quiet", "--"]:
-            return subprocess.CompletedProcess(cmd, 1 if self.lock_changed else 0, "", "")
+            code = self.diff_exit if self.diff_exit is not None else int(self.lock_changed)
+            return subprocess.CompletedProcess(cmd, code, "", "")
         if cmd[:2] == ["git", "diff"]:
             out = LOCK_DIFF
         elif step == "push":
@@ -89,6 +91,14 @@ class FakeGitHub:
 def test_no_lockfile_change_pushes_and_opens_nothing() -> None:
     gh = FakeGitHub(lock_changed=False)
     assert open_pr(gh.run) == "unchanged"
+    assert gh.calls == [["git", "diff", "--quiet", "--", "uv.lock"]]
+
+
+def test_a_broken_git_is_never_read_as_no_change() -> None:
+    """`git diff --quiet` exits 0 (same) or 1 (changed); anything else means git itself failed."""
+    gh = FakeGitHub(diff_exit=128)
+    with pytest.raises(StepFailedError, match="diff failed \\(exit 128\\)"):
+        open_pr(gh.run)
     assert gh.calls == [["git", "diff", "--quiet", "--", "uv.lock"]]
 
 

@@ -9,7 +9,6 @@ import csv
 import io
 import logging
 from datetime import UTC, date, datetime
-from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -27,15 +26,9 @@ from airwatch.observations.airnow import (
 from airwatch.observations.metadata import FetchError
 from airwatch.observations.schema import validate_hourly
 from airwatch.observations.sites import TRAINING_SITES
-from tests.unit.observations.airnow_fakes import day_transport, file_for_hour
+from tests.unit.observations.airnow_fakes import PUBLISHED, day_transport, file_for_hour, text
 
-FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "airnow" / "HourlyAQObs_2026111901.dat"
-PUBLISHED = datetime(2026, 11, 19, 4, 21, 33, tzinfo=UTC)
 PHOENIX = ZoneInfo("America/Phoenix")
-
-
-def text() -> str:
-    return FIXTURE.read_text(encoding="utf-8")
 
 
 def with_rows(edit: dict[str, dict[str, str]]) -> str:
@@ -68,7 +61,7 @@ def test_values_match_the_recording() -> None:
 
 def test_rows_without_a_measured_value_are_dropped_and_counted() -> None:
     _, dropped = parse_hourly_aqobs(text(), PUBLISHED)
-    assert dropped["no_pm25_value"] > 0
+    assert dropped == {"no_pm25_value": 43}
 
 
 def test_a_value_not_flagged_as_measured_is_dropped_and_counted() -> None:
@@ -161,6 +154,19 @@ def test_fetching_logs_no_url_query(caplog: pytest.LogCaptureFixture) -> None:
     assert published == PUBLISHED
     assert body == text()
     assert "files.airnowtech.org" not in caplog.text
+
+
+def test_a_file_without_a_publication_time_is_refused() -> None:
+    """Last-Modified is when the hour became known; the issue-time cut can't do without it."""
+
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, text=text())
+
+    with (
+        httpx.Client(transport=httpx.MockTransport(handler)) as c,
+        pytest.raises(RuntimeError, match="no Last-Modified header"),
+    ):
+        fetch_hour(c, datetime(2026, 11, 19, 1, tzinfo=UTC))
 
 
 def test_a_local_day_is_fetched_hour_by_hour_for_the_training_sites() -> None:

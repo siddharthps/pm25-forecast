@@ -235,13 +235,11 @@ TOO_MANY_REQUESTS = 429
 SERVER_ERROR = 500
 
 
-def _retryable(exc: Exception) -> bool:
+def _retryable(exc: httpx.TransportError | httpx.HTTPStatusError) -> bool:
     if isinstance(exc, httpx.TransportError):
         return True
-    if isinstance(exc, httpx.HTTPStatusError):
-        code = exc.response.status_code
-        return code == TOO_MANY_REQUESTS or code >= SERVER_ERROR
-    return False
+    code = exc.response.status_code
+    return code == TOO_MANY_REQUESTS or code >= SERVER_ERROR
 
 
 def _quiet_http_loggers() -> None:

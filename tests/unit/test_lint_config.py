@@ -11,11 +11,9 @@ import sys
 import tomllib
 from pathlib import Path
 
-import yaml
-
 from tests.project_files import walk
+from tests.repo_config import ROOT, load_yaml, precommit_hook
 
-ROOT = Path(__file__).resolve().parents[2]
 NOT_CODE = {".git", ".venv", ".claude", "notes", "tasks", "docs"}
 
 
@@ -56,11 +54,7 @@ GENERATED_DOCS = "site_build"
 
 
 def _biome_pattern() -> re.Pattern[str]:
-
-    config = yaml.safe_load((ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8"))
-    hooks = [h for repo in config["repos"] for h in repo["hooks"] if h["id"] == "biome-check"]
-    assert len(hooks) == 1, "exactly one biome-check hook"
-    return re.compile(hooks[0]["files"])
+    return re.compile(precommit_hook("biome-check")["files"])
 
 
 def _web_files() -> list[str]:
@@ -100,7 +94,7 @@ def test_our_own_skills_exist_beside_the_vendored_ones() -> None:
 
 
 def test_markdownlint_skips_only_the_vendored_skills() -> None:
-    config = yaml.safe_load((ROOT / ".markdownlint-cli2.yaml").read_text(encoding="utf-8"))
+    config = load_yaml(ROOT / ".markdownlint-cli2.yaml")
     assert _skill_globs(config["ignores"]) == _vendored_skill_globs()
 
 

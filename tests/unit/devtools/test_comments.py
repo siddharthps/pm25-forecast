@@ -100,6 +100,24 @@ def test_a_regex_after_return_is_not_a_comment() -> None:
     assert js_comment_lines("function f(s) {\n  return /\\/\\//.test(s);\n}\n") == []
 
 
+@pytest.mark.parametrize(
+    ("text", "lines"),
+    [
+        pytest.param(r"const s = `a \` // still text`;" + "\n", [], id="an escaped backtick"),
+        pytest.param("const s = `${ {a: 1}.a } // text`;\n", [], id="an object inside ${}"),
+        pytest.param("const s = `${ {a: 1}.a }`; // real\n", [1], id="a comment after it"),
+        pytest.param(
+            "const s = `${ {a: 1}.a // real\n}`;\n", [1], id="a comment inside ${} after an object"
+        ),
+        pytest.param("x = /abc\n// c\n", [2], id="a regex cut by a newline"),
+    ],
+)
+def test_template_literals_and_cut_regexes_are_scanned_to_their_end(
+    text: str, lines: list[int]
+) -> None:
+    assert js_comment_lines(text) == lines
+
+
 def test_css_counts_block_comments_but_not_strings() -> None:
     text = '/* one */\na { content: "/* not */"; }\nb { c: d; } /* two\n three */\n'
     assert css_comment_lines(text) == [1, 3]

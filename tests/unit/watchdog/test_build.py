@@ -7,41 +7,22 @@ real build twice (it needs uv's cache or the network).
 import hashlib
 import os
 import re
-import shutil
 import subprocess
 import sys
 import zipfile
 from pathlib import Path
 
 import pytest
-import yaml
 
-from airwatch.devtools import uv_lock_pr
 from airwatch.watchdog import build
+from tests.repo_config import ROOT, WATCHDOG_EXPORT, uv_export
 
-ROOT = Path(__file__).resolve().parents[3]
-EXPORT = [
-    "uv",
-    "export",
-    "--frozen",
-    "--only-group",
-    "watchdog",
-    "--no-emit-project",
-    "--no-header",
-    "--format",
-    "requirements.txt",
-]
 TERRAFORM = (ROOT / "infra" / "watchdog.tf").read_text(encoding="utf-8")
 
 
 def test_the_requirements_file_matches_uv_lock() -> None:
-    uv = shutil.which("uv")
-    assert uv, "uv must be on PATH"
-    out = subprocess.run(
-        [uv, *EXPORT[1:]], cwd=ROOT, capture_output=True, text=True, check=True
-    ).stdout
-    assert build.REQUIREMENTS.read_text(encoding="utf-8") == out, (
-        "regenerate: " + " ".join(EXPORT) + " > requirements/watchdog.txt"
+    assert build.REQUIREMENTS.read_text(encoding="utf-8") == uv_export(WATCHDOG_EXPORT), (
+        "regenerate: " + " ".join(WATCHDOG_EXPORT) + " > requirements/watchdog.txt"
     )
 
 
@@ -52,16 +33,6 @@ def test_it_ships_only_boto3_and_tzdata_pinned_and_hashed() -> None:
     assert not pins & {"airwatch", "prefect", "pandas", "httpx"}
     blocks = re.split(r"\n(?=[A-Za-z0-9_.-]+==)", text.strip())
     assert all("--hash=sha256:" in b for b in blocks)
-
-
-def test_the_weekly_lock_upgrade_regenerates_it_too() -> None:
-    workflow = yaml.safe_load(
-        (ROOT / ".github" / "workflows" / "uv-lock-upgrade.yml").read_text(encoding="utf-8")
-    )
-    runs = [str(s.get("run", "")) for job in workflow["jobs"].values() for s in job["steps"]]
-    assert " ".join(EXPORT) + " > requirements/watchdog.txt" in [r.strip() for r in runs]
-    assert "requirements/watchdog.txt" in uv_lock_pr.FILES
-    assert any("src/airwatch/devtools/uv_lock_pr.py" in r for r in runs)
 
 
 def test_the_install_is_hash_checked_and_for_lambdas_platform(tmp_path: Path) -> None:

@@ -7,15 +7,17 @@
 - Any error emails its type and is re-raised (fail closed); the key never reaches an email or log.
 """
 
-import ast
 import contextlib
 import dataclasses
 import json
 import logging
 import sys
+import threading
+import urllib.error
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +30,7 @@ from airwatch.forecast.record import record_key
 from airwatch.monitoring import compute
 from airwatch.storage import S3Store
 from airwatch.watchdog import handler as wd
+from tests.project_files import import_roots
 
 REGION = "us-east-1"
 BUCKET = "pm25-forecast-data-test"
@@ -147,10 +150,11 @@ RETRY = {"mode": "retry", "scheduled_time": AT_0800}
 VERIFY = {"mode": "verify", "scheduled_time": AT_0900}
 
 
-def test_record_present_means_no_action(aws: Aws) -> None:
+@pytest.mark.parametrize("event", [RETRY, VERIFY], ids=["retry-0800", "verify-0900"])
+def test_record_present_means_no_action(aws: Aws, event: dict[str, Any]) -> None:
     _put_record(aws)
     prefect = FakePrefect()
-    result = _handle(aws, RETRY, prefect)
+    result = _handle(aws, event, prefect)
     assert result["record"] == "present"
     assert prefect.calls == []
     assert aws.emails() == []
@@ -166,9 +170,11 @@ def test_record_absent_starts_one_publishing_run_then_emails(aws: Aws) -> None:
     assert body["parameters"] == {"publish": True, "target_day": "2026-11-22"}
     assert body["idempotency_key"] == "watchdog-2026-11-22"
     assert headers["Authorization"] == f"Bearer {KEY}"
+    assert body["tags"] == ["watchdog"]
     [email] = aws.emails()
     assert "2026-11-22" in email["message"]
     assert "rose-ocelot" in email["message"]
+    assert "DRILL" not in email["subject"]
 
 
 def test_a_run_already_started_by_an_earlier_attempt_is_reported_not_repeated(aws: Aws) -> None:
@@ -204,12 +210,6 @@ def test_a_missing_key_parameter_emails_and_fails(aws: Aws) -> None:
     assert prefect.calls == []
     [email] = aws.emails()
     assert "ParameterNotFound" in email["message"]
-
-
-def test_verify_finds_the_record_and_stays_quiet(aws: Aws) -> None:
-    _put_record(aws)
-    assert _handle(aws, VERIFY)["record"] == "present"
-    assert aws.emails() == []
 
 
 def test_verify_emails_when_the_record_is_still_missing_and_starts_nothing(aws: Aws) -> None:
@@ -364,14 +364,8 @@ def test_config_comes_from_the_environment() -> None:
 
 def test_it_imports_only_the_standard_library_and_boto3() -> None:
     """The zip ships this file alone with boto3 and tzdata, so it can't import airwatch."""
-    tree = ast.parse(Path(wd.__file__).read_text(encoding="utf-8"))
-    roots = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            roots |= {a.name.split(".")[0] for a in node.names}
-        elif isinstance(node, ast.ImportFrom):
-            assert node.level == 0, "no relative imports"
-            roots.add((node.module or "").split(".")[0])
+    roots = import_roots(Path(wd.__file__))
+    assert roots, "guards the guard: no imports found"
     allowed = set(sys.stdlib_module_names) | {"boto3", "botocore"}
     assert roots <= allowed, roots - allowed
 
@@ -436,14 +430,6 @@ def test_a_drill_uses_its_own_key_and_says_drill(aws: Aws) -> None:
     assert "DRILL" in email["subject"]
 
 
-def test_a_real_retry_never_uses_a_drill_key(aws: Aws) -> None:
-    prefect = FakePrefect(status=201)
-    _handle(aws, RETRY, prefect)
-    [(_, body, _)] = prefect.calls
-    assert "drill" not in body["idempotency_key"]
-    assert "DRILL" not in aws.emails()[0]["subject"]
-
-
 def test_a_drill_retry_for_an_issued_day_is_refused_before_starting_anything(aws: Aws) -> None:
     """Its run could otherwise publish a real record late."""
     prefect = FakePrefect()
@@ -464,7 +450,8 @@ def test_a_drill_verify_may_check_any_day(aws: Aws) -> None:
 def test_drill_must_be_a_boolean(aws: Aws) -> None:
     with pytest.raises(wd.WatchdogError, match="drill"):
         _handle(aws, {**RETRY, "drill": "yes"})
-    assert aws.emails()
+    [email] = aws.emails()
+    assert "watchdog" in email["subject"].lower()
 
 
 def test_a_placeholder_left_by_the_scheduler_is_named_in_the_email(aws: Aws) -> None:
@@ -481,3 +468,68 @@ def test_a_long_bad_value_is_cut_short_in_the_email(aws: Aws) -> None:
         _handle(aws, {"mode": "retry", "scheduled_time": "x" * 500})
     [email] = aws.emails()
     assert "x" * 61 not in email["message"]
+
+
+@dataclass
+class LocalPrefect:
+    """A real HTTP server on 127.0.0.1 that answers `status`, or drops the connection if None."""
+
+    url: str
+    status: int | None = 201
+    seen: list[tuple[str, str, bytes, dict[str, str]]] = field(default_factory=list)
+
+
+@pytest.fixture
+def local_prefect() -> Iterator[LocalPrefect]:
+    state = LocalPrefect(url="")
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            body = self.rfile.read(int(self.headers["Content-Length"]))
+            state.seen.append((self.command, self.path, body, dict(self.headers)))
+            if state.status is None:
+                self.close_connection = True
+                return
+            reply = json.dumps(RUN).encode()
+            self.send_response(state.status)
+            self.send_header("Content-Length", str(len(reply)))
+            self.end_headers()
+            self.wfile.write(reply)
+
+        def log_message(self, *_: Any) -> None:
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    state.url = f"http://127.0.0.1:{server.server_address[1]}/create_flow_run"
+    thread = threading.Thread(target=server.serve_forever, args=(0.01,), daemon=True)
+    thread.start()
+    yield state
+    server.shutdown()
+    server.server_close()
+    thread.join()
+
+
+@pytest.mark.parametrize(
+    ("status", "body"),
+    [(201, json.dumps(RUN).encode()), (200, json.dumps(RUN).encode()), (401, b"{}"), (500, b"{}")],
+    ids=["created", "already-started", "refused", "server-error"],
+)
+def test_the_real_sender_returns_the_status_prefect_answered(
+    local_prefect: LocalPrefect, status: int, body: bytes
+) -> None:
+    """urllib raises on 4xx/5xx; the sender turns that back into a status for the email rules."""
+    local_prefect.status = status
+    sent = b'{"parameters": {"publish": true}}'
+    headers = {"Authorization": f"Bearer {KEY}", "Content-Type": "application/json"}
+    assert wd._urllib_post(local_prefect.url, sent, headers) == (status, body)
+    [(method, path, received, got_headers)] = local_prefect.seen
+    assert (method, path, received) == ("POST", "/create_flow_run", sent)
+    assert got_headers["Authorization"] == f"Bearer {KEY}"
+
+
+def test_the_real_sender_lets_a_dropped_connection_raise(local_prefect: LocalPrefect) -> None:
+    """Not a status: the watchdog reports it as "Prefect didn't answer" and fails."""
+    local_prefect.status = None
+    with pytest.raises(OSError) as caught:
+        wd._urllib_post(local_prefect.url, b"{}", {})
+    assert not isinstance(caught.value, urllib.error.HTTPError)

@@ -4,28 +4,23 @@ The generic rules (actions pinned to SHAs, a read-only default token) are checke
 workflow in test_ci_config.py.
 """
 
-from pathlib import Path
 from typing import Any
 
-import yaml
+from tests.repo_config import ROOT, triggers, workflow
 
-ROOT = Path(__file__).resolve().parents[2]
-PAGES = ROOT / ".github" / "workflows" / "pages.yml"
 SITE_FILES = {"index.html", "app.js", "style.css"}
 
 
 def _load() -> dict[Any, Any]:
-    data: dict[Any, Any] = yaml.safe_load(PAGES.read_text(encoding="utf-8"))
-    return data
+    return workflow("pages.yml")
 
 
 def test_it_runs_only_when_the_page_changes_or_on_request() -> None:
-    workflow = _load()
-    triggers: dict[str, Any] = workflow["on"] if "on" in workflow else workflow[True]
-    assert triggers["push"]["branches"] == ["main"]
-    assert "site/**" in triggers["push"]["paths"]
-    assert "workflow_dispatch" in triggers
-    assert "pull_request" not in triggers
+    on = triggers(_load())
+    assert on["push"]["branches"] == ["main"]
+    assert "site/**" in on["push"]["paths"]
+    assert "workflow_dispatch" in on
+    assert "pull_request" not in on
 
 
 def test_nothing_deploys_until_the_owner_turns_on_go_live() -> None:

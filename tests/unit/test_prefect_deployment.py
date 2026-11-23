@@ -5,36 +5,20 @@ run installs exactly what uv.lock says; no secret is in the file; at most 5 depl
 """
 
 import re
-import shutil
-import subprocess
 from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-import yaml
-
-from airwatch.devtools import uv_lock_pr
 from airwatch.timeutil import ISSUE_HOUR_LOCAL, ISSUE_TZ
+from tests.repo_config import PREFECT_EXPORT, ROOT, load_yaml, uv_export
 
-ROOT = Path(__file__).resolve().parents[2]
 PREFECT_YAML = ROOT / "prefect.yaml"
 REQUIREMENTS = ROOT / "requirements" / "prefect-run.txt"
-EXPORT = [
-    "uv",
-    "export",
-    "--frozen",
-    "--no-dev",
-    "--no-emit-project",
-    "--no-header",
-    "--format",
-    "requirements.txt",
-]
 HOBBY_DEPLOYMENTS = 5
 
 
 def _config() -> dict[str, Any]:
-    loaded: dict[str, Any] = yaml.safe_load(PREFECT_YAML.read_text(encoding="utf-8"))
-    return loaded
+    return load_yaml(PREFECT_YAML)
 
 
 def _daily() -> dict[str, Any]:
@@ -110,13 +94,8 @@ def test_dependencies_come_from_the_lock_export_then_the_package_alone() -> None
 
 
 def test_the_requirements_file_matches_uv_lock() -> None:
-    uv = shutil.which("uv")
-    assert uv, "uv must be on PATH"
-    out = subprocess.run(
-        [uv, *EXPORT[1:]], cwd=ROOT, capture_output=True, text=True, check=True
-    ).stdout
-    assert REQUIREMENTS.read_text(encoding="utf-8") == out, (
-        "regenerate: " + " ".join(EXPORT) + " > requirements/prefect-run.txt"
+    assert REQUIREMENTS.read_text(encoding="utf-8") == uv_export(PREFECT_EXPORT), (
+        "regenerate: " + " ".join(PREFECT_EXPORT) + " > requirements/prefect-run.txt"
     )
 
 
@@ -141,18 +120,6 @@ def test_no_secret_value_is_in_the_deployment() -> None:
 def test_our_own_logs_reach_prefect() -> None:
     env = _env()
     assert env["PREFECT_LOGGING_EXTRA_LOGGERS"] == "airwatch"
-
-
-def test_the_weekly_lock_upgrade_regenerates_the_requirements_too() -> None:
-    """Otherwise the lock job's own PR would fail the drift test above."""
-    workflow = yaml.safe_load(
-        (ROOT / ".github" / "workflows" / "uv-lock-upgrade.yml").read_text(encoding="utf-8")
-    )
-    runs = [str(s.get("run", "")) for job in workflow["jobs"].values() for s in job["steps"]]
-    upgrade = next(i for i, r in enumerate(runs) if r.strip() == "uv lock --upgrade")
-    assert runs[upgrade + 1].strip() == " ".join(EXPORT) + " > requirements/prefect-run.txt"
-    assert {"uv.lock", "requirements/prefect-run.txt"} <= set(uv_lock_pr.FILES)
-    assert any("src/airwatch/devtools/uv_lock_pr.py" in r for r in runs[upgrade + 1 :])
 
 
 def test_the_image_pins_the_projects_python() -> None:

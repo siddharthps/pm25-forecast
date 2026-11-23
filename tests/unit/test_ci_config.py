@@ -10,10 +10,21 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import yaml
 
-ROOT = Path(__file__).resolve().parents[2]
-WORKFLOWS = ROOT / ".github" / "workflows"
+from airwatch.devtools import uv_lock_pr
+from tests.repo_config import (
+    PREFECT_EXPORT,
+    ROOT,
+    WATCHDOG_EXPORT,
+    WORKFLOWS,
+    load_yaml,
+    precommit_hook,
+    run_lines,
+    steps,
+    triggers,
+    workflow_files,
+)
+
 CI = WORKFLOWS / "ci.yml"
 LOCK_UPGRADE = WORKFLOWS / "uv-lock-upgrade.yml"
 MUTMUT = WORKFLOWS / "mutmut.yml"
@@ -21,30 +32,6 @@ DEPENDABOT = ROOT / ".github" / "dependabot.yml"
 
 PINNED = re.compile(r"^\s*-?\s*uses:\s*[\w.-]+/[\w./-]+@[0-9a-f]{40}\s+#\s*v\d+\.\d+\.\d+\s*$")
 USES = re.compile(r"^\s*-?\s*uses:\s*(\S+)")
-
-
-def _workflow_files() -> list[Path]:
-    return sorted(WORKFLOWS.glob("*.yml")) + sorted(WORKFLOWS.glob("*.yaml"))
-
-
-def _load(path: Path) -> dict[Any, Any]:
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
-    assert isinstance(data, dict), f"{path.name} is not a YAML mapping"
-    return data
-
-
-def _triggers(workflow: dict[Any, Any]) -> dict[str, Any]:
-    triggers = workflow.get("on", workflow.get(True))
-    assert isinstance(triggers, dict), "triggers must be a mapping"
-    return triggers
-
-
-def _run_lines(workflow: dict[Any, Any]) -> str:
-    return "\n".join(
-        str(step.get("run", ""))
-        for job in workflow["jobs"].values()
-        for step in job.get("steps", [])
-    )
 
 
 def _uv_floor() -> str:
@@ -56,11 +43,11 @@ def _uv_floor() -> str:
 
 
 def test_workflows_exist() -> None:
-    assert CI in _workflow_files(), "guards the guards: no workflows, so they pass vacuously"
-    assert LOCK_UPGRADE in _workflow_files()
+    assert CI in workflow_files(), "guards the guards: no workflows, so they pass vacuously"
+    assert LOCK_UPGRADE in workflow_files()
 
 
-@pytest.mark.parametrize("path", _workflow_files(), ids=lambda p: p.name)
+@pytest.mark.parametrize("path", workflow_files(), ids=lambda p: p.name)
 def test_every_action_is_pinned_to_a_sha_with_its_version(path: Path) -> None:
     bad = [
         line.strip()
@@ -70,24 +57,23 @@ def test_every_action_is_pinned_to_a_sha_with_its_version(path: Path) -> None:
     assert not bad, f"{path.name}: actions not pinned as '@<sha>  # vX.Y.Z': {bad}"
 
 
-@pytest.mark.parametrize("path", _workflow_files(), ids=lambda p: p.name)
+@pytest.mark.parametrize("path", workflow_files(), ids=lambda p: p.name)
 def test_workflow_token_is_read_only_by_default(path: Path) -> None:
-    assert _load(path).get("permissions") == {"contents": "read"}
+    assert load_yaml(path).get("permissions") == {"contents": "read"}
 
 
-@pytest.mark.parametrize("path", _workflow_files(), ids=lambda p: p.name)
+@pytest.mark.parametrize("path", workflow_files(), ids=lambda p: p.name)
 def test_uv_version_in_ci_is_the_pyproject_floor(path: Path) -> None:
-    for job in _load(path)["jobs"].values():
-        for step in job.get("steps", []):
-            if str(step.get("uses", "")).startswith("astral-sh/setup-uv@"):
-                assert step.get("with", {}).get("version") == _uv_floor()
+    for step in steps(load_yaml(path)):
+        if str(step.get("uses", "")).startswith("astral-sh/setup-uv@"):
+            assert step.get("with", {}).get("version") == _uv_floor()
 
 
 def test_ci_runs_on_prs_pushes_to_main_and_dispatch() -> None:
-    triggers = _triggers(_load(CI))
-    assert "pull_request" in triggers
-    assert triggers["push"]["branches"] == ["main"]
-    assert "workflow_dispatch" in triggers
+    on = triggers(load_yaml(CI))
+    assert "pull_request" in on
+    assert on["push"]["branches"] == ["main"]
+    assert "workflow_dispatch" in on
 
 
 @pytest.mark.parametrize(
@@ -104,27 +90,28 @@ def test_ci_runs_on_prs_pushes_to_main_and_dispatch() -> None:
     ],
 )
 def test_ci_runs_each_gate(command: str) -> None:
-    assert command in _run_lines(_load(CI))
+    assert command in run_lines(load_yaml(CI))
 
 
 def test_ci_scans_full_history_with_the_pre_commit_gitleaks_version() -> None:
-    ci = _load(CI)
-    steps = [step for job in ci["jobs"].values() for step in job.get("steps", [])]
-    gitleaks = [s for s in steps if str(s.get("uses", "")).startswith("gitleaks/gitleaks-action@")]
+    ci_steps = steps(load_yaml(CI))
+    gitleaks = [
+        s for s in ci_steps if str(s.get("uses", "")).startswith("gitleaks/gitleaks-action@")
+    ]
     assert len(gitleaks) == 1
     precommit = (ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8")
     pin = r"gitleaks/gitleaks\n\s+rev: [0-9a-f]{40}\s+# frozen: v(\d+\.\d+\.\d+)"
     match = re.search(pin, precommit)
     assert match, "gitleaks pin not found in .pre-commit-config.yaml"
     assert gitleaks[0]["env"]["GITLEAKS_VERSION"] == match.group(1)
-    checkouts = [s for s in steps if str(s.get("uses", "")).startswith("actions/checkout@")]
+    checkouts = [s for s in ci_steps if str(s.get("uses", "")).startswith("actions/checkout@")]
     assert any(s.get("with", {}).get("fetch-depth") == 0 for s in checkouts), (
         "full history, so a secret in any commit of the PR is caught, not just the tip"
     )
 
 
 def _terraform_job() -> dict[Any, Any]:
-    jobs = [j for j in _load(CI)["jobs"].values() if j.get("name") == "Terraform"]
+    jobs = [j for j in load_yaml(CI)["jobs"].values() if j.get("name") == "Terraform"]
     assert len(jobs) == 1, "ci.yml needs exactly one job named 'Terraform' (#8)"
     job = jobs[0]
     assert isinstance(job, dict)
@@ -149,8 +136,8 @@ def test_ci_terraform_version_matches_main_tf() -> None:
     main_tf = (ROOT / "infra" / "main.tf").read_text(encoding="utf-8")
     match = re.search(r'required_version = "~> (\d+\.\d+\.\d+)"', main_tf)
     assert match, "required_version not found in infra/main.tf"
-    steps = _terraform_job()["steps"]
-    setup = [s for s in steps if str(s.get("uses", "")).startswith("hashicorp/setup-terraform@")]
+    tf_steps = _terraform_job()["steps"]
+    setup = [s for s in tf_steps if str(s.get("uses", "")).startswith("hashicorp/setup-terraform@")]
     assert len(setup) == 1
     assert setup[0]["with"]["terraform_version"] == match.group(1)
 
@@ -164,9 +151,7 @@ def test_every_skipped_pre_commit_hook_is_checked_elsewhere_in_ci() -> None:
         "terraform-fmt": "terraform fmt -check -recursive",
         "gitleaks": "gitleaks/gitleaks-action@",
     }
-    ci = _load(CI)
-    steps = [s for job in ci["jobs"].values() for s in job.get("steps", [])]
-    skip_steps = [s for s in steps if "SKIP" in s.get("env", {})]
+    skip_steps = [s for s in steps(load_yaml(CI)) if "SKIP" in s.get("env", {})]
     assert len(skip_steps) == 1
     skipped = set(skip_steps[0]["env"]["SKIP"].split(","))
     unknown = skipped - covered_by.keys()
@@ -176,12 +161,11 @@ def test_every_skipped_pre_commit_hook_is_checked_elsewhere_in_ci() -> None:
         assert covered_by[hook] in text, f"{hook} is skipped but nothing else in CI runs it"
 
 
-def test_ci_never_keeps_the_checkout_token() -> None:
-    for path in _workflow_files():
-        for job in _load(path)["jobs"].values():
-            for step in job.get("steps", []):
-                if str(step.get("uses", "")).startswith("actions/checkout@"):
-                    assert step.get("with", {}).get("persist-credentials") is False, path.name
+@pytest.mark.parametrize("path", workflow_files(), ids=lambda p: p.name)
+def test_ci_never_keeps_the_checkout_token(path: Path) -> None:
+    for step in steps(load_yaml(path)):
+        if str(step.get("uses", "")).startswith("actions/checkout@"):
+            assert step.get("with", {}).get("persist-credentials") is False, path.name
 
 
 def test_coverage_floor_is_at_least_85() -> None:
@@ -190,38 +174,43 @@ def test_coverage_floor_is_at_least_85() -> None:
 
 
 def test_dependabot_updates_actions_but_not_python() -> None:
-    config = _load(DEPENDABOT)
+    config = load_yaml(DEPENDABOT)
     ecosystems = {u["package-ecosystem"] for u in config["updates"]}
     assert "github-actions" in ecosystems
     assert not ecosystems & {"uv", "pip"}
 
 
-def test_lock_upgrade_job_is_scheduled_and_dispatches_ci() -> None:
-    workflow = _load(LOCK_UPGRADE)
-    triggers = _triggers(workflow)
-    assert "schedule" in triggers
-    assert "workflow_dispatch" in triggers
-    runs = _run_lines(workflow)
-    order = [
-        "uv lock --upgrade",
-        "requirements/prefect-run.txt",
-        "requirements/watchdog.txt",
-        "src/airwatch/devtools/uv_lock_pr.py",
-    ]
-    positions = [runs.find(step) for step in order]
-    assert -1 not in positions, dict(zip(order, positions, strict=True))
-    assert positions == sorted(positions), "lock, both exports, then the PR step"
+def test_the_weekly_lock_upgrade_refreshes_both_exports_then_opens_its_pr() -> None:
+    """Both requirements files are regenerated and committed with the lock, or the lock job's
+    own PR would fail the drift tests (test_prefect_deployment.py, watchdog/test_build.py)."""
+    workflow = load_yaml(LOCK_UPGRADE)
+    on = triggers(workflow)
+    assert "schedule" in on
+    assert "workflow_dispatch" in on
+    runs = [str(step.get("run", "")).strip() for step in steps(workflow)]
+    upgrade = runs.index("uv lock --upgrade")
+    prefect = " ".join(PREFECT_EXPORT) + " > requirements/prefect-run.txt"
+    watchdog = " ".join(WATCHDOG_EXPORT) + " > requirements/watchdog.txt"
+    assert runs[upgrade + 1] == prefect
+    assert watchdog in runs
+    pr_step = next(i for i, r in enumerate(runs) if "src/airwatch/devtools/uv_lock_pr.py" in r)
+    assert upgrade < runs.index(prefect) < runs.index(watchdog) < pr_step, (
+        "lock, both exports, then the PR step"
+    )
+    assert {"uv.lock", "requirements/prefect-run.txt", "requirements/watchdog.txt"} <= set(
+        uv_lock_pr.FILES
+    )
     module = (ROOT / "src/airwatch/devtools/uv_lock_pr.py").read_text(encoding="utf-8")
     assert '"workflow", "run", "ci.yml"' in module
 
 
 def test_mutation_testing_runs_only_when_started_by_hand() -> None:
     """D-048: on demand, never on a schedule or a PR, so a survivor never blocks a merge."""
-    workflow = _load(MUTMUT)
-    assert set(_triggers(workflow)) == {"workflow_dispatch"}
+    workflow = load_yaml(MUTMUT)
+    assert set(triggers(workflow)) == {"workflow_dispatch"}
     (job,) = workflow["jobs"].values()
     assert job["runs-on"] == "ubuntu-latest"
-    runs = _run_lines(workflow)
+    runs = run_lines(workflow)
     assert "uv sync --frozen" in runs
     assert "uv run mutmut run" in runs
     assert "uv run mutmut results" in runs
@@ -230,10 +219,7 @@ def test_mutation_testing_runs_only_when_started_by_hand() -> None:
 
 def test_terraform_fmt_never_prints_file_contents() -> None:
     """`-diff` would print the gitignored terraform.tfvars, which holds private values (#64)."""
-    config = yaml.safe_load((ROOT / ".pre-commit-config.yaml").read_text(encoding="utf-8"))
-    hooks = [h for repo in config["repos"] for h in repo["hooks"] if h["id"] == "terraform-fmt"]
-    assert len(hooks) == 1
-    assert "-diff" not in hooks[0]["entry"].split()
+    assert "-diff" not in precommit_hook("terraform-fmt")["entry"].split()
     ci = CI.read_text(encoding="utf-8")
     assert "terraform fmt" in ci, "guards the guard: CI's format step must be found"
     assert all("-diff" not in line for line in ci.splitlines() if "terraform fmt" in line)

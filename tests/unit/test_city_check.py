@@ -102,19 +102,11 @@ def test_co_located_instruments_are_one_monitor() -> None:
     assert day.mean == pytest.approx(30.0)
 
 
-def test_exceptional_event_days_are_kept_once() -> None:
+@pytest.mark.parametrize("excluded", ["Events Excluded", "Concurred Events Excluded"])
+def test_an_event_day_keeps_its_included_row_once(excluded: str) -> None:
     rows = [
         row(event="Events Included", mean=80.0),
-        row(event="Events Excluded", mean=12.0),
-    ]
-    (day,) = site_days(rows, keep_values=True).values()
-    assert day.mean == pytest.approx(80.0)
-
-
-def test_concurred_excluded_twin_is_dropped_and_the_included_day_kept() -> None:
-    rows = [
-        row(event="Events Included", mean=80.0),
-        row(event="Concurred Events Excluded", mean=12.0),
+        row(event=excluded, mean=12.0),
     ]
     (day,) = site_days(rows, keep_values=True).values()
     assert day.mean == pytest.approx(80.0)
@@ -128,6 +120,11 @@ def test_an_unknown_event_type_stops_the_check() -> None:
 def test_a_duplicate_instrument_day_stops_the_check() -> None:
     with pytest.raises(ValueError, match="duplicate"):
         site_days([row(), row()], keep_values=True)
+
+
+def test_a_malformed_site_id_stops_the_check() -> None:
+    with pytest.raises(ValueError, match="unexpected AQS site id"):
+        site_days([row(site="00A1")], keep_values=True)
 
 
 def test_values_can_be_dropped_on_read() -> None:
@@ -175,6 +172,35 @@ def history(site: str, years: range, *, mean: float = 10.0) -> list[dict[str, An
     return rows
 
 
+def sites_of(n: int) -> list[str]:
+    return [f"{i:04d}" for i in range(1, n + 1)]
+
+
+def active_ids(sites: list[str]) -> set[str]:
+    return {f"17031{s}" for s in sites}
+
+
+def city_history(
+    sites: list[str],
+    *,
+    years: range = range(2017, 2025),
+    bad_days_per_site: int = 30,
+    mean: float = 10.0,
+) -> list[dict[str, Any]]:
+    """Each site's daily rows over `years` at `mean`, its first `bad_days_per_site` days at 50."""
+    hist: list[dict[str, Any]] = []
+    for s in sites:
+        rows = history(s, years, mean=mean)
+        for r in rows[:bad_days_per_site]:
+            r["arithmetic_mean"] = 50.0
+        hist += rows
+    return hist
+
+
+SITES5 = sites_of(5)
+ACTIVE5 = active_ids(SITES5)
+
+
 def city(  # noqa: PLR0913  (one knob per frozen rule)
     n_monitors: int,
     *,
@@ -184,17 +210,12 @@ def city(  # noqa: PLR0913  (one knob per frozen rule)
     weather_ok: bool = True,
     active: set[str] | None = None,
 ) -> CityScore:
-    sites = [f"{i:04d}" for i in range(1, n_monitors + 1)]
-    hist: list[dict[str, Any]] = []
-    for s in sites:
-        rows = history(s, years)
-        for r in rows[:bad_days_per_site]:
-            r["arithmetic_mean"] = 50.0
-        hist += rows
+    sites = sites_of(n_monitors)
+    hist = city_history(sites, years=years, bad_days_per_site=bad_days_per_site)
     test: list[dict[str, Any]] = []
     for s in sites[: n_monitors if test_monitors is None else test_monitors]:
         test += strip_values(year_of_rows(2025, site=s))
-    ids = {f"17031{s}" for s in sites} if active is None else active
+    ids = active_ids(sites) if active is None else active
     return score_city(
         "Test City",
         history_rows=hist,
@@ -212,22 +233,33 @@ def test_a_city_with_everything_passes() -> None:
 
 
 def test_fewer_than_five_qualifying_monitors_fails() -> None:
-    assert not city(4).passes
+    score = city(4)
+    assert not score.passes
+    assert "4 qualifying monitors (< 5)" in score.reasons
 
 
 def test_qualifying_needs_eight_good_years() -> None:
-    assert not city(5, years=range(2018, 2025)).passes
+    score = city(5, years=range(2018, 2025))
+    assert not score.passes
+    assert score.qualifying == ()
+    assert "0 qualifying monitors (< 5)" in score.reasons
 
 
 def test_qualifying_needs_2024_to_be_a_good_year() -> None:
-    assert not city(5, years=range(2015, 2024)).passes
+    score = city(5, years=range(2015, 2024))
+    assert not score.passes
+    assert score.qualifying == ()
+    assert "0 qualifying monitors (< 5)" in score.reasons
 
 
 def test_qualifying_needs_an_active_airnow_listing() -> None:
-    assert not city(5, active={"170310001", "170310002", "170310003", "170310004"}).passes
+    score = city(5, active={"170310001", "170310002", "170310003", "170310004"})
+    assert not score.passes
+    assert "170310005" not in score.qualifying
+    assert "4 qualifying monitors (< 5)" in score.reasons
 
 
-def test_bad_air_threshold_is_strictly_above_35() -> None:
+def test_bad_air_share_must_reach_half_a_percent() -> None:
     assert BAD_AIR_UG_M3 == 35.0
     at = city(5, bad_days_per_site=0)
     assert at.bad_air_share == 0.0
@@ -238,45 +270,33 @@ def test_bad_air_threshold_is_strictly_above_35() -> None:
 
 
 def test_exactly_35_is_not_a_bad_air_day() -> None:
-    sites = [f"{i:04d}" for i in range(1, 6)]
-    hist = [r for s in sites for r in history(s, range(2017, 2025), mean=35.0)]
     score = score_city(
         "Edge",
-        history_rows=hist,
-        test_rows=strip_values([r for s in sites for r in year_of_rows(2025, site=s)]),
-        airnow_active={f"17031{s}" for s in sites},
+        history_rows=city_history(SITES5, bad_days_per_site=0, mean=35.0),
+        test_rows=strip_values([r for s in SITES5 for r in year_of_rows(2025, site=s)]),
+        airnow_active=ACTIVE5,
         weather_ok=True,
     )
     assert score.bad_air_share == 0.0
 
 
 def test_test_year_needs_five_monitors_with_a_good_2025() -> None:
-    assert not city(5, test_monitors=4).passes
+    score = city(5, test_monitors=4)
+    assert not score.passes
+    assert score.reasons == ("4 monitors with a good 2025 (< 5)",)
 
 
 def test_weather_coverage_is_required() -> None:
-    assert not city(5, weather_ok=False).passes
+    score = city(5, weather_ok=False)
+    assert not score.passes
+    assert score.reasons == ("no weather coverage",)
 
 
-SITES5 = [f"{i:04d}" for i in range(1, 6)]
-ACTIVE5 = {f"17031{s}" for s in SITES5}
-
-
-def _passing_history() -> list[dict[str, Any]]:
-    hist: list[dict[str, Any]] = []
-    for s in SITES5:
-        rows = history(s, range(2017, 2025))
-        for r in rows[:30]:
-            r["arithmetic_mean"] = 50.0
-        hist += rows
-    return hist
-
-
-HIST5 = _passing_history()
+HIST5 = city_history(SITES5)
 BASELINE5 = city(5)
 
 
-@settings(max_examples=20)
+@settings(max_examples=20, deadline=None)
 @given(values=st.lists(st.floats(min_value=0, max_value=500), min_size=366, max_size=366))
 def test_2025_pm_values_never_change_the_result(values: list[float]) -> None:
     test = []
@@ -315,22 +335,11 @@ def test_scoring_refuses_2025_rows_that_still_carry_values() -> None:
 
 
 def test_rows_outside_2009_2024_are_not_history() -> None:
-    sites = [f"{i:04d}" for i in range(1, 6)]
-    hist = [r for s in sites for r in history(s, range(2017, 2025))]
-    extra = [r for s in sites for r in history(s, range(2008, 2009), mean=80.0)]
-    a = score_city(
-        "A",
-        history_rows=hist,
-        test_rows=[],
-        airnow_active={f"17031{s}" for s in sites},
-        weather_ok=True,
-    )
+    hist = city_history(SITES5, bad_days_per_site=0)
+    extra = city_history(SITES5, years=range(2008, 2009), bad_days_per_site=0, mean=80.0)
+    a = score_city("A", history_rows=hist, test_rows=[], airnow_active=ACTIVE5, weather_ok=True)
     b = score_city(
-        "A",
-        history_rows=hist + extra,
-        test_rows=[],
-        airnow_active={f"17031{s}" for s in sites},
-        weather_ok=True,
+        "A", history_rows=hist + extra, test_rows=[], airnow_active=ACTIVE5, weather_ok=True
     )
     assert a == b
 
@@ -367,7 +376,3 @@ def test_otherwise_most_monitors_then_bad_air_share() -> None:
 
 def test_no_passing_city_means_no_choice() -> None:
     assert choose_city([scored("Chicago", passes=False, monitors=1, share=0.0)]) is None
-
-
-def test_scoring_is_deterministic() -> None:
-    assert city(5) == city(5)

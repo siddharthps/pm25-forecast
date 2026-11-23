@@ -24,7 +24,12 @@ import httpx
 import pandas as pd
 
 from airwatch.observations.metadata import FetchError, fetch_response
-from airwatch.observations.schema import HOURLY_COLUMNS, concat_hourly, validate_hourly
+from airwatch.observations.schema import (
+    HOURLY_COLUMNS,
+    POC_NOT_GIVEN,
+    concat_hourly,
+    validate_hourly,
+)
 from airwatch.timeutil import local_day_window_utc
 
 __all__ = [
@@ -88,7 +93,7 @@ def parse_hourly_aqobs(text: str, published_utc: datetime) -> tuple[pd.DataFrame
         {
             "source": "airnow",
             "site_id": [r["AQSID"] for r in kept],
-            "poc": 0,
+            "poc": POC_NOT_GIVEN,
             "method_code": pd.NA,
             "time_utc": pd.to_datetime(
                 [f"{r['ValidDate']} {r['ValidTime']}" for r in kept],

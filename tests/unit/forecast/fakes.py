@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 import pandas as pd
 
-from airwatch.observations.schema import concat_hourly
+from airwatch.observations.schema import POC_NOT_GIVEN, concat_hourly
 from airwatch.timeutil import local_day_window_utc
 from tests.unit.validation.helpers import frame, varying
 
@@ -35,7 +35,7 @@ def observed_day(
         frame(
             varying((hours or {}).get(site, 24), base=(base or {}).get(site, 8.0 + i)),
             site=site,
-            poc=0,
+            poc=POC_NOT_GIVEN,
             method=None,
             source="airnow",
             start=start,

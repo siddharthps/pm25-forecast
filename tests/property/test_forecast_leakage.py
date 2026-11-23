@@ -14,7 +14,7 @@ from hypothesis import assume, event, given, settings
 from hypothesis import strategies as st
 
 from airwatch.forecast.run import NoForecastError, run_daily
-from airwatch.observations.schema import concat_hourly
+from airwatch.observations.schema import POC_NOT_GIVEN, concat_hourly
 from tests.unit.forecast.fakes import (
     ISSUE_AT,
     PHOENIX,
@@ -94,7 +94,7 @@ def test_rows_from_the_unfinished_issue_day_never_change_the_forecast(
     today = frame(
         values,
         site=site,
-        poc=0,
+        poc=POC_NOT_GIVEN,
         method=None,
         source="airnow",
         start=d_start,

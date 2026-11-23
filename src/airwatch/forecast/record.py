@@ -14,6 +14,7 @@ import json
 from datetime import date, datetime
 from typing import Any, Protocol
 
+from airwatch.errors import ReportableError
 from airwatch.timeutil import ISSUE_TZ, ensure_utc
 from airwatch.validation.checks import ValidationResult
 
@@ -94,6 +95,10 @@ def encode(record: dict[str, Any]) -> bytes:
     return (json.dumps(record, indent=2, sort_keys=True) + "\n").encode("utf-8")
 
 
+class RecordUnreadableError(ReportableError):
+    """A write was refused as existing, but the existing record could not be read."""
+
+
 def write_once(store: Store, record: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
     """Create the record if absent. Returns (created, the record now stored)."""
     key = record_key(date.fromisoformat(record["forecast_date"]))
@@ -101,6 +106,6 @@ def write_once(store: Store, record: dict[str, Any]) -> tuple[bool, dict[str, An
         return True, record
     raw = store.get(key)
     if raw is None:
-        raise RuntimeError(f"record refused as existing but not readable: {key}")
+        raise RecordUnreadableError(f"record refused as existing but not readable: {key}")
     existing: dict[str, Any] = json.loads(raw)
     return False, existing

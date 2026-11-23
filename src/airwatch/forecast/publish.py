@@ -35,6 +35,7 @@ from airwatch.aqi import (
     text_color,
     truncate_pm25,
 )
+from airwatch.errors import ReportableError
 from airwatch.forecast.record import SCORE_PREFIX, Store
 from airwatch.observations.sites import SITE_NAMES
 
@@ -62,7 +63,7 @@ SECRET_PATTERNS = (
 )
 
 
-class PublishRefusedError(RuntimeError):
+class PublishRefusedError(ReportableError):
     """A public payload failed its schema or the secret scan; nothing was written."""
 
 

@@ -1416,7 +1416,7 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - 2026-11-22 after 09:15 CST: the morning check, then close #75.
 - Then T14 (weather ingestion, with #78); the D-014 review by 2026-11-25.
 
-## 2026-11-22: the morning check, then milestone B's small issues (CST, about 12:25 to 13:30)
+## 2026-11-22: the morning check, then milestone B's small issues (CST, 12:25–13:40, 20:00–20:15)
 
 - **The 06:00 run, `nano-pony`,** ended Completed. Its log reads
   `2026-11-23: recorded, 10 monitor(s), 0 without a valid day (published: True)`; about 3 minutes,
@@ -1476,6 +1476,11 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   PC and WSL sit on the issue zone, so zone tests move the process zone; and how to run several
   issue branches in one session without journal or D-entry conflicts.
 
+- **Merged (owner's go, about 20:00 CST, after a pause):** #89–#94 and #96 as squash merges;
+  #95 after merging `main` into its branch (D-048 against #93's squashed D-047, the only
+  conflict) and a fresh CI run; this records PR #97 last. The closed issues' boxes ticked; #43
+  and #3 keep one open box each.
+
 ### Traps found
 
 - **Prefect's CLI log output contains a non-ASCII byte (`µ`),** so `grep` called it a binary file
@@ -1497,11 +1502,10 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 
 ### Next
 
-- Owner: merge the nine PRs (#42's after #57's). After #43 merges, one hand-dispatched
-  lock run shows the new module working for real.
-- Tonight, Monday 06:17 UTC (00:17 CST): the first scheduled lock run (still the inline script);
-  it can close #6 and #43's last box.
+- Tonight, Monday 06:17 UTC (00:17 CST): the first scheduled lock run, and the first with the
+  new module (#94 is on `main`). Check that it opened or updated one PR with CI; that closes #6
+  and #43's last box.
 - 2026-11-25: #3's old key and IAM user deleted, the owner confirming first. Then the D-014
   timeline review, the last item of Checkpoint B.
-- Follow-ups filed: #86, #87, #88 (milestone C); #88 after #52's and #42's PRs merge.
+- Follow-ups filed: #86, #87, #88 (milestone C); #88 is unblocked once #95 is merged.
 - Then T14 (weather ingestion, with #78).

@@ -202,8 +202,17 @@ def test_lock_upgrade_job_is_scheduled_and_dispatches_ci() -> None:
     assert "schedule" in triggers
     assert "workflow_dispatch" in triggers
     runs = _run_lines(workflow)
-    assert "uv lock --upgrade" in runs
-    assert "gh workflow run ci.yml" in runs
+    order = [
+        "uv lock --upgrade",
+        "requirements/prefect-run.txt",
+        "requirements/watchdog.txt",
+        "src/airwatch/devtools/uv_lock_pr.py",
+    ]
+    positions = [runs.find(step) for step in order]
+    assert -1 not in positions, dict(zip(order, positions, strict=True))
+    assert positions == sorted(positions), "lock, both exports, then the PR step"
+    module = (ROOT / "src/airwatch/devtools/uv_lock_pr.py").read_text(encoding="utf-8")
+    assert '"workflow", "run", "ci.yml"' in module
 
 
 def test_mutation_testing_runs_only_when_started_by_hand() -> None:

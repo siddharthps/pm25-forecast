@@ -4,7 +4,8 @@
 # dispatches CI on the branch; the checks land on the PR's head commit.
 #
 # Idempotent: one fixed branch and at most one open PR. A rerun force-updates the branch and
-# reuses the PR; with no lockfile change it does nothing.
+# reuses the PR; with no lockfile change it does nothing. The push, PR and dispatch logic, and its
+# tests, live in src/airwatch/devtools/uv_lock_pr.py (#43).
 #
 # Needs the repo setting: Settings → Actions → General → Workflow permissions →
 # "Allow GitHub Actions to create and approve pull requests".
@@ -54,42 +55,8 @@ jobs:
       - name: Regenerate the watchdog's requirements
         run: uv export --frozen --only-group watchdog --no-emit-project --no-header --format requirements.txt > requirements/watchdog.txt
 
-      - name: Check for changes
-        id: diff
-        run: |
-          if git diff --quiet -- uv.lock; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "uv.lock is already up to date." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-          fi
-
+      # Standard library only, run by path: nothing from the upgraded lock is installed.
       - name: Push the branch, open or reuse the PR, dispatch CI
-        if: steps.diff.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          # gh acts as git's credential helper, so the token never goes in a URL or the config.
-          gh auth setup-git
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -C "$BRANCH"
-          git commit --quiet -m "chore(deps): weekly uv lock --upgrade" -- uv.lock requirements/prefect-run.txt requirements/watchdog.txt
-          git push --force origin "$BRANCH"
-          {
-            echo "## Changed packages"
-            echo
-            echo '```diff'
-            git diff HEAD~1 -- uv.lock | grep -E '^[-+](name|version) = ' || true
-            echo '```'
-          } > "$RUNNER_TEMP/body.md"
-          pr=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
-          if [ -z "$pr" ]; then
-            gh pr create --base main --head "$BRANCH" \
-              --title "chore(deps): weekly uv lock --upgrade" --body-file "$RUNNER_TEMP/body.md"
-          else
-            gh pr edit "$pr" --body-file "$RUNNER_TEMP/body.md"
-          fi
-          gh workflow run ci.yml --ref "$BRANCH"
-          echo "Opened or updated the PR and dispatched CI on \`$BRANCH\`." >> "$GITHUB_STEP_SUMMARY"
+        run: uv run --no-project --python 3.12 src/airwatch/devtools/uv_lock_pr.py

@@ -108,23 +108,25 @@ def test_the_latest_payload_passes_its_own_schema() -> None:
 
 
 @pytest.mark.parametrize(
-    ("change", "why"),
+    "change",
     [
-        (lambda p: p.update(raw_rows=[1, 2]), "an extra field"),
-        (lambda p: p["forecasts"][0].update(site_id="40130019"), "a bad site id"),
-        (lambda p: p["city"].update(color="red"), "a colour not from the table"),
-        (lambda p: p.update(preliminary=False), "dropping the preliminary label"),
-        (lambda p: p["forecasts"][0].update(n_hours=24), "a record-only field"),
-        (lambda p: p["aqi_scale"][2].update(color="orange"), "a scale colour not from the table"),
-        (lambda p: p["aqi_scale"].pop(), "a scale missing a category"),
+        pytest.param(lambda p: p.update(raw_rows=[1, 2]), id="an extra field"),
+        pytest.param(lambda p: p["forecasts"][0].update(site_id="40130019"), id="a bad site id"),
+        pytest.param(lambda p: p["city"].update(color="red"), id="a colour not from the table"),
+        pytest.param(lambda p: p.update(preliminary=False), id="dropping the preliminary label"),
+        pytest.param(lambda p: p["forecasts"][0].update(n_hours=24), id="a record-only field"),
+        pytest.param(
+            lambda p: p["aqi_scale"][2].update(color="orange"),
+            id="a scale colour not from the table",
+        ),
+        pytest.param(lambda p: p["aqi_scale"].pop(), id="a scale missing a category"),
     ],
 )
-def test_the_schema_refuses_anything_off_the_list(change: Any, why: str) -> None:
+def test_the_schema_refuses_anything_off_the_list(change: Any) -> None:
     payload = public_payload(record())
     change(payload)
     with pytest.raises(PublishRefusedError, match="schema"):
         check_public(payload, "latest")
-    assert why
 
 
 @pytest.mark.parametrize(
@@ -242,20 +244,19 @@ def test_a_day_with_no_valid_actual_publishes_a_null_mae() -> None:
 
 
 @pytest.mark.parametrize(
-    ("change", "why"),
+    "change",
     [
-        (lambda s: s["monitors"][0].update(n_hours=24), "a private field"),
-        (lambda s: s.update(scored_by="me"), "an extra field"),
-        (lambda s: s.update(n_scored=-1), "a negative count"),
-        (lambda s: s["monitors"][0].update(site_id="1"), "a bad site id"),
+        pytest.param(lambda s: s["monitors"][0].update(n_hours=24), id="a private field"),
+        pytest.param(lambda s: s.update(scored_by="me"), id="an extra field"),
+        pytest.param(lambda s: s.update(n_scored=-1), id="a negative count"),
+        pytest.param(lambda s: s["monitors"][0].update(site_id="1"), id="a bad site id"),
     ],
 )
-def test_the_history_schema_refuses_a_score_off_the_list(change: Any, why: str) -> None:
+def test_the_history_schema_refuses_a_score_off_the_list(change: Any) -> None:
     hist = history_payload([record()], {"2026-11-21": _score()})
     change(hist["days"][0]["score"])
     with pytest.raises(PublishRefusedError, match="schema"):
         check_public(hist, "history")
-    assert why
 
 
 def test_history_picks_up_the_private_scores() -> None:

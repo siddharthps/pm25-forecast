@@ -10,7 +10,7 @@ from typing import Any
 
 import pandas as pd
 import pytest
-from hypothesis import given, settings
+from hypothesis import assume, event, given, settings
 from hypothesis import strategies as st
 
 from airwatch.forecast.run import NoForecastError, run_daily
@@ -52,27 +52,28 @@ BASE_FORECAST = forecast_of(BASE)
 
 @settings(deadline=None)
 @given(
-    late=st.lists(st.booleans(), min_size=len(BASE), max_size=len(BASE)),
+    late=st.sets(st.integers(min_value=0, max_value=len(BASE) - 1)),
     values=st.lists(any_value, min_size=len(BASE), max_size=len(BASE)),
     after_s=st.integers(min_value=1, max_value=8 * 3600),
 )
 def test_a_row_published_after_issue_counts_as_if_deleted(
-    late: list[bool], values: list[float], after_s: int
+    late: set[int], values: list[float], after_s: int
 ) -> None:
-    mask = pd.Series(late)
+    mask = pd.Series(BASE.index.isin(late), index=BASE.index)
     changed = BASE.copy()
     changed.loc[mask, "value_ug_m3"] = pd.Series(values)[mask]
     changed.loc[mask, "available_at_utc"] = pd.Timestamp(ISSUE_AT + timedelta(seconds=after_s))
     deleted = BASE[~mask].reset_index(drop=True)
-    if len(deleted) == 0:
-        return
+    assume(len(deleted) > 0)
     try:
         expected = forecast_of(deleted)
     except NoForecastError:
+        event("no forecast either way")
         with pytest.raises(NoForecastError):
             forecast_of(changed)
-        return
-    assert forecast_of(changed) == expected
+    else:
+        event("forecasts compared")
+        assert forecast_of(changed) == expected
 
 
 @settings(deadline=None)

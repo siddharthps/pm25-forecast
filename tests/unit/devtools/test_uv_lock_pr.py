@@ -1,0 +1,210 @@
+"""The weekly uv-lock job acts at most once: run twice, or after any one step fails (#43, D-027).
+
+`open_pr` talks to the world only through `run`, so a fake GitHub stands in for `git` and `gh`.
+It can fail any step, and its create can fail *after* opening the PR (a failed API write may
+still have happened).
+"""
+
+import ast
+import subprocess
+import sys
+from collections.abc import Sequence
+from dataclasses import dataclass, field
+from pathlib import Path
+
+import pytest
+
+from airwatch.devtools import uv_lock_pr
+from airwatch.devtools.uv_lock_pr import BRANCH, StepFailedError, open_pr
+
+LOCK_DIFF = (
+    "diff --git a/uv.lock b/uv.lock\n"
+    " [[package]]\n"
+    '-name = "httpx"\n'
+    '+name = "httpx"\n'
+    '-version = "0.28.0"\n'
+    '+version = "0.28.1"\n'
+    ' source = { registry = "https://pypi.org/simple" }\n'
+)
+STEPS = ("push", "list", "create", "edit", "dispatch")
+
+
+@dataclass
+class FakeGitHub:
+    lock_changed: bool = True
+    open_prs: list[int] = field(default_factory=list)
+    fail: str | None = None
+    create_fails_after_opening: bool = False
+    pushes: int = 0
+    dispatches: int = 0
+    bodies: list[str] = field(default_factory=list)
+    calls: list[list[str]] = field(default_factory=list)
+
+    def _step(self, args: Sequence[str]) -> str:
+        cmd = list(args)
+        if cmd[:2] == ["git", "push"]:
+            return "push"
+        if cmd[:3] == ["gh", "pr", "list"]:
+            return "list"
+        if cmd[:3] == ["gh", "pr", "create"]:
+            return "create"
+        if cmd[:3] == ["gh", "pr", "edit"]:
+            return "edit"
+        if cmd[:3] == ["gh", "workflow", "run"]:
+            return "dispatch"
+        return "other"
+
+    def run(self, args: Sequence[str]) -> subprocess.CompletedProcess[str]:
+        cmd = list(args)
+        self.calls.append(cmd)
+        step = self._step(cmd)
+        if step == "create" and self.create_fails_after_opening:
+            self.open_prs.append(len(self.open_prs) + 1)
+            return subprocess.CompletedProcess(cmd, 1, "", "HTTP 502")
+        if step == self.fail:
+            return subprocess.CompletedProcess(cmd, 1, "", "boom")
+        out = ""
+        if cmd[:4] == ["git", "diff", "--quiet", "--"]:
+            return subprocess.CompletedProcess(cmd, 1 if self.lock_changed else 0, "", "")
+        if cmd[:2] == ["git", "diff"]:
+            out = LOCK_DIFF
+        elif step == "push":
+            self.pushes += 1
+        elif step == "list":
+            out = str(self.open_prs[0]) if self.open_prs else ""
+        elif step == "create":
+            self.open_prs.append(len(self.open_prs) + 1)
+            self.bodies.append(cmd[cmd.index("--body") + 1])
+        elif step == "edit":
+            self.bodies.append(cmd[cmd.index("--body") + 1])
+        elif step == "dispatch":
+            self.dispatches += 1
+        return subprocess.CompletedProcess(cmd, 0, out, "")
+
+    def heal(self) -> None:
+        self.fail = None
+        self.create_fails_after_opening = False
+
+
+def test_no_lockfile_change_pushes_and_opens_nothing() -> None:
+    gh = FakeGitHub(lock_changed=False)
+    assert open_pr(gh.run) == "unchanged"
+    assert gh.calls == [["git", "diff", "--quiet", "--", "uv.lock"]]
+
+
+def test_a_change_opens_one_pr_and_dispatches_ci() -> None:
+    gh = FakeGitHub()
+    assert open_pr(gh.run) == "created"
+    assert (gh.open_prs, gh.pushes, gh.dispatches) == ([1], 1, 1)
+
+
+def test_running_twice_opens_at_most_one_pr() -> None:
+    gh = FakeGitHub()
+    open_pr(gh.run)
+    assert open_pr(gh.run) == "updated"
+    assert gh.open_prs == [1]
+    assert gh.dispatches == 2
+
+
+def test_an_existing_open_pr_is_reused() -> None:
+    gh = FakeGitHub(open_prs=[7])
+    assert open_pr(gh.run) == "updated"
+    assert gh.open_prs == [7]
+    assert ["gh", "pr", "create"] not in [c[:3] for c in gh.calls]
+
+
+@pytest.mark.parametrize("step", STEPS)
+def test_any_one_step_failing_leaves_at_most_one_pr_and_a_rerun_recovers(step: str) -> None:
+    gh = FakeGitHub(fail=step, open_prs=[3] if step == "edit" else [])
+    with pytest.raises(StepFailedError, match=step):
+        open_pr(gh.run)
+    assert len(gh.open_prs) <= 1
+    gh.heal()
+    open_pr(gh.run)
+    assert len(gh.open_prs) == 1
+    assert gh.dispatches >= 1
+
+
+def test_a_create_that_errors_but_opened_the_pr_is_not_repeated() -> None:
+    gh = FakeGitHub(create_fails_after_opening=True)
+    assert open_pr(gh.run) == "updated"
+    assert gh.open_prs == [1]
+    assert gh.dispatches == 1
+
+
+def test_the_pr_body_lists_the_changed_names_and_versions() -> None:
+    gh = FakeGitHub()
+    open_pr(gh.run)
+    assert gh.bodies == [
+        "## Changed packages\n\n```diff\n"
+        '-name = "httpx"\n+name = "httpx"\n-version = "0.28.0"\n+version = "0.28.1"\n'
+        "```\n"
+    ]
+
+
+def test_the_commands_match_the_old_inline_script() -> None:
+    gh = FakeGitHub()
+    open_pr(gh.run)
+    files = ["uv.lock", "requirements/prefect-run.txt", "requirements/watchdog.txt"]
+    title = "chore(deps): weekly uv lock --upgrade"
+    expected = [
+        ["git", "diff", "--quiet", "--", "uv.lock"],
+        ["gh", "auth", "setup-git"],
+        ["git", "config", "user.name", "github-actions[bot]"],
+        [
+            "git",
+            "config",
+            "user.email",
+            "41898282+github-actions[bot]@users.noreply.github.com",
+        ],
+        ["git", "switch", "-C", BRANCH],
+        ["git", "commit", "--quiet", "-m", title, "--", *files],
+        ["git", "push", "--force", "origin", BRANCH],
+        ["git", "diff", "HEAD~1", "--", "uv.lock"],
+        [
+            "gh",
+            "pr",
+            "list",
+            "--head",
+            BRANCH,
+            "--state",
+            "open",
+            "--json",
+            "number",
+            "--jq",
+            ".[0].number // empty",
+        ],
+        [
+            "gh",
+            "pr",
+            "create",
+            "--base",
+            "main",
+            "--head",
+            BRANCH,
+            "--title",
+            title,
+            "--body",
+            gh.bodies[0],
+        ],
+        ["gh", "workflow", "run", "ci.yml", "--ref", BRANCH],
+    ]
+    assert gh.calls == expected
+
+
+def test_no_command_carries_a_token() -> None:
+    gh = FakeGitHub()
+    open_pr(gh.run)
+    assert not [c for c in gh.calls if any("token" in a.lower() for a in c)]
+
+
+def test_the_module_needs_only_the_standard_library() -> None:
+    tree = ast.parse(Path(uv_lock_pr.__file__).read_text(encoding="utf-8"))
+    roots: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            roots.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            roots.add(node.module.split(".")[0])
+    assert roots
+    assert roots <= set(sys.stdlib_module_names)

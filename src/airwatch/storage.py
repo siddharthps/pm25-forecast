@@ -18,10 +18,12 @@ from typing import TYPE_CHECKING, Any
 
 from botocore.exceptions import ClientError
 
+from airwatch.errors import ReportableError
+
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client
 
-__all__ = ["S3Store"]
+__all__ = ["S3Store", "WriteConflictError"]
 
 HTTP_PRECONDITION_FAILED = 412
 HTTP_CONFLICT = 409
@@ -32,6 +34,10 @@ def _status(exc: ClientError) -> int | None:
     meta: dict[str, Any] = exc.response.get("ResponseMetadata", {})  # type: ignore[assignment]
     status = meta.get("HTTPStatusCode")
     return int(status) if status is not None else None
+
+
+class WriteConflictError(ReportableError):
+    """A conditional write kept conflicting (409) after every retry."""
 
 
 class S3Store:
@@ -74,7 +80,7 @@ class S3Store:
                     raise
                 if attempt == CONFLICT_ATTEMPTS:
                     msg = f"conditional write kept conflicting (409) after {attempt} attempts"
-                    raise RuntimeError(msg) from None
+                    raise WriteConflictError(msg) from None
                 time.sleep(self._pause * attempt)
             else:
                 return True

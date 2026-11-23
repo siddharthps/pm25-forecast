@@ -107,6 +107,7 @@ def test_each_index_falls_in_one_category(aqi: int, name: str) -> None:
         ("Good", "#000000"),
         ("Moderate", "#000000"),
         ("Unhealthy for Sensitive Groups", "#000000"),
+        pytest.param("Unhealthy", "#000000", id="red: black 5.25 to 1 beats white 4.0 to 1"),
         ("Very Unhealthy", "#ffffff"),
         ("Hazardous", "#ffffff"),
     ],

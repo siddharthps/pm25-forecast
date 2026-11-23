@@ -13,9 +13,12 @@ import dataclasses
 import json
 import logging
 import sys
+import threading
+import urllib.error
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime, timedelta
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
@@ -482,3 +485,68 @@ def test_a_long_bad_value_is_cut_short_in_the_email(aws: Aws) -> None:
         _handle(aws, {"mode": "retry", "scheduled_time": "x" * 500})
     [email] = aws.emails()
     assert "x" * 61 not in email["message"]
+
+
+@dataclass
+class LocalPrefect:
+    """A real HTTP server on 127.0.0.1 that answers `status`, or drops the connection if None."""
+
+    url: str
+    status: int | None = 201
+    seen: list[tuple[str, str, bytes, dict[str, str]]] = field(default_factory=list)
+
+
+@pytest.fixture
+def local_prefect() -> Iterator[LocalPrefect]:
+    state = LocalPrefect(url="")
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            body = self.rfile.read(int(self.headers["Content-Length"]))
+            state.seen.append((self.command, self.path, body, dict(self.headers)))
+            if state.status is None:
+                self.close_connection = True
+                return
+            reply = json.dumps(RUN).encode()
+            self.send_response(state.status)
+            self.send_header("Content-Length", str(len(reply)))
+            self.end_headers()
+            self.wfile.write(reply)
+
+        def log_message(self, *_: Any) -> None:
+            pass
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    state.url = f"http://127.0.0.1:{server.server_address[1]}/create_flow_run"
+    thread = threading.Thread(target=server.serve_forever, args=(0.01,), daemon=True)
+    thread.start()
+    yield state
+    server.shutdown()
+    server.server_close()
+    thread.join()
+
+
+@pytest.mark.parametrize(
+    ("status", "body"),
+    [(201, json.dumps(RUN).encode()), (200, json.dumps(RUN).encode()), (401, b"{}"), (500, b"{}")],
+    ids=["created", "already-started", "refused", "server-error"],
+)
+def test_the_real_sender_returns_the_status_prefect_answered(
+    local_prefect: LocalPrefect, status: int, body: bytes
+) -> None:
+    """urllib raises on 4xx/5xx; the sender turns that back into a status for the email rules."""
+    local_prefect.status = status
+    sent = b'{"parameters": {"publish": true}}'
+    headers = {"Authorization": f"Bearer {KEY}", "Content-Type": "application/json"}
+    assert wd._urllib_post(local_prefect.url, sent, headers) == (status, body)
+    [(method, path, received, got_headers)] = local_prefect.seen
+    assert (method, path, received) == ("POST", "/create_flow_run", sent)
+    assert got_headers["Authorization"] == f"Bearer {KEY}"
+
+
+def test_the_real_sender_lets_a_dropped_connection_raise(local_prefect: LocalPrefect) -> None:
+    """Not a status: the watchdog reports it as "Prefect didn't answer" and fails."""
+    local_prefect.status = None
+    with pytest.raises(OSError) as caught:
+        wd._urllib_post(local_prefect.url, b"{}", {})
+    assert not isinstance(caught.value, urllib.error.HTTPError)

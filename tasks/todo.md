@@ -70,6 +70,7 @@ line** (2026-12-16) · **D: Complete**.
 | [#87](https://github.com/siddharthps/pm25-forecast/issues/87) | Leakage property: why the unfinished-day test discards 1,220 of 3,220 examples | #59 | C |
 | [#88](https://github.com/siddharthps/pm25-forecast/issues/88) | One process-zone test helper for the time-zone tests (after #52 and #42 merge) | #42 | C |
 | [#98](https://github.com/siddharthps/pm25-forecast/issues/98) | Test suite: fix a CI flake and strengthen five weak assertions (audit group 1) | the 2026-11-22 test-suite audit | C |
+| [#99](https://github.com/siddharthps/pm25-forecast/issues/99) | Test suite: cover the untested error paths and boundaries (audit group 2) | the 2026-11-22 test-suite audit | C |
 
 The **State** column is a snapshot. GitHub is the source of truth, and this column is not kept in
 sync.

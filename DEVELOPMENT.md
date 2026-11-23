@@ -32,6 +32,22 @@ uv run pre-commit run vale --all-files # the style sheet's banned words (notes/S
 
 CI also runs lychee over `site_build/` as the separate link and anchor checker (D-016).
 
+## Mutation testing (Linux only: WSL or CI; D-048)
+
+mutmut needs `fork`, so on this PC it runs in WSL, from a clone in the Linux home folder (the
+Windows `.venv` can't be shared, and `/mnt/c` is slow). WSL's uv must meet the pyproject floor;
+if it doesn't, prefix each `uv` with `uvx --from uv==<floor>`. The paths it mutates are in
+`pyproject.toml`'s `[tool.mutmut]`: add a module by extending `only_mutate`.
+
+```bash
+uv sync --frozen && uv run mutmut run  # in WSL; about 2 min for timeutil and config
+uv run mutmut results                  # every mutant not killed; `uv run mutmut show <name>` for one
+gh workflow run mutmut.yml --ref <branch>  # the same on GitHub (UTC); results in the run's summary
+```
+
+Each survivor is killed by a new test or explained in the journal. Run it after changing a
+mutated module, before its merge.
+
 ## Data, forecast and AWS
 
 ```bash

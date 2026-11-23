@@ -1501,6 +1501,35 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
 
 ---
 
+## D-048 · 2026-11-22 · Mutation testing: mutmut 3, on demand in CI or WSL, never blocking (#42)
+
+- **Tool:** mutmut 3.8.1 (PyPI, 2026-10-28), a dev dependency. It needs `fork`, so it runs on
+  Linux only: GitHub's runners, or WSL on the owner's PC.
+- **Where (owner's choice):** a hand-started GitHub job (`.github/workflows/mutmut.yml`,
+  dispatch only) that lists the survivors in its summary, and the same command in WSL
+  (DEVELOPMENT.md). Run after changing a mutated module, before its merge. It never blocks a
+  merge, since a survivor needs a judgement: killed by a new test, or explained in the journal.
+- **Why both:** they run in different zones. WSL runs on Chicago time, CI on UTC. The first run
+  found two `issue_time_utc` mutants that passed only because WSL's zone equals the issue zone;
+  tests now move the process zone (POSIX only).
+- **Scope:** `src/airwatch/timeutil.py` and `src/airwatch/config.py` (`[tool.mutmut]`); T15
+  extends `only_mutate` with `features/`, `forecast/record.py` and `training/split.py`.
+- **The copy:** mutmut tests a copy of the repo, so `also_copy` lists every tracked top-level
+  entry (a test keeps that list complete). Two repository checks are deselected inside the
+  copy only, because they check the repo itself and the copy's `src/` is mutmut's generated
+  code: the comment-ban baseline, and the `also_copy` test (the copy has no git). Both still
+  run in the normal suite. This scopes checks away from generated files, as D-029 allows.
+- **First run (2026-11-22, WSL, 12 CPUs):** 65 mutants, 2 min 3 s; 51 killed, 14 survived.
+  Three were real gaps, now killed (the two above, and a `tzinfo` whose offset is `None`). The
+  other 11 change only an error message's text, which the tests deliberately don't pin. After
+  the new tests: 54 killed, 11 survived, 1 min 50 s.
+- **Alternatives:** a weekly scheduled run as well (a job to watch, and GitHub's cron can be
+  late or dropped); WSL only (depends on remembering, and tests only Chicago time). Both
+  offered, not chosen.
+- **Status:** Active. Owner's choice, 2026-11-22.
+
+---
+
 ## Open questions (to settle, then move into a D-entry)
 
 - Further open items are listed in [SPEC.md](SPEC.md) § Open Questions.

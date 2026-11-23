@@ -109,7 +109,7 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
   merged #74, 2026-11-21)
 - [x] T11: Bottom line + outline + style sheet (Vale), docs stub, `results.json` number check,
   README skeleton (D-022) (merged #84, 2026-11-22 UTC)
-- [ ] #83: Core test suite back under its 30 s budget
+- [x] #83: Core test suite back under its 30 s budget (D-046; merged #85, 2026-11-22 UTC)
 
 ### Checkpoint B: Skeleton live (2026-11-25), plus the D-014 review
 

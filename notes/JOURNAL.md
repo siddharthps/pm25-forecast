@@ -1415,3 +1415,97 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   can't conflict between two PRs. Tick #83 in plan.md once it's merged.
 - 2026-11-22 after 09:15 CST: the morning check, then close #75.
 - Then T14 (weather ingestion, with #78); the D-014 review by 2026-11-25.
+
+## 2026-11-22: the morning check, then milestone B's small issues (CST, 12:25–13:40, 20:00–20:15)
+
+- **The 06:00 run, `nano-pony`,** ended Completed. Its log reads
+  `2026-11-23: recorded, 10 monitor(s), 0 without a valid day (published: True)`; about 3 minutes,
+  15 of 500 this month.
+- **The first real score:** the same run logged `2026-11-20: scored, 10 monitor(s)`. In the public
+  `history.json`, 2026-11-20 has a `score` block: 10 scored, none without an actual. Its MAE and
+  bias match a hand recomputation from the ten per-monitor errors (error = forecast − actual).
+- **The page** loads (HTTP 200). `latest.json` (12:01:41 UTC) and `history.json` (12:01:51 UTC) are
+  served with the page's CORS origin; `latest.json` shows 2026-11-23.
+- **The watchdog stayed silent:** at 08:00 (retry) and 09:00 (verify), both logged
+  `target_day 2026-11-23, record present`. The error alarm stayed OK, last changed 2026-11-21
+  15:16 UTC. #75's last box ticked, and #75 closed with this evidence.
+- **#83 ticked** in plan.md and todo.md (merged #85, 2026-11-22 06:36 UTC, D-046).
+- **The owner's order for the rest of Phase 2:** the small issues and milestone A's two first;
+  the D-014 review last. One branch per issue, none touching this journal (the session's entry
+  lives here, on `83-tick-merged`), so the PRs can't conflict on it.
+  - **#58** (`58-publish-test-ids`): schema cases named by `pytest.param` ids; a static test bans a
+    bare `assert <param>` (it found exactly the two cases first).
+  - **#59** (`59-leakage-assume`): `assume()` for an all-late draw. Hypothesis statistics showed
+    the property mostly tested the trivial branch: 94% of examples (97% under `explore`) left both
+    sites under 18 hours. Late rows are now a set of positions: 90% compare forecasts (95% under
+    `explore`). A planted one-hour leak fails, shrunk to one row one second late (the old
+    strategy caught that one too; the gain is coverage).
+  - **#56** (`56-failure-log-type-only`): `failure_line` prints the message only for a
+    `ReportableError` (new marker base for our own errors); the two bare `RuntimeError`s on the
+    run's path got named classes. All four foreign-value cases fail on the old line.
+  - **#52** (`52-utc-logging`): `airwatch.logutil.configure()`, lines like
+    `2026-11-22T18:57:57.305Z ...`. The issue named three callers; `forecast.run`'s `main` was a
+    fourth. Red on the old formatter; the real-`tzset` test ran on Linux (WSL), 9 passed.
+  - **#57** (`57-airnow-poc`): AirNow's POC is `POC_NOT_GIVEN = -1`, enforced by the schema
+    (owner's choice, D-047). EPA's formats allow 0; our AQS history before 2025 is all POC 3
+    (1,080,807 rows); the live AirNow test passes.
+  - **#43** (`43-uv-lock-script`): the job's push/PR/dispatch moved into
+    `airwatch.devtools.uv_lock_pr`, run by path with no project installed. A test pins the old
+    script's exact command sequence. Fake `git`/`gh` tests cover reruns and each step failing;
+    five fail with the reuse guard removed. New: a create that errors is checked by listing again.
+  - **#42** (`42-mutmut`, on top of `57-airnow-poc` so D-047 and D-048 can't conflict): mutmut
+    3.8.1, on demand in CI or WSL (owner's choice, D-048). **First timed run** (WSL, 12 CPUs):
+    65 mutants, 2 min 3 s, 51 killed, 14 survived. Killed with new tests: two `issue_time_utc`
+    mutants (zone dropped) that passed only because WSL runs on Chicago time, and a `tzinfo`
+    whose offset is `None`. **Explained:** the other 11 change only error-message text
+    (`config._zone` 8, `aqs_credentials` 1, `_require_date` 2), which the tests don't pin by
+    design. After: 54 killed, 11 survived, 1 min 50 s.
+  - **#3** (`3-tokens-register`): TOKENS.md gains the GitHub CLI login and `GITHUB_TOKEN` (GitHub
+    docs read 2026-11-22). `sts get-caller-identity` shows the Identity Center
+    `AdministratorAccess` role. Its last box waits for 2026-11-25.
+- **All nine branches merged together** in a scratch worktree: 666 passed, Ruff and mypy clean.
+  Every pair also merges without conflict.
+- **The owner delegated the open choices** (about 13:35: "you choose what is best and let me
+  know"). Chosen: PRs for all nine branches, CI waited for by PR number, merges left to the
+  owner; the three findings filed as #86 (scheduled run's error by type), #87 (the
+  unfinished-day property's invalid examples) and #88 (one process-zone test helper), all in
+  milestone C so Phase 2 doesn't grow; #78 moved to milestone C (label phase-3), matching
+  todo.md. #3's "pipeline's narrow identity" box ticked after reading the role back:
+  `pm25-forecast-prefect-run`, one attached policy `pm25-forecast-pipeline`.
+- **CLAUDE.md** gained three rules from today: errors by type through `ReportableError`; this
+  PC and WSL sit on the issue zone, so zone tests move the process zone; and how to run several
+  issue branches in one session without journal or D-entry conflicts.
+
+- **Merged (owner's go, about 20:00 CST, after a pause):** #89–#94 and #96 as squash merges;
+  #95 after merging `main` into its branch (D-048 against #93's squashed D-047, the only
+  conflict) and a fresh CI run; this records PR #97 last. The closed issues' boxes ticked; #43
+  and #3 keep one open box each.
+
+### Traps found
+
+- **Prefect's CLI log output contains a non-ASCII byte (`µ`),** so `grep` called it a binary file
+  and dropped the scoring line. `grep -a` reads it as text.
+- **`aws logs filter-log-events --output text` splits multi-line messages,** which breaks
+  line-by-line parsing. Read `--output json` instead, and compute epoch start times in code, not
+  by hand (a hand-typed one returned nothing).
+- **The AWS SSO session had expired** (it lasts 8 hours). A morning check needs
+  `aws sso login --profile pm25` first.
+- **A green property can test little:** only `--hypothesis-show-statistics` with an `event()` per
+  branch showed #59's 94%. The same view shows the unfinished-day property discarding 1,220 of
+  3,220 examples under `explore`, cause not yet known.
+- **A test machine on the issue zone hides zone bugs:** this PC and WSL both run on Chicago time.
+  Tests that matter move the process zone (`TZ` + `tzset`, POSIX only, so WSL and CI).
+- **mutmut runs the suite in a copy:** with only `tests/` copied, every mutant stayed "not
+  checked" in a few seconds (the clean run failed). Read `mutmut results` before trusting a run.
+- **Windows can't delete a deep worktree** ("Filename too long"); `Remove-Item` with the `\\?\`
+  prefix can, then `git worktree prune`.
+
+### Next
+
+- Tonight, Monday 06:17 UTC (00:17 CST): the first scheduled lock run, and the first with the
+  new module (#94 is on `main`). Check that it opened or updated one PR with CI; that closes #6
+  and #43's last box.
+- 2026-11-25: #3's old key and IAM user deleted, the owner confirming first. Then the D-014
+  timeline review, the last item of Checkpoint B.
+- Follow-ups filed: #86, #87, #88 (milestone C); #88 is unblocked once #95 is merged.
+- Then T14 (weather ingestion, with #78).

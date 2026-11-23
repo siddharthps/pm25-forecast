@@ -69,16 +69,14 @@ def _ledger(s3: Any) -> list[str]:
 
 
 def test_a_scheduled_run_forecasts_publishes_and_logs_its_minutes(s3: Any) -> None:
+    """No target day is passed, so the job forecasts the latest one due."""
     outcome = _job(s3, publish=True)
     assert outcome.run.status == "recorded"
+    assert outcome.run.record["forecast_date"] == TARGET.isoformat()
     assert object_versions(s3, PRIVATE, record_key(TARGET)) == 1
     assert object_versions(s3, PUBLIC, LATEST_KEY) == 1
     assert outcome.usage.minutes == 4 + TEARDOWN_PAD_MIN
     assert _ledger(s3) == [f"{PREFIX}month=2026-11/run={RUN}.json"]
-
-
-def test_the_target_defaults_to_the_latest_due(s3: Any) -> None:
-    assert _job(s3, publish=True).run.record["forecast_date"] == TARGET.isoformat()
 
 
 def test_a_manual_dry_run_writes_only_its_minutes(s3: Any) -> None:

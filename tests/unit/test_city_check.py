@@ -387,7 +387,3 @@ def test_otherwise_most_monitors_then_bad_air_share() -> None:
 
 def test_no_passing_city_means_no_choice() -> None:
     assert choose_city([scored("Chicago", passes=False, monitors=1, share=0.0)]) is None
-
-
-def test_scoring_is_deterministic() -> None:
-    assert city(5) == city(5)

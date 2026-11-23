@@ -52,27 +52,6 @@ def test_a_line_shows_utc_with_a_z_while_local_time_is_chicago(
     assert _line_at(created) == "2026-11-22T12:01:40.540Z hello"
 
 
-@pytest.mark.parametrize(
-    ("utc", "expected"),
-    [
-        pytest.param(
-            datetime(2026, 11, 1, 6, 30, tzinfo=UTC), "2026-11-01T06:30:00.000Z", id="01:30 CDT"
-        ),
-        pytest.param(
-            datetime(2026, 11, 1, 7, 30, tzinfo=UTC), "2026-11-01T07:30:00.000Z", id="01:30 CST"
-        ),
-        pytest.param(
-            datetime(2026, 3, 8, 8, 30, tzinfo=UTC), "2026-03-08T08:30:00.000Z", id="spring gap"
-        ),
-    ],
-)
-def test_a_dst_change_in_the_local_zone_changes_nothing(
-    monkeypatch: pytest.MonkeyPatch, utc: datetime, expected: str
-) -> None:
-    monkeypatch.setattr(logging.Formatter, "converter", staticmethod(_chicago_clock))
-    assert _line_at(utc.timestamp()) == f"{expected} hello"
-
-
 def test_a_real_process_zone_change_changes_nothing() -> None:
     tzset = getattr(time, "tzset", None)
     if tzset is None:

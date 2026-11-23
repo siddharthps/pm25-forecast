@@ -33,6 +33,9 @@ def _reference(utc: datetime) -> str:
 @example(utc=datetime(2026, 11, 1, 6, 59, 59, 999_000, tzinfo=UTC), zone=ZONES[0])
 @example(utc=datetime(2026, 11, 1, 7, 0, tzinfo=UTC), zone=ZONES[0])
 @example(utc=datetime(2026, 3, 8, 8, 0, tzinfo=UTC), zone=ZONES[0])
+@example(utc=datetime(2026, 11, 1, 6, 30, tzinfo=UTC), zone=ZONES[0])
+@example(utc=datetime(2026, 11, 1, 7, 30, tzinfo=UTC), zone=ZONES[0])
+@example(utc=datetime(2026, 3, 8, 8, 30, tzinfo=UTC), zone=ZONES[0])
 def test_the_line_shows_the_utc_instant_in_any_local_zone(utc: datetime, zone: ZoneInfo) -> None:
     def local_clock(t: float | None) -> time.struct_time:
         return datetime.fromtimestamp(time.time() if t is None else t, zone).timetuple()

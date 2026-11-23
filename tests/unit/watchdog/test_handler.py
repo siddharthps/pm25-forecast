@@ -169,9 +169,11 @@ def test_record_absent_starts_one_publishing_run_then_emails(aws: Aws) -> None:
     assert body["parameters"] == {"publish": True, "target_day": "2026-11-22"}
     assert body["idempotency_key"] == "watchdog-2026-11-22"
     assert headers["Authorization"] == f"Bearer {KEY}"
+    assert body["tags"] == ["watchdog"]
     [email] = aws.emails()
     assert "2026-11-22" in email["message"]
     assert "rose-ocelot" in email["message"]
+    assert "DRILL" not in email["subject"]
 
 
 def test_a_run_already_started_by_an_earlier_attempt_is_reported_not_repeated(aws: Aws) -> None:
@@ -437,14 +439,6 @@ def test_a_drill_uses_its_own_key_and_says_drill(aws: Aws) -> None:
     assert body["parameters"] == {"publish": True, "target_day": "2026-11-23"}
     [email] = aws.emails()
     assert "DRILL" in email["subject"]
-
-
-def test_a_real_retry_never_uses_a_drill_key(aws: Aws) -> None:
-    prefect = FakePrefect(status=201)
-    _handle(aws, RETRY, prefect)
-    [(_, body, _)] = prefect.calls
-    assert "drill" not in body["idempotency_key"]
-    assert "DRILL" not in aws.emails()[0]["subject"]
 
 
 def test_a_drill_retry_for_an_issued_day_is_refused_before_starting_anything(aws: Aws) -> None:

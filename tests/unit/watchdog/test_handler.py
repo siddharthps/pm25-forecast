@@ -464,7 +464,8 @@ def test_a_drill_verify_may_check_any_day(aws: Aws) -> None:
 def test_drill_must_be_a_boolean(aws: Aws) -> None:
     with pytest.raises(wd.WatchdogError, match="drill"):
         _handle(aws, {**RETRY, "drill": "yes"})
-    assert aws.emails()
+    [email] = aws.emails()
+    assert "watchdog" in email["subject"].lower()
 
 
 def test_a_placeholder_left_by_the_scheduler_is_named_in_the_email(aws: Aws) -> None:

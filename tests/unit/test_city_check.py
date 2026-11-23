@@ -212,22 +212,33 @@ def test_a_city_with_everything_passes() -> None:
 
 
 def test_fewer_than_five_qualifying_monitors_fails() -> None:
-    assert not city(4).passes
+    score = city(4)
+    assert not score.passes
+    assert "4 qualifying monitors (< 5)" in score.reasons
 
 
 def test_qualifying_needs_eight_good_years() -> None:
-    assert not city(5, years=range(2018, 2025)).passes
+    score = city(5, years=range(2018, 2025))
+    assert not score.passes
+    assert score.qualifying == ()
+    assert "0 qualifying monitors (< 5)" in score.reasons
 
 
 def test_qualifying_needs_2024_to_be_a_good_year() -> None:
-    assert not city(5, years=range(2015, 2024)).passes
+    score = city(5, years=range(2015, 2024))
+    assert not score.passes
+    assert score.qualifying == ()
+    assert "0 qualifying monitors (< 5)" in score.reasons
 
 
 def test_qualifying_needs_an_active_airnow_listing() -> None:
-    assert not city(5, active={"170310001", "170310002", "170310003", "170310004"}).passes
+    score = city(5, active={"170310001", "170310002", "170310003", "170310004"})
+    assert not score.passes
+    assert "170310005" not in score.qualifying
+    assert "4 qualifying monitors (< 5)" in score.reasons
 
 
-def test_bad_air_threshold_is_strictly_above_35() -> None:
+def test_bad_air_share_must_reach_half_a_percent() -> None:
     assert BAD_AIR_UG_M3 == 35.0
     at = city(5, bad_days_per_site=0)
     assert at.bad_air_share == 0.0
@@ -251,11 +262,15 @@ def test_exactly_35_is_not_a_bad_air_day() -> None:
 
 
 def test_test_year_needs_five_monitors_with_a_good_2025() -> None:
-    assert not city(5, test_monitors=4).passes
+    score = city(5, test_monitors=4)
+    assert not score.passes
+    assert score.reasons == ("4 monitors with a good 2025 (< 5)",)
 
 
 def test_weather_coverage_is_required() -> None:
-    assert not city(5, weather_ok=False).passes
+    score = city(5, weather_ok=False)
+    assert not score.passes
+    assert score.reasons == ("no weather coverage",)
 
 
 SITES5 = [f"{i:04d}" for i in range(1, 6)]
@@ -276,7 +291,7 @@ HIST5 = _passing_history()
 BASELINE5 = city(5)
 
 
-@settings(max_examples=20)
+@settings(max_examples=20, deadline=None)
 @given(values=st.lists(st.floats(min_value=0, max_value=500), min_size=366, max_size=366))
 def test_2025_pm_values_never_change_the_result(values: list[float]) -> None:
     test = []

@@ -150,11 +150,20 @@ def _fetch_down(_: date) -> tuple[pd.DataFrame, dict[str, int]]:
     raise RuntimeError("AirNow down")
 
 
-STEPS = ["fetch", "validate", "compute", "report", "record", "publish"]
+STEPS = [
+    ("fetch", RuntimeError, "AirNow down"),
+    ("validate", ValidationFailedError, "hard validation failure"),
+    ("compute", NoForecastError, "no monitor"),
+    ("report", RuntimeError, "storage down"),
+    ("record", RuntimeError, "storage down"),
+    ("publish", RuntimeError, "storage down"),
+]
 
 
-@pytest.mark.parametrize("step", STEPS)
-def test_a_failure_at_any_step_acts_at_most_once(s3: Any, step: str) -> None:
+@pytest.mark.parametrize(("step", "error", "message"), STEPS, ids=[s[0] for s in STEPS])
+def test_a_failure_at_any_step_acts_at_most_once(
+    s3: Any, step: str, error: type[Exception], message: str
+) -> None:
     df = observed_day()
     fetch = fetcher(df)
     private: S3Store = S3Store(s3, PRIVATE)
@@ -170,12 +179,11 @@ def test_a_failure_at_any_step_acts_at_most_once(s3: Any, step: str) -> None:
     else:
         public = Failing(s3, PUBLIC, "")
 
-    with pytest.raises((RuntimeError, ValidationFailedError, NoForecastError)):
+    with pytest.raises(error, match=message) as caught:
         run(s3, fetch=fetch, private=private, public=public)
+    assert type(caught.value) is error
 
     assert object_versions(s3, PRIVATE, RECORD) == (1 if step == "publish" else 0)
-    if stored(s3, PUBLIC, LATEST_KEY) is not None:
-        assert stored(s3, PRIVATE, RECORD) is not None
     assert stored(s3, PUBLIC, LATEST_KEY) is None
 
     outcome = run(s3, fetch=fetcher(df), now=NOW + timedelta(minutes=30))

@@ -72,6 +72,7 @@ line** (2026-12-16) · **D: Complete**.
 | [#98](https://github.com/siddharthps/pm25-forecast/issues/98) | Test suite: fix a CI flake and strengthen five weak assertions (audit group 1) | the 2026-11-22 test-suite audit | C |
 | [#99](https://github.com/siddharthps/pm25-forecast/issues/99) | Test suite: cover the untested error paths and boundaries (audit group 2) | the 2026-11-22 test-suite audit | C |
 | [#100](https://github.com/siddharthps/pm25-forecast/issues/100) | Test suite: remove or merge 14 redundant cases (audit group 3) | the 2026-11-22 test-suite audit | C |
+| [#101](https://github.com/siddharthps/pm25-forecast/issues/101) | Remove the unreachable last line of _retryable (metadata.py) | #99 (the 2026-11-22 test-suite audit) | C |
 
 The **State** column is a snapshot. GitHub is the source of truth, and this column is not kept in
 sync.

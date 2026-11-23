@@ -17,7 +17,7 @@ import pytest
 from botocore.exceptions import ClientError
 from moto import mock_aws
 
-from airwatch.storage import S3Store
+from airwatch.storage import S3Store, WriteConflictError
 
 BUCKET = "test-private-bucket"
 
@@ -81,7 +81,7 @@ def test_a_409_conflict_is_retried(s3: Any) -> None:
 
 def test_repeated_409s_give_up_with_an_error(s3: Any) -> None:
     store = S3Store(cast(Any, Flaky(s3, conflicts=10)), BUCKET, retry_pause_s=0)
-    with pytest.raises(RuntimeError, match="409"):
+    with pytest.raises(WriteConflictError, match="409"):
         store.create_if_absent("records/z.json", b"data")
 
 

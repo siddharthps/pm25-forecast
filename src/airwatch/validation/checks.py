@@ -38,6 +38,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pandas as pd
 
+from airwatch.errors import ReportableError
 from airwatch.observations.schema import validate_hourly
 from airwatch.observations.sites import VERIFIED_METHODS
 from airwatch.timeutil import ensure_utc, local_day_window_utc
@@ -100,7 +101,7 @@ class Window:
             raise ValueError("window start must be before its end")
 
 
-class ValidationFailedError(RuntimeError):
+class ValidationFailedError(ReportableError):
     """At least one hard rule caught something. The message names rules and counts only."""
 
 

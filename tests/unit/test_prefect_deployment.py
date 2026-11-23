@@ -13,6 +13,7 @@ from typing import Any
 
 import yaml
 
+from airwatch.devtools import uv_lock_pr
 from airwatch.timeutil import ISSUE_HOUR_LOCAL, ISSUE_TZ
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -150,7 +151,8 @@ def test_the_weekly_lock_upgrade_regenerates_the_requirements_too() -> None:
     runs = [str(s.get("run", "")) for job in workflow["jobs"].values() for s in job["steps"]]
     upgrade = next(i for i, r in enumerate(runs) if r.strip() == "uv lock --upgrade")
     assert runs[upgrade + 1].strip() == " ".join(EXPORT) + " > requirements/prefect-run.txt"
-    assert any("-- uv.lock requirements/prefect-run.txt" in r for r in runs)
+    assert {"uv.lock", "requirements/prefect-run.txt"} <= set(uv_lock_pr.FILES)
+    assert any("src/airwatch/devtools/uv_lock_pr.py" in r for r in runs[upgrade + 1 :])
 
 
 def test_the_image_pins_the_projects_python() -> None:

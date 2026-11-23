@@ -1479,6 +1479,28 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
 
 ---
 
+## D-047 · 2026-11-22 · AirNow's missing instrument number is -1, a named marker (#57)
+
+- **The problem:** every hourly row has a `poc`, the number AQS gives each instrument at a site
+  (a non-null `int16`). AirNow gives none, and the parser wrote a bare `0`. Code that groups,
+  joins or deduplicates by `(site_id, poc)` had to know that 0 meant "unknown". EPA's formats
+  describe the POC as a one- or two-digit number, so 0 could be a real instrument.
+- **Decision:** AirNow rows carry `POC_NOT_GIVEN = -1` (`airwatch.observations.schema`), outside
+  the 0–99 range, so it can't be read as a real instrument. `validate_hourly` enforces it as
+  structure: AirNow rows must carry the marker, and AQS rows must be in 0–99.
+- **Checked against real data:** the project's AQS history before 2025 (160 site-years,
+  1,080,807 rows) has only POC 3; a live AirNow day passes the new rule.
+- **Earlier outputs:** forecast records hold only counts per rule, so none differs. The private
+  validation reports list example rows with their POC: AirNow examples read 0 up to the
+  2026-11-23 report and -1 after it.
+- **Alternatives:** keep 0 and name it (least change, but 0 is a legal POC); a nullable `Int16`
+  with `pd.NA` (pandas drops missing keys when grouping by default and can't compare them with
+  `==`, so the duplicate, flat-line and instrument checks would each need changing, and AirNow
+  rows could quietly drop out of a check). Both offered, not chosen.
+- **Status:** Active. Owner's choice, 2026-11-22.
+
+---
+
 ## Open questions (to settle, then move into a D-entry)
 
 - Further open items are listed in [SPEC.md](SPEC.md) § Open Questions.

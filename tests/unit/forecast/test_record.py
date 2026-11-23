@@ -5,7 +5,13 @@ from datetime import date
 
 import pytest
 
-from airwatch.forecast.record import encode, record_key, report_key, write_once
+from airwatch.forecast.record import (
+    RecordUnreadableError,
+    encode,
+    record_key,
+    report_key,
+    write_once,
+)
 from tests.unit.forecast.fakes import MemoryStore
 
 RECORD = {"forecast_date": "2026-11-21", "forecasts": []}
@@ -37,5 +43,5 @@ class RefusesButEmpty(MemoryStore):
 
 
 def test_a_refused_write_with_nothing_to_read_fails_loudly() -> None:
-    with pytest.raises(RuntimeError, match="not readable"):
+    with pytest.raises(RecordUnreadableError, match="not readable"):
         write_once(RefusesButEmpty(), RECORD)

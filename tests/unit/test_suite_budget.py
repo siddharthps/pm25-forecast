@@ -5,14 +5,10 @@ too much for 30 s. Unset, as on the owner's PC, nothing is timed. The plugin run
 a small inner pytest session.
 """
 
-from pathlib import Path
-
 import pytest
-import yaml
 
+from tests.repo_config import ROOT, steps, workflow
 from tests.suite_budget import ENV
-
-ROOT = Path(__file__).resolve().parents[2]
 
 SLOW = "import time\n\ndef test_slow():\n    time.sleep(0.2)\n"
 FAILING = "import time\n\ndef test_slow_and_wrong():\n    time.sleep(0.2)\n    assert False\n"
@@ -62,9 +58,7 @@ def test_a_bad_budget_is_a_usage_error(
 
 
 def test_ci_runs_the_core_suite_with_the_75_s_budget() -> None:
-    ci = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
-    steps = [s for job in ci["jobs"].values() for s in job.get("steps", [])]
-    core = [s for s in steps if s.get("name") == "Core tests with coverage"]
+    core = [s for s in steps(workflow("ci.yml")) if s.get("name") == "Core tests with coverage"]
     assert len(core) == 1
     assert core[0].get("env", {}).get(ENV) == "75"
 

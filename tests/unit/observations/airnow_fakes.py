@@ -1,4 +1,8 @@
-"""A fake AirNow file server for one or more days, built from the recorded hourly file."""
+"""The recorded AirNow hourly file (its one home), and a fake file server built from it.
+
+`PUBLISHED` is the recording's own `Last-Modified` time: AirNow published the 01:00 UTC hour at
+04:21:33 UTC.
+"""
 
 from __future__ import annotations
 
@@ -10,6 +14,7 @@ from pathlib import Path
 import httpx
 
 FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "airnow" / "HourlyAQObs_2026111901.dat"
+PUBLISHED = datetime(2026, 11, 19, 4, 21, 33, tzinfo=UTC)
 
 
 def text() -> str:

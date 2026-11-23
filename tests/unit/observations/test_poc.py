@@ -5,18 +5,13 @@ doesn't give one. `POC_NOT_GIVEN` (-1) sits outside that range, so code that gro
 deduplicates by `(site_id, poc)` can never take it for a real instrument.
 """
 
-from datetime import UTC, datetime
-from pathlib import Path
-
 import pandas as pd
 import pytest
 
 from airwatch.observations.airnow import parse_hourly_aqobs
 from airwatch.observations.schema import POC_NOT_GIVEN, validate_hourly
+from tests.unit.observations.airnow_fakes import PUBLISHED, text
 from tests.unit.validation.helpers import frame
-
-FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "airnow" / "HourlyAQObs_2026111901.dat"
-PUBLISHED = datetime(2026, 11, 19, 4, 21, 33, tzinfo=UTC)
 
 
 def test_the_marker_is_outside_every_real_poc() -> None:
@@ -24,8 +19,7 @@ def test_the_marker_is_outside_every_real_poc() -> None:
 
 
 def test_airnow_rows_carry_the_not_given_marker() -> None:
-    text = FIXTURE.read_text(encoding="utf-8")
-    df, _ = parse_hourly_aqobs(text, PUBLISHED)
+    df, _ = parse_hourly_aqobs(text(), PUBLISHED)
     assert len(df) > 0
     assert (df["poc"] == POC_NOT_GIVEN).all()
 

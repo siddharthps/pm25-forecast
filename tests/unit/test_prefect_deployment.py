@@ -5,35 +5,20 @@ run installs exactly what uv.lock says; no secret is in the file; at most 5 depl
 """
 
 import re
-import shutil
-import subprocess
 from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-import yaml
-
 from airwatch.timeutil import ISSUE_HOUR_LOCAL, ISSUE_TZ
+from tests.repo_config import PREFECT_EXPORT, ROOT, load_yaml, uv_export
 
-ROOT = Path(__file__).resolve().parents[2]
 PREFECT_YAML = ROOT / "prefect.yaml"
 REQUIREMENTS = ROOT / "requirements" / "prefect-run.txt"
-EXPORT = [
-    "uv",
-    "export",
-    "--frozen",
-    "--no-dev",
-    "--no-emit-project",
-    "--no-header",
-    "--format",
-    "requirements.txt",
-]
 HOBBY_DEPLOYMENTS = 5
 
 
 def _config() -> dict[str, Any]:
-    loaded: dict[str, Any] = yaml.safe_load(PREFECT_YAML.read_text(encoding="utf-8"))
-    return loaded
+    return load_yaml(PREFECT_YAML)
 
 
 def _daily() -> dict[str, Any]:
@@ -109,13 +94,8 @@ def test_dependencies_come_from_the_lock_export_then_the_package_alone() -> None
 
 
 def test_the_requirements_file_matches_uv_lock() -> None:
-    uv = shutil.which("uv")
-    assert uv, "uv must be on PATH"
-    out = subprocess.run(
-        [uv, *EXPORT[1:]], cwd=ROOT, capture_output=True, text=True, check=True
-    ).stdout
-    assert REQUIREMENTS.read_text(encoding="utf-8") == out, (
-        "regenerate: " + " ".join(EXPORT) + " > requirements/prefect-run.txt"
+    assert REQUIREMENTS.read_text(encoding="utf-8") == uv_export(PREFECT_EXPORT), (
+        "regenerate: " + " ".join(PREFECT_EXPORT) + " > requirements/prefect-run.txt"
     )
 
 

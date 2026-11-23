@@ -7,7 +7,6 @@ real build twice (it needs uv's cache or the network).
 import hashlib
 import os
 import re
-import shutil
 import subprocess
 import sys
 import zipfile
@@ -16,30 +15,14 @@ from pathlib import Path
 import pytest
 
 from airwatch.watchdog import build
+from tests.repo_config import ROOT, WATCHDOG_EXPORT, uv_export
 
-ROOT = Path(__file__).resolve().parents[3]
-EXPORT = [
-    "uv",
-    "export",
-    "--frozen",
-    "--only-group",
-    "watchdog",
-    "--no-emit-project",
-    "--no-header",
-    "--format",
-    "requirements.txt",
-]
 TERRAFORM = (ROOT / "infra" / "watchdog.tf").read_text(encoding="utf-8")
 
 
 def test_the_requirements_file_matches_uv_lock() -> None:
-    uv = shutil.which("uv")
-    assert uv, "uv must be on PATH"
-    out = subprocess.run(
-        [uv, *EXPORT[1:]], cwd=ROOT, capture_output=True, text=True, check=True
-    ).stdout
-    assert build.REQUIREMENTS.read_text(encoding="utf-8") == out, (
-        "regenerate: " + " ".join(EXPORT) + " > requirements/watchdog.txt"
+    assert build.REQUIREMENTS.read_text(encoding="utf-8") == uv_export(WATCHDOG_EXPORT), (
+        "regenerate: " + " ".join(WATCHDOG_EXPORT) + " > requirements/watchdog.txt"
     )
 
 

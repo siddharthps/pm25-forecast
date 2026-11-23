@@ -9,7 +9,6 @@ import csv
 import io
 import logging
 from datetime import UTC, date, datetime
-from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import httpx
@@ -27,15 +26,9 @@ from airwatch.observations.airnow import (
 from airwatch.observations.metadata import FetchError
 from airwatch.observations.schema import validate_hourly
 from airwatch.observations.sites import TRAINING_SITES
-from tests.unit.observations.airnow_fakes import day_transport, file_for_hour
+from tests.unit.observations.airnow_fakes import PUBLISHED, day_transport, file_for_hour, text
 
-FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "airnow" / "HourlyAQObs_2026111901.dat"
-PUBLISHED = datetime(2026, 11, 19, 4, 21, 33, tzinfo=UTC)
 PHOENIX = ZoneInfo("America/Phoenix")
-
-
-def text() -> str:
-    return FIXTURE.read_text(encoding="utf-8")
 
 
 def with_rows(edit: dict[str, dict[str, str]]) -> str:

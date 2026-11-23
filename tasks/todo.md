@@ -76,6 +76,8 @@ line** (2026-12-16) · **D: Complete**.
 | [#102](https://github.com/siddharthps/pm25-forecast/issues/102) | Test suite: parametrize four sets of look-alike tests (audit group 4; merged #108, 2026-11-23 UTC) | the 2026-11-22 test-suite audit | C |
 | [#103](https://github.com/siddharthps/pm25-forecast/issues/103) | Test suite: one home for repeated test setup code (audit group 5; merged #109, 2026-11-23 UTC) | the 2026-11-22 test-suite audit | C |
 | [#112](https://github.com/siddharthps/pm25-forecast/issues/112) | Mutation-test the modules that hold the must-never rules | the 2026-11-22 test-suite audit | C |
+| [#113](https://github.com/siddharthps/pm25-forecast/issues/113) | Watchdog starts the weekly uv-lock run; drop the GitHub cron | the 2026-11-23 dropped lock run | C |
+| [#115](https://github.com/siddharthps/pm25-forecast/issues/115) | Lock PR: open it with a GitHub App token so its own CI counts (PR #116) | #43 (#114's blocked merge, 2026-11-23) | B |
 
 The **State** column is a snapshot. GitHub is the source of truth, and this column is not kept in
 sync.

@@ -1605,3 +1605,46 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - Tonight's 06:17 UTC lock run (#6, #43), and #3 on 2026-11-25; then the D-014 timeline review,
   the last box of Checkpoint B.
 - #112 (milestone C): time one module under mutmut before the full run.
+
+## 2026-11-23: the dropped lock run, #114, and the lock PR's App token (CST, about 10:10 to 11:20)
+
+- **The dropped run:** `uv-lock-upgrade.yml`'s cron (Mondays 06:17 UTC) never fired on
+  2026-11-23; by 16:12 UTC the workflow had one run, the hand-started one from 2026-11-18. This is
+  the GitHub cron risk D-001 names. Filed **#113** (milestone C): the watchdog starts the weekly
+  lock run and the GitHub cron is dropped (owner's choice over a Cloudflare Worker, both $0; and
+  over keeping the cron as a backup).
+- **#114, started by hand (owner's OK):** run 45215418192 opened #114 (20 patch and minor
+  upgrades: boto3/botocore 1.44.9, pydantic 2.14.4, redis 8.2.0, ruff 0.17.6, …), and the CI it
+  dispatched passed. #43 and #6 were closed on that, then **reopened**: the merge was blocked.
+  - **Trap:** the `main` ruleset doesn't count a `workflow_dispatch` CI run, even on the PR's
+    head commit. The merge API said "4 of 4 required status checks are expected"; `gh pr merge`
+    says only "the base branch policy prohibits the merge".
+  - **Trap:** a PR opened by `GITHUB_TOKEN` *does* create `pull_request` runs, held at
+    `action_required` until a person approves them (GitHub's "Triggering a workflow" page). D-027
+    assumed no run at all. The owner's `--approve` review changed nothing; it wasn't the gap.
+  - A first guess, the ruleset's `require_extra_approval_for_unattributed_changes`, was wrong:
+    other repos report it adds nothing when the required review count is 0 (second-hand only).
+  - Fixed by approving the held run (owner's OK); its checks passed and #114 merged (`2de110c`).
+    The watchdog's zip changes with `requirements/watchdog.txt`, so the next `terraform plan`
+    shows a Lambda update.
+- **#115 (milestone B), PR #116:** the lock PR is opened with a private GitHub App's token
+  (D-049, refines D-027): `actions/create-github-app-token` v3.3.0 (v3.4.0 is inside the 7-day
+  cooldown), Contents and Pull requests write only, commits as the App's bot user, no dispatch.
+  Tests first; three planted mistakes each caught. The owner created `pm25-forecast-lock`, set
+  `LOCK_APP_CLIENT_ID` and `LOCK_APP_PRIVATE_KEY`, and the `.pem` was deleted (it was in the repo
+  folder; `.gitignore`'s `*.pem` kept it out).
+  - **Trap:** saving an App's permissions ("The GitHub App has been updated") doesn't grant them
+    to the installation; it must accept them on its Configure page. Until then the token step
+    fails with "The permissions requested are not granted to this installation" (two runs).
+  - Run 45221876228 from the branch: the token minted; `uv.lock` was already up to date, so the
+    bot id, push and the PR's own CI are still untested.
+
+### Next
+
+- Tomorrow: rerun `uv-lock-upgrade.yml` from `115-lock-pr-app-token`. A real lock PR whose own
+  CI starts with no approval, and no missing checks in the merge API, ticks #115's last box and
+  #43's (and #6); then the owner merges #116 and may turn off "Allow GitHub Actions to create
+  and approve pull requests".
+- 2026-11-25: #3's old key and IAM user deleted (owner confirms first); then the D-014 timeline
+  review, the last box of Checkpoint B, counting #113 and #115.
+- #113 after #116 merges, using the same App if the D-entry finds it fits; #112 (milestone C).

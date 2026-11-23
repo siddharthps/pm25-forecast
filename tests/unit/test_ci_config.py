@@ -180,12 +180,12 @@ def test_every_skipped_pre_commit_hook_is_checked_elsewhere_in_ci() -> None:
         assert covered_by[hook] in text, f"{hook} is skipped but nothing else in CI runs it"
 
 
-def test_ci_never_keeps_the_checkout_token() -> None:
-    for path in _workflow_files():
-        for job in _load(path)["jobs"].values():
-            for step in job.get("steps", []):
-                if str(step.get("uses", "")).startswith("actions/checkout@"):
-                    assert step.get("with", {}).get("persist-credentials") is False, path.name
+@pytest.mark.parametrize("path", _workflow_files(), ids=lambda p: p.name)
+def test_ci_never_keeps_the_checkout_token(path: Path) -> None:
+    for job in _load(path)["jobs"].values():
+        for step in job.get("steps", []):
+            if str(step.get("uses", "")).startswith("actions/checkout@"):
+                assert step.get("with", {}).get("persist-credentials") is False, path.name
 
 
 def test_coverage_floor_is_at_least_85() -> None:

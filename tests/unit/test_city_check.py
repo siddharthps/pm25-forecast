@@ -102,19 +102,11 @@ def test_co_located_instruments_are_one_monitor() -> None:
     assert day.mean == pytest.approx(30.0)
 
 
-def test_exceptional_event_days_are_kept_once() -> None:
+@pytest.mark.parametrize("excluded", ["Events Excluded", "Concurred Events Excluded"])
+def test_an_event_day_keeps_its_included_row_once(excluded: str) -> None:
     rows = [
         row(event="Events Included", mean=80.0),
-        row(event="Events Excluded", mean=12.0),
-    ]
-    (day,) = site_days(rows, keep_values=True).values()
-    assert day.mean == pytest.approx(80.0)
-
-
-def test_concurred_excluded_twin_is_dropped_and_the_included_day_kept() -> None:
-    rows = [
-        row(event="Events Included", mean=80.0),
-        row(event="Concurred Events Excluded", mean=12.0),
+        row(event=excluded, mean=12.0),
     ]
     (day,) = site_days(rows, keep_values=True).values()
     assert day.mean == pytest.approx(80.0)

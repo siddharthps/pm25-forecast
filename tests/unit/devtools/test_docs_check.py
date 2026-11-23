@@ -51,6 +51,12 @@ def test_a_typed_number_is_found_with_its_line() -> None:
         "See [the issue](https://github.com/o/r/issues/18) and <https://example.com/a1>.",
         "Read [D-008](https://example.com/x#d-008-2026-11-18).",
         "Concentrations in µg/m³.",
+        pytest.param("{{ results.items[3] }}", id="an index inside a macro"),
+        pytest.param("{{ results.design.ci_level }}%", id="a percent sign after a macro"),
+        pytest.param(
+            "{{ results.test_vs.cams.ci_low }} to {{ results.test_vs.cams.ci_high }}",
+            id="two macros in one phrase",
+        ),
     ],
 )
 def test_allowed_literals_and_macros_pass(text: str) -> None:
@@ -88,18 +94,6 @@ def test_numbers_outside_macros_fail(text: str, found: list[str]) -> None:
 )
 def test_numbers_typed_inside_a_macro_fail(text: str, found: list[str]) -> None:
     assert _numbers(text) == found
-
-
-@pytest.mark.parametrize(
-    "text",
-    [
-        "{{ results.items[3] }}",
-        "{{ results.design.ci_level }}%",
-        "{{ results.test_vs.cams.ci_low }} to {{ results.test_vs.cams.ci_high }}",
-    ],
-)
-def test_results_paths_inside_macros_pass(text: str) -> None:
-    assert _numbers(text) == []
 
 
 @given(

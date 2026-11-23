@@ -1644,11 +1644,12 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   - **Trap:** a run from an issue branch builds the lock PR on that branch, so #117 first carried
     #116's diff too. After #116 merged, a run from `main` (45227715893) force-updated it to the
     lock change alone, and its CI passed again.
+  - #117 merged (`bc69595`, owner's OK) on its own checks, with no approval and no `--admin`: the
+    first lock PR to do so. The owner then turned off "Allow GitHub Actions to create and approve
+    pull requests" (API: `can_approve_pull_request_reviews: false`, default permissions `read`).
 
 ### Next
 
-- The owner merges #117 (pydocket 0.32.0), and may turn off "Allow GitHub Actions to create and
-  approve pull requests" (D-049).
 - 2026-11-25: #3's old key and IAM user deleted (owner confirms first); then the D-014 timeline
   review, the last box of Checkpoint B, counting #113.
 - #113 (watchdog starts the lock run, using the same App if its D-entry finds it fits); #112.

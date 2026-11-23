@@ -1509,3 +1509,99 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   timeline review, the last item of Checkpoint B.
 - Follow-ups filed: #86, #87, #88 (milestone C); #88 is unblocked once #95 is merged.
 - Then T14 (weather ingestion, with #78).
+
+## 2026-11-22: the test-suite audit and its six groups (CST, about 20:15 to 21:15)
+
+- **The audit (read-only first):** all 673 core cases read and measured. Before: 22.4 s with 4
+  workers; coverage 1,794/1,810 lines (99.12%) and 390/404 branches (96.53%), 98.64% combined. The
+  suite wasn't bloated: about 14 cases were redundant. The findings were one flake, weak
+  assertions, copied setup code and about a dozen untested error paths. Report and live status:
+  a private page (artifact `7bvtahBZQc1Z4mH9xScCnK`). The owner asked for the groups one at a
+  time, each explained before any change; every group below was approved that way.
+- **Group 1, #98** (`98-test-suite-correctness`): `test_2025_pm_values_never_change_the_result`
+  failed under `--cov` (`DeadlineExceeded`; 180–224 ms per example against 200 ms) and now sets
+  `deadline=None`. Strengthened: the AirNow drop count (exact, 43), six "city fails" tests
+  (each asserts its reason), the step-failure test (one exception type and message per step;
+  the old tuple was all `RuntimeError`s), one email count. One test was renamed. A planted
+  mistake passed each old test and fails the new one.
+- **Group 2, #99** (`99-test-suite-gaps`): 20 cases for untested paths, each pinning today's
+  behaviour (no bugs found):
+  - `validate_hourly`'s refusals (new `test_schema.py`), including `available_at_utc` equal to
+    `time_utc`;
+  - an AirNow file without `Last-Modified`;
+  - the watchdog's real `_urllib_post` against a local 127.0.0.1 server;
+  - five JS-scanner cases;
+  - a `git diff` exit of 128;
+  - the Unhealthy text colour;
+  - a malformed AQS site ID.
+
+  Planted mistakes showed the first four scanner cases missed a nested-brace bug, so a fifth
+  was added. Dropped: two low-value branches, and `metadata.py:244`, which can't be reached.
+- **#101** (`101-retryable-dead-line`, owner's choice: delete): `_retryable` takes the two types
+  its caller catches; `test_fetch_json.py` passes unchanged. The only app-code change.
+- **Group 3, #100** (`100-test-suite-redundancy`): 14 cases removed or folded:
+  - `test_dst_days_are_in_range` ×6 and `DST_EXAMPLES` (no other test read the list);
+  - `test_scoring_is_deterministic` (one process can't show set-order changes);
+  - the logging DST unit test (×3), its three instants now `@example`s on the property;
+  - `test_the_target_defaults_to_the_latest_due` and `test_a_real_retry_never_uses_a_drill_key`
+    (assertions moved into a sibling);
+  - three lock-upgrade workflow tests, now one in `test_ci_config.py`.
+
+  A per-test coverage run (`--cov-context=test`, checked first on two tests known to own lines)
+  found no line or branch only these covered. Missed lines and branches were identical in every
+  file after.
+- **Group 4, #102** (`102-test-suite-parametrize`): four parametrizations. The 09:00 verify case
+  gained "starts no Prefect run"; a verify that contacted Prefect had passed.
+- **Group 5, #103** (`103-test-helpers`) **and #88** (`88-process-zone-helper`): one home each for
+  YAML/workflow/pre-commit reading (`tests/repo_config.py`), the import walk, the city-check
+  history, the AirNow fixture, and the process zone (`tests/process_zone.py`, with its own
+  tests). The test ids were identical before and after. Planted config mistakes and two broken
+  zone helpers are caught. WSL ran the zone tests: 685 passed, none skipped.
+- **Group 6 skipped (owner's choice):** sharing one moto per file in four files (34 starts,
+  7.2 s of CPU) would save about 0.5–1 s of wall time. That's inside the 0.9 s run-to-run noise
+  and below the 1 s bar, and it would cost per-test isolation.
+- **After:**
+  - 685 core cases, about 20 fewer test bodies;
+  - 1,803/1,808 lines (99.72%) and 399/402 branches (99.25%), 99.64% combined;
+  - what's still missed is deliberate: the two dropped branches, and the build lines only the
+    `slow` test runs;
+  - time is unchanged within noise: three runs each, `main` 23.8–27.8 s, the stack 23.2–23.5 s.
+- **Branches are stacked** because each adds a row at the same place in `tasks/todo.md`: #98 ←
+  #99 ← #100 ← #101 ← #102 ← #103 ← #88, so they merge in that order. This records branch is
+  off `main` and touches only this journal.
+
+### Traps found
+
+- **`coverage json` re-reads today's source:** old data reported against changed files gave
+  1,808 statements for a 1,810-statement run. Keep the JSON written at the time as the
+  baseline.
+- **A file named `.coverage.<x>.json` beside `.coverage.<x>`** is picked up as a data file
+  (`file is not a database`). Write the reports to another folder.
+- **A deadline flake needs coverage *and* parallel workers:** the test passed alone, even under
+  coverage. `--hypothesis-show-statistics` gave the per-example time instead of a wait for the
+  next failure.
+- **Accepting `RuntimeError` accepts all of ours:** `ReportableError`s subclass it, so a test
+  that means one error type needs `type(e) is X` or a message match.
+- **A dict keyed by hook id hides a duplicated hook.** The shared lookup counts instead.
+- **`serve_forever()` polls every 0.5 s,** so a local test server's teardown took 0.5 s per test.
+  `serve_forever(0.01)` fixes it.
+- **Bash heredocs turned `\\n` into a real newline** in a replacement script (the owner's notes
+  already warn); multi-line edits went through the Edit tool.
+
+- **Merged (owner's go, about 21:20 CST):** PRs #104–#110 as squash merges in the stack's order,
+  each after its four required checks passed; then this records PR (#111). From #105 on, each
+  branch conflicted with the squashed `main` (`tasks/todo.md` first, then two test files at
+  #109), so `main` was merged into the next branch. That merge changed no file in the branch,
+  and `main` matched the previous branch's tip. The final `main` is identical to the stack
+  tested locally and in WSL (`5906a15`). Issues #98–#103 and #88 closed; #112 filed: mutation
+  testing for the modules that hold the must-never rules.
+- **Lessons recorded:** a "phase-end test check" section in the owner's global CLAUDE.md
+  (weak tests first, mutation testing on the core, one or two PRs). In this repo's CLAUDE.md,
+  issue branches leave `tasks/todo.md` to the records branch too, and the zone rule names
+  `tests/process_zone.py`.
+
+### Next
+
+- Tonight's 06:17 UTC lock run (#6, #43), and #3 on 2026-11-25; then the D-014 timeline review,
+  the last box of Checkpoint B.
+- #112 (milestone C): time one module under mutmut before the full run.

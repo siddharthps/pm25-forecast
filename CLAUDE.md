@@ -52,9 +52,12 @@ Every command, with how to run it: [DEVELOPMENT.md](DEVELOPMENT.md), imported he
 - Report errors by type. Only our own `ReportableError`s (`airwatch.errors`) may print their
   message, which holds dates, paths, rule names and counts, never a data value (#56).
 - This PC and WSL run on America/Chicago, the issue zone, so a dropped time zone passes here.
-  A zone-sensitive test moves the process zone (`TZ` + `tzset`; POSIX, so it runs in WSL and CI).
-  mutmut runs on Linux only: WSL or the `mutmut.yml` job (DEVELOPMENT.md, D-048).
-- Several issue branches in one session: none touches `notes/JOURNAL.md` (the session's entry
-  goes on one records branch); a branch adding a D-entry stacks on the one before it. Before the
-  PRs, dry-merge every pair (`git merge-tree --write-tree a b`) and run the suite on all of
-  them merged together.
+  A zone-sensitive test moves the process zone with `tests/process_zone.py` (`TZ` + `tzset`;
+  POSIX, so it runs in WSL and CI). mutmut runs on Linux only: WSL or the `mutmut.yml` job
+  (DEVELOPMENT.md, D-048).
+- Several issue branches in one session: none touches `notes/JOURNAL.md` or `tasks/todo.md`
+  (the session's entry and the new issues' rows go on one records branch); a branch adding a
+  D-entry stacks on the one before it. Before the PRs, dry-merge every pair
+  (`git merge-tree --write-tree a b`) and run the suite on all of them merged together. A stack
+  conflicts again after each squash merge: merge `main` into the next branch (never rebase and
+  force-push) and check the merge changed no file in it before its CI and merge.

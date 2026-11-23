@@ -6,7 +6,6 @@ a different moment there (SPEC § Code Style: UTC with its zone, everywhere).
 
 import io
 import logging
-import os
 import time
 from collections.abc import Iterator
 from datetime import UTC, datetime
@@ -16,6 +15,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from airwatch import logutil
+from tests.process_zone import process_zone
 from tests.project_files import walk
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -53,22 +53,10 @@ def test_a_line_shows_utc_with_a_z_while_local_time_is_chicago(
 
 
 def test_a_real_process_zone_change_changes_nothing() -> None:
-    tzset = getattr(time, "tzset", None)
-    if tzset is None:
-        pytest.skip("time.tzset is POSIX only (runs in CI)")
-    before = os.environ.get("TZ")
-    os.environ["TZ"] = "America/Chicago"
-    tzset()
-    try:
+    with process_zone("America/Chicago"):
         assert time.localtime(0).tm_hour == 18
         created = datetime(2026, 11, 1, 6, 30, tzinfo=UTC).timestamp()
         assert _line_at(created) == "2026-11-01T06:30:00.000Z hello"
-    finally:
-        if before is None:
-            del os.environ["TZ"]
-        else:
-            os.environ["TZ"] = before
-        tzset()
 
 
 def test_configure_logs_through_the_utc_formatter_and_quiets_the_noisy(

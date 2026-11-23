@@ -68,7 +68,7 @@ line** (2026-12-16) · **D: Complete**.
 | [#83](https://github.com/siddharthps/pm25-forecast/issues/83) | Core test suite back under its 30 s budget (merged #85, 2026-11-22 UTC, D-046) | T11 timing checks | B |
 | [#86](https://github.com/siddharthps/pm25-forecast/issues/86) | Scheduled run: report a failed step's error by type, as #56 did for the CLI | #56 | C |
 | [#87](https://github.com/siddharthps/pm25-forecast/issues/87) | Leakage property: why the unfinished-day test discards 1,220 of 3,220 examples | #59 | C |
-| [#88](https://github.com/siddharthps/pm25-forecast/issues/88) | One process-zone test helper for the time-zone tests (after #52 and #42 merge) | #42 | C |
+| [#88](https://github.com/siddharthps/pm25-forecast/issues/88) | One process-zone test helper for the time-zone tests (after #52 and #42 merge; done with the 2026-11-22 audit, group 5) | #42 | C |
 | [#98](https://github.com/siddharthps/pm25-forecast/issues/98) | Test suite: fix a CI flake and strengthen five weak assertions (audit group 1) | the 2026-11-22 test-suite audit | C |
 | [#99](https://github.com/siddharthps/pm25-forecast/issues/99) | Test suite: cover the untested error paths and boundaries (audit group 2) | the 2026-11-22 test-suite audit | C |
 | [#100](https://github.com/siddharthps/pm25-forecast/issues/100) | Test suite: remove or merge 14 redundant cases (audit group 3) | the 2026-11-22 test-suite audit | C |

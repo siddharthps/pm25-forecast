@@ -7,10 +7,7 @@
   naive in Python, and must be refused like any naive datetime.
 """
 
-import os
-import time
-from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta, tzinfo
 from typing import override
 from zoneinfo import ZoneInfo
@@ -18,24 +15,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from airwatch.timeutil import ensure_utc, issue_time_utc, to_local
-
-
-@contextmanager
-def process_zone(name: str) -> Iterator[None]:
-    tzset: Callable[[], None] | None = getattr(time, "tzset", None)
-    if tzset is None:
-        pytest.skip("time.tzset is POSIX only (runs in WSL and CI)")
-    before = os.environ.get("TZ")
-    os.environ["TZ"] = name
-    tzset()
-    try:
-        yield
-    finally:
-        if before is None:
-            del os.environ["TZ"]
-        else:
-            os.environ["TZ"] = before
-        tzset()
+from tests.process_zone import process_zone
 
 
 @pytest.mark.parametrize("zone", ["UTC", "Asia/Kolkata", "America/Phoenix"])

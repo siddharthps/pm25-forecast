@@ -13,6 +13,13 @@ never by printing it. Dates are America/Chicago.
 | v1 IAM user `air-quality-mlops-user`, key …XZ53 (2025) | **Retired**: deactivated 2026-11-18 (last used 2025-08-04) | The old repo's `.env` and the CLI `default` profile, both now dead | **Delete the key and the user on 2026-11-25** if nothing broke | n/a | 2026-11-18 |
 | Prefect Cloud API key `pm25-forecast-cli` | Prefect CLI login and deployments (workspace `siddharthpm/default`, the Hobby plan's only one) | Owner's password manager, and the Prefect CLI profile on this PC (`prefect cloud login`, 2026-11-20) | **Expires 2027-02-28**. Renew a week before (reminder: 2027-02-21) | Prefect Cloud → profile → API Keys → create a new key, `prefect cloud login`, then delete the old key | 2026-11-18 |
 | Prefect Cloud API key `pm25-forecast-watchdog` | The watchdog Lambda starts the daily deployment when the 06:00 run is missed (D-041). A user key: the Hobby plan has no service accounts | AWS SSM Parameter Store, SecureString `/pm25-forecast/prefect-api-key` (us-east-1), created by the owner in the console, so the value never enters Terraform state. Not kept anywhere else | **Expires 2027-02-28**, the same day as the CLI key, so one renewal covers both (reminder: 2027-02-21) | Prefect Cloud → profile → API Keys → create a new key; Parameter Store → the parameter → Edit → paste the new value; then delete the old key. The next 08:00 check uses it | 2026-11-20 |
+| GitHub CLI login (`gh`, account `siddharthps`) | Pull requests, issues, CI watching and API lookups from this PC, by the owner and agent sessions. Scopes: `repo`, `workflow`, `read:org`, `gist`, `project` | The Windows credential manager (`gh auth status`: "keyring"), never in the repo or `.env` | No fixed expiry. GitHub revokes an OAuth token **unused for one year**, or one pushed to a public repo or gist ([GitHub docs](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/token-expiration-and-revocation), read 2026-11-22) | `gh auth login`, then `gh auth status` to see the account (never the token) | 2026-11-22 |
+
+**GitHub Actions' `GITHUB_TOKEN` is issued per job** and expires when the job finishes; on
+GitHub-hosted runners it can't outlive the 6-hour job limit
+([GitHub docs](https://docs.github.com/en/actions/concepts/security/github_token), read
+2026-11-22). Nothing to store or renew. Each workflow grants it read-only by default, and a job
+widens only what it needs (`tests/unit/test_ci_config.py` checks the default).
 
 **The Prefect run holds no credential (D-040).** Its AWS access is the role `pm25-forecast-prefect-run`,
 assumed through Prefect Cloud's OIDC provider, with temporary credentials that Prefect injects. No key

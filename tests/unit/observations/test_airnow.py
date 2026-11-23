@@ -68,7 +68,7 @@ def test_values_match_the_recording() -> None:
 
 def test_rows_without_a_measured_value_are_dropped_and_counted() -> None:
     _, dropped = parse_hourly_aqobs(text(), PUBLISHED)
-    assert dropped["no_pm25_value"] > 0
+    assert dropped == {"no_pm25_value": 43}
 
 
 def test_a_value_not_flagged_as_measured_is_dropped_and_counted() -> None:

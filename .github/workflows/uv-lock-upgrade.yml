@@ -1,14 +1,15 @@
 # Weekly Python dependency upgrades (D-027). Dependabot's bundled uv is older than our
 # required-version floor, so this job runs `uv lock --upgrade` with the pinned uv and opens
-# (or refreshes) one PR. PRs opened with GITHUB_TOKEN don't trigger workflows, so it then
-# dispatches CI on the branch; the checks land on the PR's head commit.
+# (or refreshes) one PR. It pushes and opens the PR with a GitHub App's installation token, not
+# GITHUB_TOKEN: a GITHUB_TOKEN PR's CI waits for a person's approval, and a dispatched CI run
+# doesn't count for the main ruleset (#115, D-049). The App's token runs the PR's own CI.
 #
 # Idempotent: one fixed branch and at most one open PR. A rerun force-updates the branch and
-# reuses the PR; with no lockfile change it does nothing. The push, PR and dispatch logic, and its
-# tests, live in src/airwatch/devtools/uv_lock_pr.py (#43).
+# reuses the PR; with no lockfile change it does nothing. The push and PR logic, and its tests,
+# live in src/airwatch/devtools/uv_lock_pr.py (#43).
 #
-# Needs the repo setting: Settings → Actions → General → Workflow permissions →
-# "Allow GitHub Actions to create and approve pull requests".
+# Needs the App's client ID as the repo variable LOCK_APP_CLIENT_ID and its private key as the
+# repo secret LOCK_APP_PRIVATE_KEY (notes/TOKENS.md).
 name: uv lock upgrade
 
 on:
@@ -32,9 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write  # push the branch
-      pull-requests: write  # open or update the PR
-      actions: write  # dispatch CI on the branch
+      contents: read  # the App's token pushes and opens the PR; GITHUB_TOKEN writes nothing
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -55,8 +54,19 @@ jobs:
       - name: Regenerate the watchdog's requirements
         run: uv export --frozen --only-group watchdog --no-emit-project --no-header --format requirements.txt > requirements/watchdog.txt
 
+      # Expires within the hour and is revoked when the job ends; scoped to what the next step does.
+      - name: Get the lock App's token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
+        with:
+          client-id: ${{ vars.LOCK_APP_CLIENT_ID }}
+          private-key: ${{ secrets.LOCK_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
       # Standard library only, run by path: nothing from the upgraded lock is installed.
-      - name: Push the branch, open or reuse the PR, dispatch CI
+      - name: Push the branch, open or reuse the PR
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         run: uv run --no-project --python 3.12 src/airwatch/devtools/uv_lock_pr.py

@@ -666,8 +666,10 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - A GitHub App or a PAT for CI on the bot PRs: both are extra credentials, and a PAT expires.
 - **Needs (owner, one-off):** Settings → Actions → General → "Allow GitHub Actions to create and
   approve pull requests".
-- **Status:** Active. Revisit if Dependabot's bundled uv reaches our floor and we want native
-  updates (a new D-entry). Security alerts for uv still come from the dependency graph.
+- **Status:** Active, except the CI trigger: D-049 replaces the `GITHUB_TOKEN` and dispatch
+  with a GitHub App token (2026-11-23). Revisit if Dependabot's bundled uv reaches our floor and
+  we want native updates (a new D-entry). Security alerts for uv still come from the dependency
+  graph.
 
 ## D-028 · 2026-11-18 · Public JSON in its own bucket, not a prefix of the private one (refines D-012)
 
@@ -1527,6 +1529,45 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
   late or dropped); WSL only (depends on remembering, and tests only Chicago time). Both
   offered, not chosen.
 - **Status:** Active. Owner's choice, 2026-11-22.
+
+---
+
+## D-049 · 2026-11-23 · The lock PR is opened with a GitHub App token (#115, refines D-027)
+
+- **Decision:** `uv-lock-upgrade.yml` pushes the branch and opens or edits its PR with a
+  short-lived installation token from a private GitHub App, minted by
+  `actions/create-github-app-token` (v3.3.0, pinned by SHA). The job's `GITHUB_TOKEN` is
+  read-only. The CI dispatch step is deleted. Commits are the App's bot user's
+  (`<slug>[bot]`, noreply email `<user id>+<slug>[bot]@…`, the id looked up through the API).
+- **Why:** D-027's dispatch didn't make the PR mergeable. Seen on 2026-11-23 with #114:
+  - The PR's own `pull_request` run was held at `action_required` until a person approved it.
+  - The dispatched CI passed on the same commit, but the `main` ruleset didn't count it: the
+    merge API answered "4 of 4 required status checks are expected".
+- **Facts (read 2026-11-23):**
+  - GitHub's "Triggering a workflow" page: events from `GITHUB_TOKEN` create no new runs,
+    except `workflow_dispatch` and `repository_dispatch`. A PR it opens or updates creates
+    `pull_request` runs "in an approval-required state". A GitHub App installation token or a
+    PAT "lets `pull_request` workflows run automatically".
+  - An installation token expires after 1 hour (GitHub's installation-token page), and the
+    action revokes it in its post step unless `skip-token-revoke` is set (its README).
+  - The README's own recipe sets git's user to the App's bot user, as above.
+  - The action takes `client-id`; `app-id` is deprecated. v3.4.0 (2026-11-18) was inside the
+    7-day cooldown that Dependabot keeps for actions, so v3.3.0 (2026-10-12) is pinned.
+- **The App:** private ("Only on this account"), installed on this repo only, webhook off,
+  repository permissions Contents and Pull requests read and write (Metadata read is
+  automatic). The workflow asks for only those two. Client ID in the repo variable
+  `LOCK_APP_CLIENT_ID`, private key in the repo secret `LOCK_APP_PRIVATE_KEY` (TOKENS.md).
+  Once it works, the repo setting "Allow GitHub Actions to create and approve pull requests"
+  that D-027 needed can be turned off.
+- **Alternatives:**
+  - Keep `GITHUB_TOKEN`, drop the dispatch, and approve the PR's run by hand each week: no new
+    credential, but a weekly click before the PR has any counted checks.
+  - A fine-grained PAT: the PR and pushes are the owner's, and it expires (at most a year).
+  - D-027 rejected both an App and a PAT as extra credentials; that was before the dispatch
+    was seen not to count.
+- **For #113:** the watchdog needs a GitHub credential to start this workflow. If the same App
+  can serve (the Lambda minting a token from the key in SSM), #113 uses it: one key to rotate.
+- **Status:** Active. Owner's choice, 2026-11-23.
 
 ---
 

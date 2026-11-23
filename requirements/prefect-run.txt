@@ -532,9 +532,9 @@ pydantic-settings==2.16.3 \
     # via
     #   airwatch
     #   prefect
-pydocket==0.31.0 \
-    --hash=sha256:d04b69370cd8986b97d1332ee859f8285ebfed61363ee49072542ec4e4758dfa \
-    --hash=sha256:ff39d8b132091f5c8c831fd0cd94c93ee592049c8cd186bd6670520959c77a17
+pydocket==0.32.0 \
+    --hash=sha256:82ed135f82975b1838ba90ed7e1a29fc4bfa3bb5df8f72f11ebe554afe315fa2 \
+    --hash=sha256:e7b79124253973ac5e9079169ac87e768690e2b3acb3a388a2c586884f222f89
     # via prefect
 pygments==2.21.0 \
     --hash=sha256:2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9 \

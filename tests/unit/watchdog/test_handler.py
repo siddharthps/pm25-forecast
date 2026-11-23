@@ -150,10 +150,11 @@ RETRY = {"mode": "retry", "scheduled_time": AT_0800}
 VERIFY = {"mode": "verify", "scheduled_time": AT_0900}
 
 
-def test_record_present_means_no_action(aws: Aws) -> None:
+@pytest.mark.parametrize("event", [RETRY, VERIFY], ids=["retry-0800", "verify-0900"])
+def test_record_present_means_no_action(aws: Aws, event: dict[str, Any]) -> None:
     _put_record(aws)
     prefect = FakePrefect()
-    result = _handle(aws, RETRY, prefect)
+    result = _handle(aws, event, prefect)
     assert result["record"] == "present"
     assert prefect.calls == []
     assert aws.emails() == []
@@ -209,12 +210,6 @@ def test_a_missing_key_parameter_emails_and_fails(aws: Aws) -> None:
     assert prefect.calls == []
     [email] = aws.emails()
     assert "ParameterNotFound" in email["message"]
-
-
-def test_verify_finds_the_record_and_stays_quiet(aws: Aws) -> None:
-    _put_record(aws)
-    assert _handle(aws, VERIFY)["record"] == "present"
-    assert aws.emails() == []
 
 
 def test_verify_emails_when_the_record_is_still_missing_and_starts_nothing(aws: Aws) -> None:

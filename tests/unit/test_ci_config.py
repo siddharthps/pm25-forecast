@@ -12,6 +12,10 @@ from typing import Any
 import pytest
 import yaml
 
+from airwatch.devtools import uv_lock_pr
+from tests.unit.test_prefect_deployment import EXPORT as PREFECT_EXPORT
+from tests.unit.watchdog.test_build import EXPORT as WATCHDOG_EXPORT
+
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS = ROOT / ".github" / "workflows"
 CI = WORKFLOWS / "ci.yml"
@@ -196,21 +200,30 @@ def test_dependabot_updates_actions_but_not_python() -> None:
     assert not ecosystems & {"uv", "pip"}
 
 
-def test_lock_upgrade_job_is_scheduled_and_dispatches_ci() -> None:
+def test_the_weekly_lock_upgrade_refreshes_both_exports_then_opens_its_pr() -> None:
+    """Both requirements files are regenerated and committed with the lock, or the lock job's
+    own PR would fail the drift tests (test_prefect_deployment.py, watchdog/test_build.py)."""
     workflow = _load(LOCK_UPGRADE)
     triggers = _triggers(workflow)
     assert "schedule" in triggers
     assert "workflow_dispatch" in triggers
-    runs = _run_lines(workflow)
-    order = [
-        "uv lock --upgrade",
-        "requirements/prefect-run.txt",
-        "requirements/watchdog.txt",
-        "src/airwatch/devtools/uv_lock_pr.py",
+    runs = [
+        str(step.get("run", "")).strip()
+        for job in workflow["jobs"].values()
+        for step in job.get("steps", [])
     ]
-    positions = [runs.find(step) for step in order]
-    assert -1 not in positions, dict(zip(order, positions, strict=True))
-    assert positions == sorted(positions), "lock, both exports, then the PR step"
+    upgrade = runs.index("uv lock --upgrade")
+    prefect = " ".join(PREFECT_EXPORT) + " > requirements/prefect-run.txt"
+    watchdog = " ".join(WATCHDOG_EXPORT) + " > requirements/watchdog.txt"
+    assert runs[upgrade + 1] == prefect
+    assert watchdog in runs
+    pr_step = next(i for i, r in enumerate(runs) if "src/airwatch/devtools/uv_lock_pr.py" in r)
+    assert upgrade < runs.index(prefect) < runs.index(watchdog) < pr_step, (
+        "lock, both exports, then the PR step"
+    )
+    assert {"uv.lock", "requirements/prefect-run.txt", "requirements/watchdog.txt"} <= set(
+        uv_lock_pr.FILES
+    )
     module = (ROOT / "src/airwatch/devtools/uv_lock_pr.py").read_text(encoding="utf-8")
     assert '"workflow", "run", "ci.yml"' in module
 

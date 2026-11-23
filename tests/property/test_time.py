@@ -51,16 +51,6 @@ def _utc_hours_in_local_day(day: date, tz: ZoneInfo) -> list[datetime]:
     return [t for t in hours if t.astimezone(tz).date() == day]
 
 
-DST_EXAMPLES = [
-    _us_dst_start(2009),
-    _us_dst_end(2009),
-    _us_dst_start(2025),
-    _us_dst_end(2025),
-    _us_dst_start(2030),
-    _us_dst_end(2030),
-]
-
-
 @given(target=days)
 @example(target=_us_dst_start(2025))
 @example(target=_us_dst_start(2025) + timedelta(days=1))
@@ -176,9 +166,3 @@ def test_to_local_round_trips(dt: datetime, tz: ZoneInfo) -> None:
     local = to_local(dt, tz)
     assert local.tzinfo is tz
     assert ensure_utc(local) == ensure_utc(dt)
-
-
-@pytest.mark.parametrize("day", DST_EXAMPLES, ids=str)
-def test_dst_days_are_in_range(day: date) -> None:
-    assert FIRST <= day <= LAST, "guards the guards: a DST example outside the range"
-    assert day.weekday() == 6

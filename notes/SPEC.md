@@ -126,6 +126,7 @@ pm25-forecast/                 new public repo (D-002, D-017); package name `air
 ├── src/airwatch/
 │   ├── config.py              typed settings; the only place that reads the environment
 │   ├── timeutil.py            UTC/local conversion, issue-time rules (single home)
+│   ├── logutil.py             the one logging setup: UTC times with a Z (#52)
 │   ├── aqi.py                 EPA's AQI rules and colours (single home; D-036)
 │   ├── storage.py             S3 get/put/list and create-only-if-absent (D-034)
 │   ├── errors.py              ReportableError: errors whose message is safe to log (#56)

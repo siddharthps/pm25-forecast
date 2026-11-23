@@ -23,6 +23,7 @@ import boto3
 import httpx
 
 from airwatch.config import get_settings
+from airwatch.logutil import configure
 from airwatch.observations.aqs import fetch_site_year
 from airwatch.observations.aqs_bulk import (
     FIRST_YEAR,
@@ -42,9 +43,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--apply", action="store_true", help="fetch and upload (default: dry run)")
     args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
-    for name in ("botocore", "boto3", "urllib3"):
-        logging.getLogger(name).setLevel(logging.ERROR)
+    configure()
 
     settings = get_settings()
     session = boto3.Session(profile_name=settings.aws_profile, region_name=settings.aws_region)

@@ -22,6 +22,7 @@ from typing import Any
 import httpx
 
 from airwatch.config import get_settings
+from airwatch.logutil import configure
 from airwatch.observations.metadata import (
     HISTORY_YEARS,
     TEST_YEAR,
@@ -142,7 +143,7 @@ def weather_ok(client: httpx.Client, rows: list[dict[str, Any]]) -> bool:
 
 
 def main() -> int:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
+    configure()
     started = datetime.now(UTC)
     with httpx.Client(timeout=httpx.Timeout(180.0, connect=20.0)) as client:
         aqs = Aqs(client)

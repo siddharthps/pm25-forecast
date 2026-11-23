@@ -37,6 +37,7 @@ from airwatch.errors import ReportableError
 from airwatch.forecast.publish import publish as publish_latest
 from airwatch.forecast.publish import publish_history
 from airwatch.forecast.record import Store, build_record, record_key, report_key, write_once
+from airwatch.logutil import configure
 from airwatch.observations.aqs import daily_means
 from airwatch.timeutil import ISSUE_TZ, ensure_utc, issue_time_utc, local_day_window_utc
 from airwatch.validation.checks import Window, run_checks
@@ -237,9 +238,7 @@ def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover  (real e
     parser.add_argument("--target-day", type=date.fromisoformat, help="default: the latest due")
     parser.add_argument("--publish", action="store_true", help="write the record and public file")
     args = parser.parse_args(argv)
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
-    for name in ("botocore", "boto3", "urllib3"):
-        logging.getLogger(name).setLevel(logging.ERROR)
+    configure()
 
     settings = get_settings()
     now = datetime.now(UTC)

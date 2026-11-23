@@ -1588,8 +1588,20 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - **Bash heredocs turned `\\n` into a real newline** in a replacement script (the owner's notes
   already warn); multi-line edits went through the Edit tool.
 
+- **Merged (owner's go, about 21:20 CST):** PRs #104–#110 as squash merges in the stack's order,
+  each after its four required checks passed; then this records PR (#111). From #105 on, each
+  branch conflicted with the squashed `main` (`tasks/todo.md` first, then two test files at
+  #109), so `main` was merged into the next branch. That merge changed no file in the branch,
+  and `main` matched the previous branch's tip. The final `main` is identical to the stack
+  tested locally and in WSL (`5906a15`). Issues #98–#103 and #88 closed; #112 filed: mutation
+  testing for the modules that hold the must-never rules.
+- **Lessons recorded:** a "phase-end test check" section in the owner's global CLAUDE.md
+  (weak tests first, mutation testing on the core, one or two PRs). In this repo's CLAUDE.md,
+  issue branches leave `tasks/todo.md` to the records branch too, and the zone rule names
+  `tests/process_zone.py`.
+
 ### Next
 
-- PRs for the seven stacked branches and this records branch, when the owner asks; CI waited
-  for by PR number, merged in the stack's order.
-- Still due from the last entry: tonight's 06:17 UTC lock run (#6, #43), and #3 on 2026-11-25.
+- Tonight's 06:17 UTC lock run (#6, #43), and #3 on 2026-11-25; then the D-014 timeline review,
+  the last box of Checkpoint B.
+- #112 (milestone C): time one module under mutmut before the full run.

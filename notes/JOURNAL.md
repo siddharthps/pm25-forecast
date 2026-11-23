@@ -1636,15 +1636,19 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   - **Trap:** saving an App's permissions ("The GitHub App has been updated") doesn't grant them
     to the installation; it must accept them on its Configure page. Until then the token step
     fails with "The permissions requested are not granted to this installation" (two runs).
-  - Run 45221876228 from the branch: the token minted; `uv.lock` was already up to date, so the
-    bot id, push and the PR's own CI are still untested.
+  - Run 45221876228 from the branch: the token minted; `uv.lock` was already up to date.
+  - Run 45226966584 from the branch (pydocket 0.31.0 → 0.32.0) opened **#117** as
+    `app/pm25-forecast-lock`: its own `pull_request` CI started with no approval and passed, the
+    commit is linked to `pm25-forecast-lock[bot]`, and GitHub reported it mergeable. #116 merged
+    (`a3c9128`, owner's OK); #115, #43 and #6 closed.
+  - **Trap:** a run from an issue branch builds the lock PR on that branch, so #117 first carried
+    #116's diff too. After #116 merged, a run from `main` (45227715893) force-updated it to the
+    lock change alone, and its CI passed again.
 
 ### Next
 
-- Tomorrow: rerun `uv-lock-upgrade.yml` from `115-lock-pr-app-token`. A real lock PR whose own
-  CI starts with no approval, and no missing checks in the merge API, ticks #115's last box and
-  #43's (and #6); then the owner merges #116 and may turn off "Allow GitHub Actions to create
-  and approve pull requests".
+- The owner merges #117 (pydocket 0.32.0), and may turn off "Allow GitHub Actions to create and
+  approve pull requests" (D-049).
 - 2026-11-25: #3's old key and IAM user deleted (owner confirms first); then the D-014 timeline
-  review, the last box of Checkpoint B, counting #113 and #115.
-- #113 after #116 merges, using the same App if the D-entry finds it fits; #112 (milestone C).
+  review, the last box of Checkpoint B, counting #113.
+- #113 (watchdog starts the lock run, using the same App if its D-entry finds it fits); #112.

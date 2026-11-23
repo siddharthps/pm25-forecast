@@ -201,7 +201,36 @@ def test_the_weekly_lock_upgrade_refreshes_both_exports_then_opens_its_pr() -> N
         uv_lock_pr.FILES
     )
     module = (ROOT / "src/airwatch/devtools/uv_lock_pr.py").read_text(encoding="utf-8")
-    assert '"workflow", "run", "ci.yml"' in module
+    assert '"workflow"' not in module, "no CI dispatch: the PR's own CI runs (D-049)"
+
+
+def test_the_lock_pr_is_opened_with_a_scoped_github_app_token() -> None:
+    """D-049: GITHUB_TOKEN's pull_request runs wait for a person's approval, and a dispatched CI
+    run doesn't count for the ruleset. An App installation token's events run CI normally."""
+    workflow = load_yaml(LOCK_UPGRADE)
+    (job,) = workflow["jobs"].values()
+    assert job["permissions"] == {"contents": "read"}, "GITHUB_TOKEN writes nothing here"
+    all_steps = steps(workflow)
+    (app,) = [
+        s
+        for s in all_steps
+        if str(s.get("uses", "")).startswith("actions/create-github-app-token@")
+    ]
+    assert app["with"] == {
+        "client-id": "${{ vars.LOCK_APP_CLIENT_ID }}",
+        "private-key": "${{ secrets.LOCK_APP_PRIVATE_KEY }}",
+        "permission-contents": "write",
+        "permission-pull-requests": "write",
+    }, "the token asks for only what the job does: push the branch, open or edit the PR"
+    pr_step = next(s for s in all_steps if "uv_lock_pr.py" in str(s.get("run", "")))
+    assert pr_step["env"] == {
+        "GH_TOKEN": f"${{{{ steps.{app['id']}.outputs.token }}}}",
+        "APP_SLUG": f"${{{{ steps.{app['id']}.outputs.app-slug }}}}",
+    }
+    assert all_steps.index(app) < all_steps.index(pr_step)
+    text = LOCK_UPGRADE.read_text(encoding="utf-8")
+    assert "github.token" not in text
+    assert "secrets.GITHUB_TOKEN" not in text
 
 
 def test_mutation_testing_runs_only_when_started_by_hand() -> None:

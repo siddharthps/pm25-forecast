@@ -394,10 +394,16 @@ def test_config_comes_from_the_environment() -> None:
 
 
 def test_it_imports_only_the_standard_library_and_boto3() -> None:
-    """The zip ships this file alone with boto3 and tzdata, so it can't import airwatch."""
-    roots = import_roots(Path(wd.__file__))
+    """The zip ships this file alone with boto3 and tzdata, so it can't import airwatch.
+
+    mutmut's rewritten copy (under `mutants/`) also imports mutmut's trampoline (#113); the real
+    file never may."""
+    source = Path(wd.__file__)
+    roots = import_roots(source)
     assert roots, "guards the guard: no imports found"
     allowed = set(sys.stdlib_module_names) | {"boto3", "botocore"}
+    if "mutants" in source.parts:
+        allowed.add("mutmut")
     assert roots <= allowed, roots - allowed
 
 

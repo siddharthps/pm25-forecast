@@ -15,6 +15,7 @@ from hypothesis import strategies as st
 
 from airwatch.forecast.run import NoForecastError, run_daily
 from airwatch.observations.schema import POC_NOT_GIVEN, concat_hourly
+from airwatch.observations.sites import AIRNOW_METHOD, VERIFIED_METHODS
 from tests.unit.forecast.fakes import (
     ISSUE_AT,
     PHOENIX,
@@ -48,6 +49,11 @@ def forecast_of(df: pd.DataFrame) -> tuple[Any, Any]:
 
 
 BASE_FORECAST = forecast_of(BASE)
+
+
+def _site_range(site: str) -> tuple[float, float]:
+    method = VERIFIED_METHODS[AIRNOW_METHOD[site]]
+    return method.min_value, method.max_value
 
 
 @settings(deadline=None)
@@ -87,7 +93,17 @@ def test_rows_from_the_unfinished_issue_day_never_change_the_forecast(
     """Hours from 00:00 Phoenix on the issue day (07:00 UTC), published by 11:30 UTC.
 
     That's before the 12:00 UTC issue time, so only the observed-day rule keeps them out.
+    Under `explore`, about 1,400 draws per 2,000 are "invalid": Hypothesis's own bookkeeping
+    (status `gave_up`, "exceeded maximum test case size"), discarded before the body runs and
+    costing no time (#87, measured with Hypothesis's observability output).
     """
+    lo, hi = _site_range(site)
+    event(f"{len(values)} issue-day hour(s)")
+    event(
+        "some value outside the site's range"
+        if any(not lo <= v <= hi for v in values)
+        else "every value inside the site's range"
+    )
     d_start = ISSUE_AT - timedelta(hours=5)
     published = d_start + timedelta(hours=4, minutes=30)
     assert published <= ISSUE_AT

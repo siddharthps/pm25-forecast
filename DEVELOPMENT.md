@@ -70,6 +70,19 @@ AWS_PROFILE=pm25 uv run python -m airwatch.validation.report --source all  # D-0
 AWS_PROFILE=pm25 uv run python -m airwatch.forecast.run   # D+1 forecast: dry run; --publish acts
 ```
 
+## Dependencies: the 7-day wait (D-056)
+
+The weekly lock job (`uv-lock-upgrade.yml`) takes a release only once it is 7 days old. A local
+`uv lock` keeps the locked versions, so it never undoes the wait.
+
+- **Adding a package or raising a minimum:** pick a release at least 7 days old
+  (`uv add "pkg>=<that version>"`). A newer minimum makes the job fail, and uv's error names it.
+- **An urgent release** (a security fix inside the week):
+  1. on a branch: `uv lock --upgrade-package <pkg>`, then both exports below, and a PR;
+  2. in the same PR, append `--exclude-newer-package=<pkg>=false` to the job's `uv lock` line, or
+     the next weekly run downgrades it (with `--upgrade` uv re-resolves under the cutoff);
+  3. a week later, drop the exemption.
+
 ## After a `uv.lock` change, and before a Terraform plan
 
 ```bash

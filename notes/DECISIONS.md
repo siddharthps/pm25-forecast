@@ -716,7 +716,7 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 - **Status:** Active. Owner accepted, 2026-11-18. *Refined 2026-11-20 (#55, D-037):* the
   `.claude/skills/**` exclusions in markdownlint and `ruff format` now list exactly the vendored
   skills in `skills-lock.json`, so our own skills (`delete-comment`) stay checked; a test keeps
-  the lists in step with the lock.
+  the lists in step with the lock. *Refined 2026-11-24 (D-056):* releases wait 7 days in the job.
 
 ---
 
@@ -1900,6 +1900,37 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
 - **Alternatives:** filtering Prefect's log handler (it sees formatted text, too late to judge
   what is data); keeping the chain and trusting Prefect's private logs (breaks the rule on the
   path that runs every day).
+- **Status:** Active. 2026-11-24.
+
+---
+
+## D-056 · 2026-11-24 · Python releases wait 7 days in the weekly lock job (#122, refines D-027)
+
+- **Decision (owner's choice, 2026-11-24):** the weekly lock job runs
+  `uv lock --upgrade --exclude-newer "7 days"`, the same wait Dependabot's cooldown gives Actions
+  updates. Only the job sets it: `pyproject.toml` has no `exclude-newer`. A new or raised
+  minimum (`>=` or `==`) must be a release at least 7 days old. An urgent release is taken by
+  hand with a one-week exemption on the job's line (DEVELOPMENT.md). A test checks the job's
+  command, that only such exemptions may follow it, and that the wait equals Dependabot's.
+- **Facts (uv 0.13.9, tried 2026-11-24 on a copy of the project):**
+  - uv turns "7 days" into a cutoff at each run ("Resolving despite existing lockfile due to
+    addition of global exclude newer <timestamp>").
+  - A lock made with the flag leaves `uv.lock` unchanged for a later `uv lock --locked` without
+    it, so local runs agree with the job.
+  - With `--upgrade`, uv ignores locked versions newer than the cutoff: it re-resolves to the
+    newest release before it, hence the exemption for an urgent release.
+  - Our minimums are set to the newest release when a package is added (boto3>=1.44.6 on 11-18),
+    so a cutoff in `pyproject.toml` would fail every local lock for that package's first week.
+    By the next run (2026-11-30) every current minimum is over 7 days old (PyPI upload times),
+    including the `zensical==0.1.3` pin and its `zensical-ui==0.0.43`.
+  - uv's docs: `exclude-newer` takes a timestamp or a duration ("30 days", "P7D"), compared with
+    each file's upload time; `exclude-newer-package` sets or disables (`false`) the cutoff for one
+    package (docs.astral.sh/uv/reference/settings/#exclude-newer and #exclude-newer-package,
+    docs.astral.sh/uv/concepts/resolution/#reproducible-resolutions, read 2026-11-24).
+- **Why:** #119 opened with filelock 4.3.1 two minutes after its upload. A week lets a broken or
+  malicious release be found and yanked before it reaches the lock.
+- **Alternatives (rejected by the owner):** the cutoff in `pyproject.toml` for everyone (an
+  exemption for every new minimum until it ages); no wait, holding each lock PR by hand.
 - **Status:** Active. 2026-11-24.
 
 ---

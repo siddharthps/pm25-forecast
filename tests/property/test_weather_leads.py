@@ -130,9 +130,21 @@ def test_rejects_a_naive_datetime() -> None:
         archived_run_start(datetime(2025, 1, 15, 7))  # noqa: DTZ001
 
 
-def test_rejects_an_offset_below_one_day() -> None:
+def test_seconds_and_microseconds_never_shift_the_run_start() -> None:
+    valid = datetime(2025, 1, 16, 6, 0, 30, 500, tzinfo=UTC)
+    assert archived_run_start(valid) == datetime(2025, 1, 13, 6, tzinfo=UTC)
+
+
+@pytest.mark.parametrize("offset", [1, 7])
+def test_accepts_every_offset_the_archive_offers(offset: int) -> None:
+    valid = datetime(2025, 1, 16, 6, tzinfo=UTC)
+    assert archived_run_start(valid, offset_days=offset) == valid - timedelta(days=offset)
+
+
+@pytest.mark.parametrize("offset", [0, 8])
+def test_rejects_an_offset_the_archive_lacks(offset: int) -> None:
     with pytest.raises(ValueError, match="offset_days must be 1 to 7"):
-        archived_run_start(datetime(2025, 1, 15, 7, tzinfo=UTC), offset_days=0)
+        archived_run_start(datetime(2025, 1, 15, 7, tzinfo=UTC), offset_days=offset)
 
 
 def test_rejects_a_datetime_as_the_target_day() -> None:

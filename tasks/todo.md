@@ -30,7 +30,7 @@ line** (2026-12-16) · **D: Complete**.
 | T10 | [#17](https://github.com/siddharthps/pm25-forecast/issues/17) | Daily scoring | B | closed (merged #74, 2026-11-21, D-042) |
 | T11 | [#18](https://github.com/siddharthps/pm25-forecast/issues/18) | Docs stub, number check and README skeleton | B | closed (merged #84, 2026-11-22 UTC, D-043) |
 | T14 | [#19](https://github.com/siddharthps/pm25-forecast/issues/19) | Weather ingestion | C | open: parts 1 and 2 merged (#125, #127; D-051, D-052); closes with #78 |
-| T12b | [#20](https://github.com/siddharthps/pm25-forecast/issues/20) | Validation, remaining problem classes and weather sources | C | open: in review 2026-11-24 (D-054) |
+| T12b | [#20](https://github.com/siddharthps/pm25-forecast/issues/20) | Validation, remaining problem classes and weather sources | C | closed (#129, D-054, 2026-11-24) |
 | T15 | [#21](https://github.com/siddharthps/pm25-forecast/issues/21) | Leakage-safe features | C | open |
 | T16 | [#22](https://github.com/siddharthps/pm25-forecast/issues/22) | CV harness and baselines | C | open |
 | T17 | [#23](https://github.com/siddharthps/pm25-forecast/issues/23) | MLflow backend and promotion pointer | C | open |
@@ -60,7 +60,7 @@ line** (2026-12-16) · **D: Complete**.
 | [#58](https://github.com/siddharthps/pm25-forecast/issues/58) | test_publish: pytest ids instead of a dummy 'assert why' (merged #89, 2026-11-22 UTC) | comment audit (#55) | B |
 | [#59](https://github.com/siddharthps/pm25-forecast/issues/59) | Leakage property test: assume() instead of an early return (merged #90, 2026-11-22 UTC) | comment audit (#55) | B |
 | [#75](https://github.com/siddharthps/pm25-forecast/issues/75) | Watchdog schedules send the time placeholder escaped (fixed in #76; closed 2026-11-22 after a silent morning) | the first real watchdog checks (T9) | B |
-| [#78](https://github.com/siddharthps/pm25-forecast/issues/78) | Save CAMS's D+1 forecast each morning, as issued (with T14; running before T23; D-053, in review 2026-11-24) | the write-up plan (T11, D-044) | C |
+| [#78](https://github.com/siddharthps/pm25-forecast/issues/78) | Save CAMS's D+1 forecast each morning, as issued (with T14; running before T23; D-053, merged #128 2026-11-24; closes once the first real file is seen) | the write-up plan (T11, D-044) | C |
 | [#79](https://github.com/siddharthps/pm25-forecast/issues/79) | The pipeline writes results.json and the chart data | T11 (D-043, D-044) | C |
 | [#80](https://github.com/siddharthps/pm25-forecast/issues/80) | Draw the write-up's four charts at build time | the write-up plan (T11, D-044) | C |
 | [#81](https://github.com/siddharthps/pm25-forecast/issues/81) | Block-bootstrap intervals and verdicts (D-045) | the write-up plan (T11, D-045) | C |

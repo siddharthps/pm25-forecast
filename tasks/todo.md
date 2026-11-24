@@ -75,8 +75,8 @@ line** (2026-12-16) · **D: Complete**.
 | [#101](https://github.com/siddharthps/pm25-forecast/issues/101) | Remove the unreachable last line of _retryable (metadata.py) (merged #107, 2026-11-23 UTC) | #99 (the 2026-11-22 test-suite audit) | C |
 | [#102](https://github.com/siddharthps/pm25-forecast/issues/102) | Test suite: parametrize four sets of look-alike tests (audit group 4; merged #108, 2026-11-23 UTC) | the 2026-11-22 test-suite audit | C |
 | [#103](https://github.com/siddharthps/pm25-forecast/issues/103) | Test suite: one home for repeated test setup code (audit group 5; merged #109, 2026-11-23 UTC) | the 2026-11-22 test-suite audit | C |
-| [#112](https://github.com/siddharthps/pm25-forecast/issues/112) | Mutation-test the modules that hold the must-never rules | the 2026-11-22 test-suite audit | C |
-| [#113](https://github.com/siddharthps/pm25-forecast/issues/113) | Watchdog starts the weekly uv-lock run; drop the GitHub cron (merged #136, D-058; owner's apply and drill left) | the 2026-11-23 dropped lock run | C |
+| [#112](https://github.com/siddharthps/pm25-forecast/issues/112) | Mutation-test the modules that hold the must-never rules (timed 2026-11-24: about 1 h a run) | the 2026-11-22 test-suite audit | C |
+| [#113](https://github.com/siddharthps/pm25-forecast/issues/113) | Watchdog starts the weekly uv-lock run; drop the GitHub cron (merged #136, D-058; applied and drilled 2026-11-24; closes after the 2026-11-30 run) | the 2026-11-23 dropped lock run | C |
 | [#115](https://github.com/siddharthps/pm25-forecast/issues/115) | Lock PR: open it with a GitHub App token so its own CI counts (merged #116, 2026-11-23 UTC) | #43 (#114's blocked merge, 2026-11-23) | B |
 | [#120](https://github.com/siddharthps/pm25-forecast/issues/120) | D-014 timeline review, Checkpoint B (merged #121, 2026-11-24 UTC, D-050) | Checkpoint B's last box | B |
 | [#122](https://github.com/siddharthps/pm25-forecast/issues/122) | Lock job: a 7-day cooldown on new Python releases, as for Actions (fill-in, D-050; merged #133, D-056, 2026-11-24) | #119 (a 2-minute-old release, 2026-11-23) | C |

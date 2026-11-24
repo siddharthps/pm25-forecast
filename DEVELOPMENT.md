@@ -48,6 +48,11 @@ gh workflow run mutmut.yml --ref <branch>  # the same on GitHub (UTC); results i
 Each survivor is killed by a new test or explained in the journal. Run it after changing a
 mutated module, before its merge.
 
+Timed in WSL (12 CPUs, 2026-11-24): `validation/checks.py` alone takes about 14 min (1,111
+mutants), `watchdog/handler.py` about 5 min; #112's whole list is about an hour. `mutmut
+results` and `mutmut show` read the same `only_mutate` as the run: with a different list they
+show nothing.
+
 Started from Git Bash on Windows, `wsl.exe` drops the quotes inside a `bash -c "…"` command and
 Git Bash rewrites `/mnt/c/…` paths. Put the commands in a script with Linux line endings and run
 it as a login shell (WSL's `uv` is only on a login shell's path), with path rewriting off:

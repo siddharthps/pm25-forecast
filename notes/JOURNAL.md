@@ -1695,3 +1695,89 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - **Sun 11-29 waypoint:** T14 (weather ingestion) with #78 (the CAMS forecast saved daily).
 - **Mon 11-30:** #119 refreshed by the lock run; merge if filelock 4.3.1 isn't yanked.
 - Fill-in: #122, #113, #86, #87.
+
+## 2026-11-23/24: T14 (#19) part 1, on branch `19-weather` (CST, about 20:10 to 23:40)
+
+- **D-051 (refines D-007), owner's choices one at a time:** ERA5 (`models=era5`) for training,
+  NOAA GFS Global (`gfs_global`) for the test rebuild, the forecasts-only variant and live; 8
+  variables (dew point out as a duplicate, boundary-layer height out: no forecast archive); each
+  monitor's own coordinates; and **`_previous_day3` for every hour** of the target day.
+  - **The spec's lead rule leaked.** `_previous_day1` for the first 24 h lands on runs started
+    at or after 06 UTC on the issue day. Found from Open-Meteo's docs, then checked by matching
+    `_previous_day2` against named runs: the archive takes the last run started at or before the
+    offset (rounds down).
+  - **The agent's first fix leaked too:** `_previous_day2` for every hour was worked out with
+    Chicago's day, but the target day is Phoenix's (07 UTC to 07 UTC), so its last stamps land
+    on the issue day's 06 UTC run. The owner was asked to decide before that premise was checked,
+    then re-asked; lesson saved to the agent's memory (verify a premise with real data and a
+    worked example before asking).
+  - **72 h costs little:** GFS against ERA5 at Phoenix, February–December 2024 (development
+    period, 8,040 hours): mean absolute error grew 1–4% from 2 to 3 days ahead.
+  - The owner asked whether a different start time would be simpler; D-019's 06:00 is Frozen,
+    and a 07:00 Phoenix start would let 48 h work with under 3 h of margin. A side-by-side table
+    and "what happens when such a bug surfaces after a freeze" went into the owner's private
+    learning notes.
+  - **Facts that changed tonight:** the archive starts 2024-01-20 (GFS), not "January 2024";
+    `gfs_global` is served from `ncep_gfs013`, whose runs appeared 5.35 h after starting
+    (`ncep_gfs025`'s took 6.29 h, the figure first recorded). No GFS run from 2024–2025 is in
+    the Single Runs API, so the offset archive is the only record of past forecasts.
+- **Built, tests first, each with planted mistakes caught after a clean baseline:**
+  - `weather/leads.py`, the 72-hour rule: a property test over every day 2009–2030 that every
+    hour uses a run published before the issue time, given an 18 h delay, against a stepping
+    reference; pinned tests show why not 24 or 48 h. Mutmut (WSL): all of its mutants killed,
+    after two new tests (offset 7 untested; times with seconds). 106 mutants, 96 killed, the 10
+    left are the message-text ones explained on 2026-11-22.
+  - `sites.SITE_COORDS`, from AQS: within 1 km of the recorded AirNow file. AQS and AirNow differ
+    by up to 571 m for one monitor (Glendale); the closest two monitors are 4.75 km apart.
+  - `weather/openmeteo.py`: a `Query` per monitor and UTC days, units spelled out, responses
+    refused by named rules, every row with its run and `available_at_utc`; the live run read
+    before and after the data. Opt-in live checks pass on the real API.
+  - `weather/bulk.py` and `scripts/weather_bulk.py`: the AQS download's rules, plus pacing.
+- **The bulk download (owner's OK):** 190 of 190 parts in the manifest, each with its file
+  (191 objects under `raw/weather/`). The first run (22:17 CST) stopped after 37 parts on a 429
+  (below); the rerun (22:23 to 23:28 CST) fetched the other 153 (1,327,584 rows) with no error.
+  - ERA5 2009-2024: every site-year complete (8,760 or 8,784 rows), 0 missing values.
+  - GFS archive 2025 (the test year): complete, 0 missing values.
+  - **GFS archive 2024:** the first 36 hours (2024-01-20 00:00 to 01-21 11:00 UTC) are empty
+    for every variable, at every site: `_previous_day3` starts 2024-01-21 12:00 UTC, a day and
+    a half after `_previous_day2`.
+  - **GFS archive 2026 (not final):** `cloud_cover` alone is missing for 29 hours on
+    2026-04-18/19 at all 10 sites. Both gaps go to the coverage check (T14 part 2) and T12b.
+
+### Traps found
+
+- **Pacing one window only:** the first run paced the hour and sent 37 year files (about 960
+  counted calls) in 20 s; Open-Meteo answered 429 (600 a minute). The manifest held the 37, and
+  the rerun planned the other 153. `CallBudget` now holds the minute, hour and day at half each,
+  with a property test; one planted mistake (calls forgotten after half a window) survived it
+  until the generator gained short gaps.
+- **Open-Meteo weights requests:** over 10 variables or 2 weeks counts as several calls
+  (pricing page); a site-year of our 8 variables is about 26.
+- **A planted mistake "caught" by a test that always failed:** check that every test passes on
+  the untouched code before planting. The longitude test moved the grid point closer, not away.
+- **A guessed tolerance:** 100 m for "same monitor" failed on real data; it now comes from the
+  closest two monitors.
+- **Windows:** Python's `write_text` wrote CRLF into `pyproject.toml` (the line-ending hook
+  stopped the commit); `\n` inside a shell heredoc became a real line break; `wsl.exe` from Git
+  Bash drops quotes and rewrites `/mnt/c` paths (now in DEVELOPMENT.md); a worktree under the
+  scratchpad couldn't be removed by git (path too long) and needed `rm -rf` plus `prune`.
+- **A time quoted unchecked:** commit `016d932` says the first live check ran about 04:10 UTC;
+  it was about 03:25 UTC. Left as pushed (no force-push).
+- **The core suite** is back at its 30 s goal (main 22.1 s vs the branch 27.2 s back to back;
+  29.9–33.5 s on other runs): filed **#124**. The bulk tests moved to `MemoryStore` (4.4 s to
+  2.3 s), one still on the real `S3Store`.
+
+- **A closing keyword inside a denial:** #125's description said it "doesn't close #19", and
+  GitHub closed #19 on the merge (`3e6995f`), reading "close #19" as a keyword. Reopened at once
+  with a comment. For a partial PR, write "Refs #N" and never put "close", "fix" or "resolve"
+  next to the number.
+- **Merges (owner's OK, given before bed: merge if the full suite passes):** #125 and this
+  records PR, after the full suite passed on `main` with both merged together and each PR's own
+  CI passed.
+
+### Next
+
+- **2026-11-25:** #3's old key and IAM user deleted (owner confirms first); milestone B closes.
+- **T14 part 2 (#19), by the 11-29 waypoint:** the archive's coverage check (2024-01-21 12 UTC on),
+  the CAMS download and its archive-bias check, and the daily live save with #78.
+- Fill-in: #124, #122, #113, #86, #87.

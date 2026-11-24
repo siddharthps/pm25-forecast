@@ -1653,3 +1653,45 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - 2026-11-25: #3's old key and IAM user deleted (owner confirms first); then the D-014 timeline
   review, the last box of Checkpoint B, counting #113.
 - #113 (watchdog starts the lock run, using the same App if its D-entry finds it fits); #112.
+
+## 2026-11-23: the D-014 timeline review (#120), and #119 held (CST, about 19:35 to 20:10)
+
+- **The late cron:** the Monday 06:17 UTC lock schedule did fire, at 18:03 UTC (run
+  45234243772), about 12 hours late, not dropped as the morning entry assumed. It opened **#119**
+  as `app/pm25-forecast-lock`, and its own CI passed with no approval: the first scheduled lock
+  PR under D-049. The lateness is more evidence for #113.
+- **#119 held, not merged:** filelock 4.3.0 → 4.3.1, which PyPI shows uploaded at 18:01 UTC,
+  two minutes before the run locked it. It's dev-only (pre-commit → virtualenv), so waiting costs
+  nothing. Next Monday's run refreshes the PR, when the release is 7 days old.
+  - Filed **#122** (milestone C): a 7-day cooldown on Python releases, as Dependabot keeps for
+    Actions. A dry run (`uv lock --upgrade --dry-run --exclude-newer "7 days"`, uv 0.13.9, no
+    file changed) accepts the relative cutoff but fails on `zensical==0.1.3`, an exact pin
+    younger than 7 days. The fix needs a per-package rule and a D-entry. It's fill-in work, like
+    the housekeeping D-050 names.
+- **The D-014 review (#120, PR #121, `a455df0`):** held with the owner two days early, one
+  question at a time. **D-050** refines D-014:
+  - the dates are kept (cut line 12-16, freeze 12-23), with 30 owner hours to 12-16;
+  - one check-in on **Sat 12-12** may move the cut line up to a week, by progress and free time
+    only, and the freeze moves with it;
+  - the cut order is unchanged;
+  - #78, #79–#82 and #112 are required, and #113, #86 and #87 are fill-in;
+  - the 14-day live check counts from T23 (SPEC criterion 1 and #35 edited);
+  - soft waypoints are set for 11-29, 12-05, 12-12 and 12-16.
+  - The owner went against the agent's suggestion on the check-in date (12-09 → 12-12) and
+    withdrew a first answer of 45+ hours for the planned 30.
+
+### Traps found
+
+- **A pre-commit failure inside `git commit -q && git push` still pushed:** the commit and push
+  were joined with a newline, not `&&`, so the failed commit left the branch pushed at `main`'s
+  head. Chain the push on the commit's success.
+- **`gh pr checks --watch` straight after `gh pr create`** said "no checks reported" again (the
+  global rule's trap); a second call, once the run was queued, worked.
+
+### Next
+
+- **2026-11-25:** #3's old key and IAM user deleted (owner confirms first); milestone B then
+  closes.
+- **Sun 11-29 waypoint:** T14 (weather ingestion) with #78 (the CAMS forecast saved daily).
+- **Mon 11-30:** #119 refreshed by the lock run; merge if filelock 4.3.1 isn't yanked.
+- Fill-in: #122, #113, #86, #87.

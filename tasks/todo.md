@@ -78,6 +78,8 @@ line** (2026-12-16) · **D: Complete**.
 | [#112](https://github.com/siddharthps/pm25-forecast/issues/112) | Mutation-test the modules that hold the must-never rules | the 2026-11-22 test-suite audit | C |
 | [#113](https://github.com/siddharthps/pm25-forecast/issues/113) | Watchdog starts the weekly uv-lock run; drop the GitHub cron | the 2026-11-23 dropped lock run | C |
 | [#115](https://github.com/siddharthps/pm25-forecast/issues/115) | Lock PR: open it with a GitHub App token so its own CI counts (merged #116, 2026-11-23 UTC) | #43 (#114's blocked merge, 2026-11-23) | B |
+| [#120](https://github.com/siddharthps/pm25-forecast/issues/120) | D-014 timeline review, Checkpoint B (merged #121, 2026-11-24 UTC, D-050) | Checkpoint B's last box | B |
+| [#122](https://github.com/siddharthps/pm25-forecast/issues/122) | Lock job: a 7-day cooldown on new Python releases, as for Actions (fill-in, D-050) | #119 (a 2-minute-old release, 2026-11-23) | C |
 
 The **State** column is a snapshot. GitHub is the source of truth, and this column is not kept in
 sync.

@@ -10,6 +10,11 @@ credentials, AirNow's public hourly files) unless a test hands in fakes, and the
 3. saves CAMS's forecast for the target day as issued (#78), even if scoring failed; a failure
    here is logged by type and fails the run, after the forecast and scores are done;
 4. always files the run's minutes, even when a step fails, before the failure is re-raised.
+
+A failure from someone else's code (pandas, botocore, httpx) is re-raised as `JobFailedError`,
+naming only the target day and the error's type, with the original detached (`from None`), so
+neither Prefect's log nor its traceback quotes a cell, a key or a URL (#86, D-055). Our own
+`ReportableError`s pass through unchanged. Either way the run ends Failed.
 """
 
 import logging
@@ -22,6 +27,7 @@ from typing import Any
 import pandas as pd
 
 from airwatch.config import Settings
+from airwatch.errors import ReportableError
 from airwatch.forecast.publish import publish_history
 from airwatch.forecast.run import RunOutcome, latest_target_day, run_daily
 from airwatch.monitoring.compute import MONTHLY_ALERT_MIN, MONTHLY_FREE_MIN, Usage, record_run
@@ -30,11 +36,15 @@ from airwatch.observations.sites import TRAINING_SITES
 from airwatch.storage import S3Store
 from airwatch.weather.cams_save import FetchCams, SaveOutcome, save_cams
 
-__all__ = ["JobOutcome", "daily_job"]
+__all__ = ["JobFailedError", "JobOutcome", "daily_job"]
 
 log = logging.getLogger(__name__)
 
 FetchDay = Callable[[date], tuple[pd.DataFrame, dict[str, int]]]
+
+
+class JobFailedError(ReportableError):
+    """A step failed in someone else's code: the day and the error's type, never its message."""
 
 
 @dataclass(frozen=True)
@@ -110,6 +120,41 @@ def daily_job(  # noqa: PLR0913  (each argument is one injected edge or the run'
     sites: Iterable[str] = TRAINING_SITES,
 ) -> JobOutcome:
     """Forecast, score, save CAMS (dry runs unless `publish`), then file this run's minutes."""
+    target: date | None = target_day
+    try:
+        target = target_day or latest_target_day(now())
+        return _run(
+            settings,
+            target,
+            run_id=run_id,
+            scheduled_start=scheduled_start,
+            publish=publish,
+            s3=s3,
+            fetch_day=fetch_day,
+            fetch_cams=fetch_cams,
+            now=now,
+            sites=sites,
+        )
+    except ReportableError:
+        raise
+    except Exception as exc:
+        day = f"{target}: " if target is not None else ""
+        raise JobFailedError(f"{day}daily job failed: {type(exc).__name__}") from None
+
+
+def _run(  # noqa: PLR0913  (daily_job's arguments, with the target day settled)
+    settings: Settings,
+    target: date,
+    *,
+    run_id: str,
+    scheduled_start: datetime,
+    publish: bool,
+    s3: Any,
+    fetch_day: FetchDay | None,
+    fetch_cams: FetchCams | None,
+    now: Callable[[], datetime],
+    sites: Iterable[str],
+) -> JobOutcome:
     client = s3 if s3 is not None else _real_s3(settings)
     private = S3Store(client, settings.data_bucket)
     public = S3Store(client, settings.public_bucket)
@@ -117,7 +162,6 @@ def daily_job(  # noqa: PLR0913  (each argument is one injected edge or the run'
     with ExitStack() as stack:
         fetch = fetch_day if fetch_day is not None else _real_fetch(settings, stack, wanted)
         cams_fetch = fetch_cams if fetch_cams is not None else _real_cams(settings, stack, now)
-        target = target_day or latest_target_day(now())
         try:
             run = run_daily(
                 target,

@@ -402,7 +402,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   moving under the write-up.
 - **Facts:** clock checked 2026-11-18 11:50 CST (17:50 UTC). The PC is on America/Chicago time.
   All dates here are America/Chicago.
-- **Status:** Active. Next review: 2026-11-25.
+- **Status:** Active, refined by D-050 (the 2026-11-25 review, held on 2026-11-23): the dates
+  stand, the cut line can move once, at a check-in on 2026-12-12.
 
 ---
 
@@ -1568,6 +1569,60 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
 - **For #113:** the watchdog needs a GitHub credential to start this workflow. If the same App
   can serve (the Lambda minting a token from the key in SSM), #113 uses it: one key to rotate.
 - **Status:** Active. Owner's choice, 2026-11-23.
+
+---
+
+## D-050 · 2026-11-23 · Timeline review: dates kept, one check-in on 12-12 (#120, refines D-014)
+
+- **Decision:** the review D-014 set for 2026-11-25, held two days early with the owner. All
+  dates America/Chicago.
+  - **Dates kept:** cut line **Wed 2026-12-16**, research freeze **Wed 2026-12-23**. The owner's
+    time stays as planned, about 30 h from 11-26 to 12-16.
+  - **One check-in, Sat 2026-12-12:** keep the cut line or move it later, once.
+    - Decided only by what is done, what is left and the owner's free time, never by any
+      model's scores.
+    - Any move is written as a new D-entry that day, before any test result is seen.
+    - The freeze moves by the same number of days, so the test-and-write-up week stays a full
+      week.
+    - At most one week: cut line no later than 2026-12-23, freeze no later than 2026-12-30.
+  - **Cut order unchanged:** the TCN, then the per-monitor map, then AQS re-scoring.
+  - **Work added since the plan:**
+    - Required, planned in like any task: #78 (the CAMS forecast saved daily), #79–#82 (the
+      write-up's build work) and #112 (mutation tests on the must-never rules).
+    - Fill-in, done in gaps (such as a long model search) or after the freeze, which allows
+      fixes: #113, #86, #87.
+    - None of it goes on the cut list.
+  - **The 14-day live check (T29) counts from the headline model going live (T23).** Days
+    forecast by persistence alone don't count. SPEC success criterion 1 says so.
+  - **Soft waypoints** (signals for the check-in, not deadlines; missing one changes nothing by
+    itself):
+    - **Sun 11-29:** weather data in (T14); the CAMS forecast saved daily (#78).
+    - **Sat 12-05:** T12b, T15, T16 (with the 3 baselines), T17.
+    - **Sat 12-12 (check-in):** T18–T20, T22, #79, #81.
+    - **Wed 12-16 (cut line):** T21, T23, T24, T25, T26, #80, #82, #112.
+- **Why:**
+  - The skeleton was live on 2026-11-22, three days early: 14 tasks (10 medium, 4 small) in
+    about 4 days, then two days of test hardening.
+  - What is left before the cut line is about twice that, and the model work is the least
+    predictable part (full searches up to 6 h each), so the buffer is kept rather than spent.
+  - The owner is unsure of their free time near mid-December, hence a cut line that can move.
+    A single fixed check-in, bounded to one week, keeps the move a calendar decision (D-014's
+    rule) rather than one that slides a day at a time.
+  - Moving the freeze with the cut line protects the delivery week: in the last project the
+    delivery path's bugs surfaced three days before the deadline.
+  - Counting the live check from T23 proves the published model runs daily, which is what T29's
+    dependency on T23 means.
+- **Alternatives:**
+  - More owner hours (45 h or more), first chosen and then withdrawn by the owner: 30 h stands.
+  - A check-in on Wed 12-09 (the agent's suggestion), any time up to 12-16, or two check-ins
+    (12-02 and 12-09); the owner chose Sat 12-12.
+  - A fixed freeze while the cut line moves; a move of up to two weeks, or no limit.
+  - Counting persistence days toward the live check (already passing, but it proves the
+    pipeline rather than the published model), or starting it after the freeze (over the
+    holidays, when a failure is slower to notice).
+- **Facts:** clock checked 2026-11-23 19:38 CST (2026-11-24 01:38 UTC). No test-period result
+  has been read (D-008). Thanksgiving is Thu 11-26, the first day of the deepening phase.
+- **Status:** Active. Owner's choices, 2026-11-23. Next review: the 2026-12-12 check-in.
 
 ---
 

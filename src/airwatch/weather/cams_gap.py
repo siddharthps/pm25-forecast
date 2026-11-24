@@ -63,7 +63,7 @@ def target_days(today: date) -> list[date]:
 
 
 def observed_means(
-    fetch_day: FetchDay, day: date, tz: ZoneInfo, sites: Iterable[str]
+    fetch_day: FetchDay, day: date, tz: ZoneInfo, sites: Iterable[str], *, now: datetime
 ) -> dict[str, float] | None:
     """Each monitor's valid observed mean for `day`, as scoring takes it; None on a hard failure."""
     wanted = tuple(sites)
@@ -73,6 +73,7 @@ def observed_means(
         window=Window(*local_day_window_utc(day, tz)),
         tz=tz,
         sites=wanted,
+        now=now,
         ingest_drops=drops,
     )
     try:
@@ -98,14 +99,15 @@ def measure(  # noqa: PLR0913  (the days, the monitors, the zone and each inject
     fetch_run: FetchRun,
     stitched_rows: pd.DataFrame,
     fetch_day: FetchDay,
+    now: datetime,
 ) -> dict[str, Any]:
-    """The D-052 gap over `days` at `sites`."""
+    """The D-052 gap over `days` at `sites`, validated as a run at `now` would be."""
     wanted, targets = tuple(sites), list(days)
     stitched = daily_means(stitched_rows, targets, tz)
     pairs: list[dict[str, Any]] = []
     skipped: Counter[str] = Counter()
     for day in targets:
-        observed = observed_means(fetch_day, day, tz, wanted)
+        observed = observed_means(fetch_day, day, tz, wanted, now=now)
         for site in wanted:
             issued_hours, issued = _hours_and_mean(
                 daily_means(fetch_run(site, issued_run_start(day)), [day], tz), site, day

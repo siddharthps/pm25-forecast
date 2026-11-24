@@ -1863,11 +1863,59 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - **A shell heredoc with nested triple quotes** broke in Git Bash; edit scripts go through the
   Write tool (the global rule).
 
+- **Merged:** #128 (`561ee4f`, squash) after its CI passed. #78 and #19 stay open until the
+  first real `cams.json` is seen.
+
+## 2026-11-24: T12b (#20), validation's other classes, branch `20-validation-part2` (CST, 09:55 to 10:50)
+
+- **D-054 (owner's choices):** faults stop the run, problems limited to some rows warn, an
+  instrument change is counted; AirNow hours are judged against each site's own instrument
+  (`AIRNOW_METHOD`, a fixed list the AQS report checks against AQS). New rules: wrong entity
+  (`site_not_listed`, `site_outside_city`), key reuse (`site_moved`, `airnow_method_stale`,
+  `method_changed`), dates (`future_hour`, `outside_active_period`), units (`unit_mismatch`);
+  for the weather files `hours_outside_part`, `run_after_valid`, `available_before_run`
+  (hard) and `outside_physical_range` (counted, kept). `run_checks` now takes the run time.
+  - **Reference data** (`validation/reference.py`): AQS's `monitors/bySite` and AirNow's site
+    list, fetched by the report only; the daily run doesn't call AQS.
+  - **Premises checked on real data first** (counts, dates, codes; no measurement): every AQS
+    hour inside its monitor's open period; all 10 sites in CBSA 38060 with one AQS position,
+    equal to ours, AirNow's within 0.57 km; seven clean method changes; two weeks of AirNow with
+    no hour outside its own site's range; 81 GFS-archive cloud-cover values at exactly −1 or
+    101 %.
+- **Built, tests first:** 21 rule tests, 26 reference tests (parsers and fetch on a mock
+  transport), 14 weather tests. The three validation properties now draw a reference and a run
+  time, so unlisted sites, future hours and inactive monitors join T12a's faults (every
+  excluded row counted once, row order and other sites never matter; up to 62 ms per example).
+  Folding them in instead of adding two more kept the suite at 53.4 s with coverage (budget
+  75 s; the two extra had made it 60 to 67 s). 23 planted mistakes, each caught by the unit
+  tests; the properties alone catch the three counting ones. Units already had a
+  planted-bad-unit test at every source (AQS, AirNow, Open-Meteo, CAMS). Core suite: 923
+  passed.
+- **The full AQS history report** (2026-11-24 16:38 UTC, 180 parts, 1,217,348 rows, reference
+  from AQS and AirNow): **passed**, nothing excluded.
+  - T12a's rules unchanged from 2026-11-20: 54 coverage gaps (site-months under 75%, 3 to 8 per
+    site), 0 duplicates, unverified methods, out-of-range hours or flat lines, 18,601 negative
+    hours inside the range (kept).
+  - T12b's: 0 unlisted sites, sites outside the CBSA, moved sites, stale AirNow instruments,
+    future hours or hours outside an active period; 7 method changes (West Phoenix 2011, 2013,
+    2014; North Phoenix 2014; Glendale 2015; Durango 2013; JLG Supersite 2024 to the T640X).
+  - AirNow for 2026-11-23 passed (238 rows kept); the weather coverage passed (240 of 240
+    files, no date fault; the 81 cloud-cover values counted).
+
+### Traps found
+
+- **A scratch script's name was already taken** by an earlier session's file: Write refused it
+  (not read first) and the command chained after it ran the old script, which stopped at its
+  first assertion before writing. Scratch scripts now get a task prefix (`t12b_…`).
+
 ### Next
 
-- PR for `78-cams-daily-save` ("Refs #78"), CI, merge.
+- PR for `20-validation-part2` ("Refs #20"), CI, merge; then #20's boxes and close it.
 - **2026-11-25 after 12:00 UTC (06:00 CST):** check the first real `cams.json` in S3 (#78's last
   box), then close #78 and #19.
 - **2026-11-25:** #3's old key and IAM user deleted (owner confirms first); milestone B closes.
-- `cams.py` and `cams_save.py` hold must-never rules: add them to #112's mutation list.
+- #112's mutation list: add `weather/cams.py`, `weather/cams_save.py`, `validation/checks.py`
+  and `validation/reference.py` (must-never rules); needs the owner's OK to edit the issue.
+- T15 (#21): what to do with the −1 and 101 % cloud-cover values (D-054 leaves it to the
+  features).
 - Fill-in: #124, #122, #113, #86, #87.

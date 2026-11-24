@@ -136,7 +136,7 @@ pm25-forecast/                 new public repo (D-002, D-017); package name `air
 │   │                          metadata.py (city check, HTTP retries), aqs_bulk.py (T13)
 │   ├── weather/               leads.py (the 72-hour rule), openmeteo.py, bulk.py (T14), cams.py,
 │   │                          coverage.py, cams_gap.py (D-052), cams_save.py (the daily save, D-053)
-│   ├── validation/            checks.py (whole problem classes), report.py
+│   ├── validation/            checks.py (whole problem classes), reference.py (D-054), report.py
 │   ├── features/              build.py (as-of-issue-time feature rows)
 │   ├── training/              split.py, baselines.py, models/, cv.py, final_test.py, registry.py
 │   ├── forecast/              run.py, record.py (conditional write), publish.py, schemas/ (D-036)

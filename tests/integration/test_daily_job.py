@@ -5,6 +5,7 @@ moto stands in for both buckets; AirNow is a fake fetch; the clock is frozen (#1
 
 import json
 import logging
+import traceback
 from collections.abc import Iterator
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
@@ -15,7 +16,7 @@ import pytest
 from moto import mock_aws
 
 from airwatch.config import Settings
-from airwatch.forecast.job import daily_job
+from airwatch.forecast.job import JobFailedError, daily_job
 from airwatch.forecast.publish import HISTORY_KEY, LATEST_KEY
 from airwatch.forecast.record import record_key, score_key
 from airwatch.forecast.run import NoForecastError
@@ -224,7 +225,10 @@ def test_a_dry_run_saves_no_cams(s3: Any) -> None:
 def test_a_cams_failure_fails_the_run_but_never_its_forecast(
     s3: Any, caplog: pytest.LogCaptureFixture
 ) -> None:
-    with caplog.at_level(logging.ERROR, logger="airwatch"), pytest.raises(ConnectionError):
+    with (
+        caplog.at_level(logging.ERROR, logger="airwatch"),
+        pytest.raises(JobFailedError, match="daily job failed: ConnectionError"),
+    ):
         _job(s3, publish=True, cams=CamsFetcher(fail=True))
     assert object_versions(s3, PRIVATE, record_key(TARGET)) == 1
     assert object_versions(s3, PUBLIC, LATEST_KEY) == 1
@@ -258,3 +262,75 @@ def test_a_retry_saves_cams_once_and_fetches_nothing(s3: Any) -> None:
     assert again.cams.status == "already_saved"
     assert cams.calls == []
     assert object_versions(s3, PRIVATE, cams_key(TARGET)) == 1
+
+
+LEAKY = "cell 123.456 at s3://private-bucket/raw/key"
+
+
+def _leaky_fetch(_: date) -> Any:
+    raise ValueError(LEAKY)
+
+
+def _printed(exc: BaseException) -> str:
+    return "".join(traceback.format_exception(exc))
+
+
+def test_a_foreign_error_is_reported_by_type_only(
+    s3: Any, caplog: pytest.LogCaptureFixture
+) -> None:
+    """#86: the scheduled path, like the CLI's (#56), never carries a foreign message."""
+    with caplog.at_level(logging.DEBUG), pytest.raises(JobFailedError) as caught:
+        _job(s3, publish=True, fetch=_leaky_fetch)
+    assert str(caught.value) == f"{TARGET}: daily job failed: ValueError"
+    assert caught.value.__suppress_context__
+    assert LEAKY not in _printed(caught.value)
+    assert not any(LEAKY in r.getMessage() for r in caplog.records)
+    assert len(_ledger(s3)) == 1, "the minutes are still filed"
+
+
+def test_our_own_errors_keep_their_type_and_message(s3: Any) -> None:
+    empty = fetcher(observed_day({SITES[0]: 10, SITES[1]: 10}))
+    with pytest.raises(NoForecastError, match=str(TARGET)):
+        _job(s3, publish=True, fetch=empty)
+
+
+def test_a_failure_before_the_target_day_is_known_names_no_day(s3: Any) -> None:
+    def broken_clock() -> datetime:
+        raise OSError(LEAKY)
+
+    with pytest.raises(JobFailedError) as caught:
+        daily_job(
+            Settings(_env_file=None, data_bucket=PRIVATE, public_bucket=PUBLIC),
+            run_id=RUN,
+            scheduled_start=ISSUE_AT,
+            publish=False,
+            s3=s3,
+            fetch_day=fetcher(observed_day()),
+            fetch_cams=CamsFetcher(),
+            now=broken_clock,
+            sites=SITES,
+        )
+    assert str(caught.value) == "daily job failed: OSError"
+    assert LEAKY not in _printed(caught.value)
+
+
+def test_an_interrupt_is_never_rewrapped(s3: Any) -> None:
+    def interrupted(_: date) -> Any:
+        raise KeyboardInterrupt
+
+    with pytest.raises(KeyboardInterrupt):
+        _job(s3, publish=True, fetch=interrupted)
+
+
+def test_a_failed_score_is_logged_and_raised_by_type_only(
+    s3: Any, caplog: pytest.LogCaptureFixture
+) -> None:
+    _job(s3, publish=True)
+    with caplog.at_level(logging.DEBUG), pytest.raises(ScoringError) as caught:
+        _later_job(s3, publish=True, fail={SCORED_DAY})
+    assert str(caught.value) == f"couldn't score {SCORED_DAY} (ConnectionError)"
+    assert any(
+        r.getMessage() == f"{SCORED_DAY}: scoring failed (ConnectionError)" for r in caplog.records
+    )
+    assert not any("AirNow unreachable" in r.getMessage() for r in caplog.records)
+    assert not any(r.exc_info for r in caplog.records), "no traceback quotes the message"

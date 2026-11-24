@@ -26,6 +26,7 @@ from datetime import date, datetime, timedelta
 from typing import Any, Literal
 from zoneinfo import ZoneInfo
 
+from airwatch.errors import ReportableError
 from airwatch.forecast.record import SCORE_PREFIX, Store, record_key, score_key
 from airwatch.forecast.run import FetchDay, day_means, latest_target_day
 from airwatch.timeutil import ensure_utc, issue_time_utc, local_day_window_utc
@@ -56,8 +57,11 @@ class NotSettledError(RuntimeError):
     """Asked to score a day before the T+2 morning run: its AirNow files may still change."""
 
 
-class ScoringError(RuntimeError):
-    """One or more days couldn't be scored. They stay unscored, so a later run tries again."""
+class ScoringError(ReportableError):
+    """One or more days couldn't be scored. They stay unscored, so a later run tries again.
+
+    The message names each day and its error's type, never the error's own message (#86).
+    """
 
 
 @dataclass(frozen=True)
@@ -189,7 +193,7 @@ def score_due(
             )
         except Exception as exc:
             failed.append(f"{day.isoformat()} ({type(exc).__name__})")
-            log.exception("%s: scoring failed", day)
+            log.error("%s: scoring failed (%s)", day, type(exc).__name__)
             continue
         outcomes.append(outcome)
         if outcome.score is not None and outcome.status != "already_scored":

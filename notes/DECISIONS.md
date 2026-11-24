@@ -1881,6 +1881,29 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
 
 ---
 
+## D-055 · 2026-11-24 · The scheduled run reports a foreign error by type (#86, refines #56)
+
+- **Decision:** `daily_job` re-raises any error from someone else's code as `JobFailedError`,
+  whose message is the target day and the error's type ("2026-11-25: daily job failed:
+  ValueError"), raised `from None` so the printed traceback drops the original and its message.
+  Our own `ReportableError`s pass through unchanged; `KeyboardInterrupt` and other non-`Exception`
+  errors are never caught. Scoring logs a failed day as "<day>: scoring failed (<type>)" with no
+  traceback, and `ScoringError` (days and type names only) becomes a `ReportableError`.
+- **What changes for the run:** it still ends Failed, so the watchdog and alerts behave as before,
+  and the minutes are still filed first. Prefect's log shows the type and the frames of our own
+  code, no longer the foreign message or the frames below it.
+- **Why:** #56's rule (errors by type; only our own messages printed) held on the command line
+  but not on the daily path, where Prefect logs the full exception. A message from pandas,
+  botocore or httpx can quote a cell, a bucket key or a URL.
+- **Cost:** debugging a scheduled failure needs a local rerun to see the foreign message. A
+  dry run reproduces any day (`python -m airwatch.forecast.run`), so that is cheap.
+- **Alternatives:** filtering Prefect's log handler (it sees formatted text, too late to judge
+  what is data); keeping the chain and trusting Prefect's private logs (breaks the rule on the
+  path that runs every day).
+- **Status:** Active. 2026-11-24.
+
+---
+
 ## Open questions (to settle, then move into a D-entry)
 
 - Further open items are listed in [SPEC.md](SPEC.md) § Open Questions.

@@ -170,7 +170,11 @@ filterwarnings = ["error"]
 
 [tool.mutmut]
 source_paths = ["src/"]
-only_mutate = ["src/airwatch/timeutil.py", "src/airwatch/config.py"]
+only_mutate = [
+    "src/airwatch/timeutil.py",
+    "src/airwatch/config.py",
+    "src/airwatch/weather/leads.py",
+]
 also_copy = [
     ".claude/",
     ".env.example",

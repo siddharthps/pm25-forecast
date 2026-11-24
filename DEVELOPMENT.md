@@ -40,7 +40,7 @@ if it doesn't, prefix each `uv` with `uvx --from uv==<floor>`. The paths it muta
 `pyproject.toml`'s `[tool.mutmut]`: add a module by extending `only_mutate`.
 
 ```bash
-uv sync --frozen && uv run mutmut run  # in WSL; about 2 min for timeutil and config
+uv sync --frozen && uv run mutmut run  # in WSL; about 2 min for timeutil, config and weather.leads
 uv run mutmut results                  # every mutant not killed; `uv run mutmut show <name>` for one
 gh workflow run mutmut.yml --ref <branch>  # the same on GitHub (UTC); results in the run's summary
 ```
@@ -48,12 +48,21 @@ gh workflow run mutmut.yml --ref <branch>  # the same on GitHub (UTC); results i
 Each survivor is killed by a new test or explained in the journal. Run it after changing a
 mutated module, before its merge.
 
+Started from Git Bash on Windows, `wsl.exe` drops the quotes inside a `bash -c "…"` command and
+Git Bash rewrites `/mnt/c/…` paths. Put the commands in a script with Linux line endings and run
+it as a login shell (WSL's `uv` is only on a login shell's path), with path rewriting off:
+
+```bash
+MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu -- bash -l /mnt/c/<path>/script.sh
+```
+
 ## Data, forecast and AWS
 
 ```bash
 aws sso login --profile pm25           # AWS access (never use long-lived keys); lasts 8 hours
 uv run pytest -m live -o log_cli=true --log-cli-level=INFO   # opt-in real-API checks, counts only
 AWS_PROFILE=pm25 uv run python scripts/aqs_bulk.py           # AQS history to S3: dry run; --apply acts
+AWS_PROFILE=pm25 uv run python scripts/weather_bulk.py       # ERA5 + GFS archive to S3 (about 2 h, paced): dry run; --apply acts
 uv run python scripts/city_check.py    # the frozen D-006 city check (reads only; cached in data/)
 AWS_PROFILE=pm25 uv run python -m airwatch.validation.report --source all  # D-033 report (reads only)
 AWS_PROFILE=pm25 uv run python -m airwatch.forecast.run   # D+1 forecast: dry run; --publish acts

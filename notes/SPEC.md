@@ -33,7 +33,7 @@ MLflow, Evidently and AWS). See [INTENT.md](INTENT.md).
 | Module id | Responsibility | Depends on |
 | --- | --- | --- |
 | `observations` | PM2.5 from EPA AQS (validated history) and AirNow (live, preliminary) (D-004) | — |
-| `weather` | Open-Meteo observed weather (ERA5), forecasts as issued (Previous Runs), live forecast, CAMS PM2.5 (D-007, D-009) | — |
+| `weather` | Open-Meteo observed weather (ERA5), GFS forecasts as issued (Previous Runs), live GFS forecast, CAMS PM2.5 (D-007, D-009, D-051) | — |
 | `validation` | Data-quality report on every source; blocks the pipeline on hard failures | observations, weather |
 | `features` | Leakage-safe feature rows "as known at issue time" | validation |
 | `training` | Baselines, 6 variants, rolling-origin CV, one-time test read, MLflow tracking and registry (D-008 to D-010) | features |
@@ -57,10 +57,12 @@ module in the order validation → features → training → monitoring → site
   continuous FEM instruments (D-032).
 - **Training labels** come from AQS. **Live labels** come from AirNow: day T is scored on the
   morning of T+2, once its files have settled (D-042). The AQS re-score follows later (D-004).
-- **Weather lead mapping:** for target day D+1 issued at 06:00 on day D, weather values valid
-  during D+1 are 18–42 hours ahead of issue. When rebuilding history from the Previous Runs API,
-  use the offset matching that lead (`_previous_day1` for hours valid up to 24 h after issue,
-  `_previous_day2` beyond). This mapping gets one property test.
+- **Weather lead mapping (D-051):** for target day D+1 (a Phoenix day) issued at 06:00 Chicago
+  on day D, weather values valid during D+1 are 19–44 hours ahead of issue. When rebuilding
+  history from the Previous Runs API, every hour of D+1 uses `_previous_day3`: the last GFS run
+  started at or before 72 h ahead of that hour, published about a day before the issue time.
+  The live run uses the newest run published before it starts. This mapping gets one property
+  test.
 
 ---
 
@@ -132,7 +134,7 @@ pm25-forecast/                 new public repo (D-002, D-017); package name `air
 │   ├── errors.py              ReportableError: errors whose message is safe to log (#56)
 │   ├── observations/          aqs.py, airnow.py, schema.py, sites.py (D-030 sites, D-032 methods),
 │   │                          metadata.py (city check, HTTP retries), aqs_bulk.py (T13)
-│   ├── weather/               openmeteo.py, cams.py
+│   ├── weather/               leads.py (the 72-hour rule), openmeteo.py, bulk.py (T14), cams.py
 │   ├── validation/            checks.py (whole problem classes), report.py
 │   ├── features/              build.py (as-of-issue-time feature rows)
 │   ├── training/              split.py, baselines.py, models/, cv.py, final_test.py, registry.py

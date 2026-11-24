@@ -2,12 +2,15 @@
 
 import csv
 import io
+import math
 import re
+from itertools import combinations
 from pathlib import Path
 
 from airwatch.observations.sites import (
     AGENCIES,
     SITE_AGENCY,
+    SITE_COORDS,
     SITE_NAMES,
     TRAINING_SITES,
     VERIFIED_METHODS,
@@ -49,6 +52,34 @@ def test_every_training_site_has_a_name_and_an_agency() -> None:
         "Arizona Department of Environmental Quality",
         "Pinal County Air Quality Control District",
     )
+
+
+def test_every_training_site_has_coordinates() -> None:
+    assert set(SITE_COORDS) == set(TRAINING_SITES)
+    assert all(
+        isinstance(lat, float) and isinstance(lon, float) for lat, lon in SITE_COORDS.values()
+    )
+
+
+SAME_SITE_KM = 1.0
+
+
+def _km(a: tuple[float, float], b: tuple[float, float]) -> float:
+    return math.hypot((a[0] - b[0]) * 111.0, (a[1] - b[1]) * 111.0 * math.cos(math.radians(a[0])))
+
+
+def test_the_tolerance_is_under_half_the_closest_two_monitors() -> None:
+    """So coordinates copied from the wrong monitor can never pass. AQS and AirNow publish
+    positions up to 571 m apart for the same monitor (Glendale, 2026-11-23), hence 1 km."""
+    closest = min(_km(SITE_COORDS[a], SITE_COORDS[b]) for a, b in combinations(SITE_COORDS, 2))
+    assert closest > 2 * SAME_SITE_KM
+
+
+def test_coordinates_agree_with_the_recorded_airnow_file() -> None:
+    rows = {r["AQSID"]: r for r in csv.DictReader(io.StringIO(text()))}
+    for site in TRAINING_SITES:
+        airnow = (float(rows[site]["Latitude"]), float(rows[site]["Longitude"]))
+        assert _km(SITE_COORDS[site], airnow) < SAME_SITE_KM, site
 
 
 def test_names_and_agencies_match_the_recorded_airnow_file() -> None:

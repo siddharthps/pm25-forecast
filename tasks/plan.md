@@ -201,6 +201,8 @@ The skill's shared `definition-of-done.md` wasn't installed, so this is ours, fr
 | Training/serving skew larger than expected | Med | It's measured (T22) and reported, not hidden |
 | Time-zone or DST bugs in the issue time | High | One `timeutil` home + property tests in T3, before any data code |
 | AirNow rewrites hourly files for ~7.7 h after the hour (found in T6) | Med | Strict issue-time cut: rows published after 06:00 are dropped and counted; a property test proves they can't change a forecast (D-034) |
+| Open-Meteo counts a long request as many calls (a site-year is about 26) and limits each minute, hour and day | Med | A budget for every window at half the free limit, with a property test (T14; a first run that paced only the hour hit the minute limit, D-051) |
+| Weather leakage: an archived forecast published after the issue time | High | The 72-hour rule (D-051), checked as "published before" by a property test on every day 2009–2030 |
 | Double publish on retry or watchdog | High | S3 conditional write + an idempotency test that fails at each step in turn (T6, T9) |
 | Accidental test peek | High | `final_test.py` guard + a CI check that no test-period metrics appear elsewhere (T16, T27) |
 | AirNow monitors don't map cleanly to AQS sites | High | Explicit site mapping in T5; unmatched monitors excluded and counted; a validation check |

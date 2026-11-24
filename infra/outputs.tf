@@ -37,3 +37,8 @@ output "prefect_key_parameter" {
   description = "SSM parameter the owner creates with the Prefect API key (T9 guide)."
   value       = local.prefect_key_param
 }
+
+output "github_token_parameter" {
+  description = "SSM parameter the owner creates with the GitHub lock token (#113, T9 guide)."
+  value       = local.github_token_param
+}

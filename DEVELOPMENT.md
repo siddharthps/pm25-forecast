@@ -72,7 +72,8 @@ AWS_PROFILE=pm25 uv run python -m airwatch.forecast.run   # D+1 forecast: dry ru
 
 ## Dependencies: the 7-day wait (D-056)
 
-The weekly lock job (`uv-lock-upgrade.yml`) takes a release only once it is 7 days old. A local
+The weekly lock job (`uv-lock-upgrade.yml`, started by the watchdog on Mondays, D-058) takes
+a release only once it is 7 days old. A local
 `uv lock` keeps the locked versions, so it never undoes the wait.
 
 - **Adding a package or raising a minimum:** pick a release at least 7 days old

@@ -207,8 +207,7 @@ def test_the_weekly_lock_upgrade_refreshes_both_exports_then_opens_its_pr() -> N
     own PR would fail the drift tests (test_prefect_deployment.py, watchdog/test_build.py)."""
     workflow = load_yaml(LOCK_UPGRADE)
     on = triggers(workflow)
-    assert "schedule" in on
-    assert "workflow_dispatch" in on
+    assert set(on) == {"workflow_dispatch"}, "the watchdog starts it on Mondays (#113, D-058)"
     runs = [str(step.get("run", "")).strip() for step in steps(workflow)]
     upgrade = next(i for i, r in enumerate(runs) if r.startswith(LOCK_UPGRADE_CMD))
     prefect = " ".join(PREFECT_EXPORT) + " > requirements/prefect-run.txt"
@@ -274,3 +273,10 @@ def test_terraform_fmt_never_prints_file_contents() -> None:
     ci = CI.read_text(encoding="utf-8")
     assert "terraform fmt" in ci, "guards the guard: CI's format step must be found"
     assert all("-diff" not in line for line in ci.splitlines() if "terraform fmt" in line)
+
+
+@pytest.mark.parametrize("path", workflow_files(), ids=lambda p: p.name)
+def test_no_workflow_runs_on_a_schedule(path: Path) -> None:
+    """D-003: GitHub Actions is for CI only; its cron drops runs (2026-11-23). The weekly lock
+    run is started by the watchdog (D-058), nothing else here keeps time."""
+    assert "schedule" not in triggers(load_yaml(path)), path.name

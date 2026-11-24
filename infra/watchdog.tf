@@ -3,12 +3,14 @@
 # EventBridge Scheduler invokes one Lambda at 08:00 and 09:00 America/Chicago. At 08:00 it checks
 # for today's record in S3 and, if missing, starts the Prefect deployment (key from SSM) and
 # emails; it also emails once a month when Prefect minutes pass 300. At 09:00 it only checks, and
-# emails if the record is still missing. Any error emails, and a CloudWatch alarm on the Lambda's
-# errors emails too (fail closed). Code: src/airwatch/watchdog/handler.py, zipped by
+# emails if the record is still missing. On Mondays it also starts the weekly uv lock workflow at
+# 08:00 (GitHub's API, token from SSM) and checks that run at 09:00 (#113, D-058). Any error
+# emails, and a CloudWatch alarm on the Lambda's errors emails too (fail closed). Code: src/airwatch/watchdog/handler.py, zipped by
 # `uv run python -m airwatch.watchdog.build` into infra/build/ before plan.
 #
-# The Prefect key is created by the owner with the AWS CLI (notes/guides/T9-WATCHDOG.md), so its
-# value never enters Terraform's state. Terraform only knows the parameter's name.
+# The Prefect key and the GitHub token are created by the owner with the AWS CLI
+# (notes/guides/T9-WATCHDOG.md), so their values never enter Terraform's state. Terraform only
+# knows the parameters' names.
 
 data "aws_caller_identity" "current" {}
 
@@ -16,6 +18,10 @@ locals {
   watchdog_name      = "pm25-forecast-watchdog"
   prefect_key_param  = "/pm25-forecast/prefect-api-key"
   prefect_key_arn    = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter${local.prefect_key_param}"
+  github_token_param = "/pm25-forecast/github-lock-token"
+  github_token_arn   = "arn:aws:ssm:${var.region}:${data.aws_caller_identity.current.account_id}:parameter${local.github_token_param}"
+  github_repo        = "siddharthps/pm25-forecast"
+  lock_workflow      = "uv-lock-upgrade.yml"
   watchdog_log_group = "/aws/lambda/${local.watchdog_name}"
   watchdog_zip       = "${path.module}/${var.watchdog_zip}"
 }
@@ -37,7 +43,7 @@ resource "aws_sns_topic_subscription" "owner_email" {
 
 resource "aws_iam_role" "watchdog" {
   name        = local.watchdog_name
-  description = "The watchdog Lambda: check the record, start one Prefect run, email."
+  description = "The watchdog Lambda: check the record, start one Prefect run or the lock run, email."
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -59,31 +65,31 @@ resource "aws_iam_role_policy" "watchdog" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid      = "ListRecordsAndLedger"
+        Sid      = "ListRecordsLedgerAndLockRuns"
         Effect   = "Allow"
         Action   = "s3:ListBucket"
         Resource = local.private_arn
         Condition = {
-          StringLike = { "s3:prefix" = ["records/*", "reports/compute/*"] }
+          StringLike = { "s3:prefix" = ["records/*", "reports/compute/*", "reports/lock-runs/*"] }
         }
       },
       {
-        Sid      = "ReadLedger"
+        Sid      = "ReadLedgerAndLockRuns"
         Effect   = "Allow"
         Action   = "s3:GetObject"
-        Resource = "${local.private_arn}/reports/compute/*"
+        Resource = ["${local.private_arn}/reports/compute/*", "${local.private_arn}/reports/lock-runs/*"]
       },
       {
-        Sid      = "WriteMonthlyAlertMarker"
+        Sid      = "WriteAlertAndLockMarkers"
         Effect   = "Allow"
         Action   = "s3:PutObject"
-        Resource = "${local.private_arn}/reports/compute-alerts/*"
+        Resource = ["${local.private_arn}/reports/compute-alerts/*", "${local.private_arn}/reports/lock-runs/*"]
       },
       {
-        Sid      = "ReadPrefectKey"
+        Sid      = "ReadPrefectKeyAndGitHubToken"
         Effect   = "Allow"
         Action   = "ssm:GetParameter"
-        Resource = local.prefect_key_arn
+        Resource = [local.prefect_key_arn, local.github_token_arn]
       },
       {
         Sid      = "Email"
@@ -120,11 +126,14 @@ resource "aws_lambda_function" "watchdog" {
 
   environment {
     variables = {
-      DATA_BUCKET           = aws_s3_bucket.private.bucket
-      ALERT_TOPIC_ARN       = aws_sns_topic.alerts.arn
-      PREFECT_KEY_PARAMETER = local.prefect_key_param
-      PREFECT_API_URL       = "https://api.prefect.cloud/api/accounts/${var.prefect_account_id}/workspaces/${var.prefect_workspace_id}"
-      PREFECT_DEPLOYMENT_ID = var.prefect_deployment_id
+      DATA_BUCKET            = aws_s3_bucket.private.bucket
+      ALERT_TOPIC_ARN        = aws_sns_topic.alerts.arn
+      PREFECT_KEY_PARAMETER  = local.prefect_key_param
+      PREFECT_API_URL        = "https://api.prefect.cloud/api/accounts/${var.prefect_account_id}/workspaces/${var.prefect_workspace_id}"
+      PREFECT_DEPLOYMENT_ID  = var.prefect_deployment_id
+      GITHUB_TOKEN_PARAMETER = local.github_token_param
+      GITHUB_REPO            = local.github_repo
+      LOCK_WORKFLOW          = local.lock_workflow
     }
   }
 

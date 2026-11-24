@@ -5,6 +5,9 @@
 - 09:00 (`verify`): a missing record emails; nothing is started.
 - The minutes email is sent once a month, the first time the ledger passes 300.
 - Any error emails its type and is re-raised (fail closed); the key never reaches an email or log.
+- Mondays (#113, D-058): 08:00 starts the weekly lock workflow once (a create-once marker first,
+  then GitHub's dispatch, then the run's ID recorded); 09:00 emails unless that run succeeded. The
+  forecast checks and the lock checks never skip each other.
 """
 
 import contextlib
@@ -41,6 +44,14 @@ DEPLOYMENT = "4a5b6c7d-8e9f-4a0b-9c1d-2e3f4a5b6c7d"
 AT_0800 = "2026-11-21T14:00:00Z"
 AT_0900 = "2026-11-21T15:00:00Z"
 TARGET = date(2026, 11, 22)
+GH_PARAM = "/pm25-forecast/github-lock-token"
+GH_TOKEN = "github_pat_" + "y" * 40
+REPO = "siddharthps/pm25-forecast"
+WORKFLOW = "uv-lock-upgrade.yml"
+MONDAY = date(2026, 11, 30)
+MON_0800 = "2026-11-30T14:00:00Z"
+MON_0900 = "2026-11-30T15:00:00Z"
+LOCK_RUN_ID = 45500000001
 RUN = {"id": "06b01005-4e4f-75ca-8000-a64c1229cea0", "name": "rose-ocelot"}
 
 
@@ -95,6 +106,7 @@ def aws(_moto: None) -> Iterator[Aws]:
     s3.put_bucket_versioning(Bucket=BUCKET, VersioningConfiguration={"Status": "Enabled"})
     ssm = boto3.client("ssm", region_name=REGION)
     ssm.put_parameter(Name=PARAM, Value=KEY, Type="SecureString", Overwrite=True)
+    ssm.put_parameter(Name=GH_PARAM, Value=GH_TOKEN, Type="SecureString", Overwrite=True)
     sns = boto3.client("sns", region_name=REGION)
     topic = sns.create_topic(Name="pm25-forecast-alerts")["TopicArn"]
     sqs = boto3.client("sqs", region_name=REGION)
@@ -117,7 +129,14 @@ def _config(aws: Aws) -> wd.Config:
         prefect_key_parameter=PARAM,
         prefect_api_url=API,
         deployment_id=DEPLOYMENT,
+        github_token_parameter=GH_PARAM,
+        github_repo=REPO,
+        lock_workflow=WORKFLOW,
     )
+
+
+def _no_get(url: str, _: Mapping[str, str]) -> tuple[int, bytes]:
+    raise AssertionError(f"no GitHub read expected: {url}")
 
 
 def _handle(
@@ -131,6 +150,7 @@ def _handle(
         ssm=aws.ssm,
         sns=aws.sns,
         post=prefect if prefect is not None else FakePrefect(),
+        get=_no_get,
     )
     return wd.handle(event, config=_config(aws), aws=clients, now=now)
 
@@ -354,8 +374,19 @@ def test_config_comes_from_the_environment() -> None:
         "PREFECT_KEY_PARAMETER": PARAM,
         "PREFECT_API_URL": API,
         "PREFECT_DEPLOYMENT_ID": DEPLOYMENT,
+        "GITHUB_TOKEN_PARAMETER": GH_PARAM,
+        "GITHUB_REPO": REPO,
+        "LOCK_WORKFLOW": WORKFLOW,
     }
-    assert wd.Config.from_env(env).deployment_id == DEPLOYMENT
+    config = wd.Config.from_env(env)
+    assert (config.deployment_id, config.github_repo, config.lock_workflow) == (
+        DEPLOYMENT,
+        REPO,
+        WORKFLOW,
+    )
+    assert config.github_token_parameter == GH_PARAM
+    with pytest.raises(KeyError):
+        wd.Config.from_env({k: v for k, v in env.items() if k != "GITHUB_REPO"})
     with pytest.raises(KeyError):
         wd.Config.from_env({k: v for k, v in env.items() if k != "DATA_BUCKET"})
     with pytest.raises(ValueError, match="https"):
@@ -384,7 +415,7 @@ def test_a_corrupt_ledger_entry_emails_its_type_and_fails(aws: Aws) -> None:
 
 def test_an_aws_error_emails_its_code(aws: Aws) -> None:
     config = dataclasses.replace(_config(aws), data_bucket="no-such-bucket")
-    clients = wd.Clients(s3=aws.s3, ssm=aws.ssm, sns=aws.sns, post=FakePrefect())
+    clients = wd.Clients(s3=aws.s3, ssm=aws.ssm, sns=aws.sns, post=FakePrefect(), get=_no_get)
     with pytest.raises(ClientError):
         wd.handle(VERIFY, config=config, aws=clients)
     [email] = aws.emails()
@@ -407,7 +438,9 @@ class RefusingPut:
 def test_a_refused_marker_write_is_an_error_not_already_sent(aws: Aws) -> None:
     _put_record(aws)
     _put_minutes(aws, [301], datetime(2026, 11, 21, 12, 30, tzinfo=UTC))
-    clients = wd.Clients(s3=RefusingPut(aws.s3), ssm=aws.ssm, sns=aws.sns, post=FakePrefect())
+    clients = wd.Clients(
+        s3=RefusingPut(aws.s3), ssm=aws.ssm, sns=aws.sns, post=FakePrefect(), get=_no_get
+    )
     with pytest.raises(ClientError):
         wd.handle(RETRY, config=_config(aws), aws=clients)
     [email] = aws.emails()
@@ -533,3 +566,275 @@ def test_the_real_sender_lets_a_dropped_connection_raise(local_prefect: LocalPre
     with pytest.raises(OSError) as caught:
         wd._urllib_post(local_prefect.url, b"{}", {})
     assert not isinstance(caught.value, urllib.error.HTTPError)
+
+
+@dataclass
+class FakeWeb:
+    """Prefect and GitHub behind one POST, and GitHub's GET: records each call, answers set ones."""
+
+    prefect: FakePrefect = field(default_factory=FakePrefect)
+    dispatch_status: int = 200
+    dispatch_reply: dict[str, Any] = field(
+        default_factory=lambda: {"workflow_run_id": LOCK_RUN_ID, "run_url": "u", "html_url": "h"}
+    )
+    dispatch_raises: Exception | None = None
+    run_status: int = 200
+    run: dict[str, Any] = field(
+        default_factory=lambda: {
+            "id": LOCK_RUN_ID,
+            "status": "completed",
+            "conclusion": "success",
+            "path": f".github/workflows/{WORKFLOW}",
+            "html_url": "https://github.com/siddharthps/pm25-forecast/actions/runs/45500000001",
+        }
+    )
+    dispatches: list[tuple[str, dict[str, Any], dict[str, str]]] = field(default_factory=list)
+    reads: list[tuple[str, dict[str, str]]] = field(default_factory=list)
+
+    def post(self, url: str, body: bytes, headers: Mapping[str, str]) -> tuple[int, bytes]:
+        if not url.startswith("https://api.github.com/"):
+            return self.prefect(url, body, headers)
+        self.dispatches.append((url, json.loads(body), dict(headers)))
+        if self.dispatch_raises is not None:
+            raise self.dispatch_raises
+        return self.dispatch_status, json.dumps(self.dispatch_reply).encode()
+
+    def get(self, url: str, headers: Mapping[str, str]) -> tuple[int, bytes]:
+        self.reads.append((url, dict(headers)))
+        return self.run_status, json.dumps(self.run).encode()
+
+
+def _monday(
+    aws: Aws, event: dict[str, Any], web: FakeWeb, now: datetime | None = None
+) -> dict[str, Any]:
+    clients = wd.Clients(s3=aws.s3, ssm=aws.ssm, sns=aws.sns, post=web.post, get=web.get)
+    at = now or datetime(2026, 11, 30, 15, 30, tzinfo=UTC)
+    return wd.handle(event, config=_config(aws), aws=clients, now=at)
+
+
+MON_RETRY = {"mode": "retry", "scheduled_time": MON_0800}
+MON_VERIFY = {"mode": "verify", "scheduled_time": MON_0900}
+DISPATCH_KEY = f"reports/lock-runs/date={MONDAY}/dispatch.json"
+RUN_KEY = f"reports/lock-runs/date={MONDAY}/run.json"
+
+
+def _put_lock_run(aws: Aws, run_id: int = LOCK_RUN_ID) -> None:
+    body = json.dumps({"run_id": run_id, "dispatched_utc": "2026-11-30T14:00:00+00:00"})
+    aws.s3.put_object(Bucket=BUCKET, Key=RUN_KEY, Body=body.encode())
+
+
+@pytest.mark.parametrize("event", [RETRY, VERIFY], ids=["retry-0800", "verify-0900"])
+def test_not_monday_means_no_github_call(aws: Aws, event: dict[str, Any]) -> None:
+    _put_record(aws)
+    web = FakeWeb()
+    result = _monday(aws, event, web, now=datetime(2026, 11, 21, 15, 30, tzinfo=UTC))
+    assert result["lock"] == "not due"
+    assert (web.dispatches, web.reads) == ([], [])
+    assert aws.emails() == []
+
+
+def test_monday_0800_dispatches_the_lock_workflow_once_and_records_its_run(aws: Aws) -> None:
+    _put_record(aws, MONDAY + timedelta(days=1))
+    web = FakeWeb()
+    result = _monday(aws, MON_RETRY, web)
+    assert (result["record"], result["lock"], result["lock_run_id"]) == (
+        "present",
+        "dispatched",
+        LOCK_RUN_ID,
+    )
+    [(url, body, headers)] = web.dispatches
+    assert url == f"https://api.github.com/repos/{REPO}/actions/workflows/{WORKFLOW}/dispatches"
+    assert body == {"ref": "main"}
+    assert headers["Authorization"] == f"Bearer {GH_TOKEN}"
+    assert headers["Accept"] == "application/vnd.github+json"
+    assert headers["X-GitHub-Api-Version"] == "2026-03-10"
+    stored = json.loads(aws.s3.get_object(Bucket=BUCKET, Key=RUN_KEY)["Body"].read())
+    assert stored["run_id"] == LOCK_RUN_ID
+    assert web.prefect.calls == []
+    assert aws.emails() == []
+
+
+def test_a_second_monday_0800_call_dispatches_nothing(aws: Aws) -> None:
+    _put_record(aws, MONDAY + timedelta(days=1))
+    web = FakeWeb()
+    _monday(aws, MON_RETRY, web)
+    again = _monday(aws, MON_RETRY, web)
+    assert again["lock"] == "already dispatched"
+    assert len(web.dispatches) == 1
+
+
+def test_the_marker_is_written_before_the_dispatch(aws: Aws) -> None:
+    """Record before the outward action: a dispatch that fails still uses up the week."""
+    _put_record(aws, MONDAY + timedelta(days=1))
+    web = FakeWeb(dispatch_raises=TimeoutError("timed out at a URL"))
+    with pytest.raises(wd.WatchdogError, match="GitHub didn't answer: TimeoutError"):
+        _monday(aws, MON_RETRY, web)
+    assert wd._exists(aws.s3, BUCKET, DISPATCH_KEY)
+    assert not wd._exists(aws.s3, BUCKET, RUN_KEY)
+    [email] = aws.emails()
+    assert "lock run NOT started" in email["subject"]
+    assert "gh workflow run uv-lock-upgrade.yml" in email["message"]
+    assert "timed out at a URL" not in email["message"]
+    again = FakeWeb()
+    assert _monday(aws, MON_RETRY, again)["lock"] == "already dispatched"
+    assert again.dispatches == []
+
+
+@pytest.mark.parametrize("status", [204, 401, 403, 404, 422, 500])
+def test_a_refused_dispatch_emails_and_fails(aws: Aws, status: int) -> None:
+    _put_record(aws, MONDAY + timedelta(days=1))
+    with pytest.raises(wd.WatchdogError, match=f"HTTP {status}"):
+        _monday(aws, MON_RETRY, FakeWeb(dispatch_status=status))
+    [email] = aws.emails()
+    assert f"HTTP {status}" in email["message"]
+
+
+def test_a_dispatch_reply_without_a_run_id_emails_and_fails(aws: Aws) -> None:
+    _put_record(aws, MONDAY + timedelta(days=1))
+    with pytest.raises(wd.WatchdogError, match="run ID"):
+        _monday(aws, MON_RETRY, FakeWeb(dispatch_reply={"run_url": "u"}))
+    assert len(aws.emails()) == 1
+
+
+def test_a_missing_github_token_emails_and_fails_closed(aws: Aws) -> None:
+    _put_record(aws, MONDAY + timedelta(days=1))
+    aws.ssm.delete_parameter(Name=GH_PARAM)
+    web = FakeWeb()
+    with pytest.raises(wd.WatchdogError, match="GitHub token: ParameterNotFound"):
+        _monday(aws, MON_RETRY, web)
+    assert web.dispatches == []
+    [email] = aws.emails()
+    assert "ParameterNotFound" in email["message"]
+
+
+def test_monday_0900_with_a_successful_run_is_silent(aws: Aws) -> None:
+    _put_record(aws, MONDAY + timedelta(days=1))
+    _put_lock_run(aws)
+    web = FakeWeb()
+    result = _monday(aws, MON_VERIFY, web)
+    assert result["lock"] == "succeeded"
+    [(url, headers)] = web.reads
+    assert url == f"https://api.github.com/repos/{REPO}/actions/runs/{LOCK_RUN_ID}"
+    assert headers["Authorization"] == f"Bearer {GH_TOKEN}"
+    assert web.dispatches == []
+    assert aws.emails() == []
+
+
+@pytest.mark.parametrize(
+    ("status", "conclusion", "shown"),
+    [
+        ("completed", "failure", "failure"),
+        ("completed", "cancelled", "cancelled"),
+        ("in_progress", None, "in_progress"),
+        ("queued", None, "queued"),
+    ],
+)
+def test_monday_0900_with_a_run_not_succeeded_emails(
+    aws: Aws, status: str, conclusion: str | None, shown: str
+) -> None:
+    _put_record(aws, MONDAY + timedelta(days=1))
+    _put_lock_run(aws)
+    web = FakeWeb()
+    web.run.update(status=status, conclusion=conclusion)
+    result = _monday(aws, MON_VERIFY, web)
+    assert result["lock"] == shown
+    [email] = aws.emails()
+    assert f"weekly lock run {shown}" in email["subject"]
+    assert "actions/runs/45500000001" in email["message"]
+
+
+def test_monday_0900_with_no_recorded_run_emails(aws: Aws) -> None:
+    _put_record(aws, MONDAY + timedelta(days=1))
+    web = FakeWeb()
+    result = _monday(aws, MON_VERIFY, web)
+    assert result["lock"] == "missing"
+    assert web.reads == []
+    [email] = aws.emails()
+    assert "weekly lock run missing" in email["subject"]
+
+
+def test_monday_0900_refuses_a_run_from_another_workflow(aws: Aws) -> None:
+    _put_record(aws, MONDAY + timedelta(days=1))
+    _put_lock_run(aws)
+    web = FakeWeb()
+    web.run["path"] = ".github/workflows/ci.yml"
+    with pytest.raises(wd.WatchdogError, match="isn't the lock workflow"):
+        _monday(aws, MON_VERIFY, web)
+    assert len(aws.emails()) == 1
+
+
+@pytest.mark.parametrize("status", [401, 404, 500])
+def test_monday_0900_when_github_wont_return_the_run_emails_and_fails(
+    aws: Aws, status: int
+) -> None:
+    _put_record(aws, MONDAY + timedelta(days=1))
+    _put_lock_run(aws)
+    with pytest.raises(wd.WatchdogError, match=f"HTTP {status}"):
+        _monday(aws, MON_VERIFY, FakeWeb(run_status=status))
+    assert len(aws.emails()) == 1
+
+
+def test_a_failed_forecast_retry_never_skips_the_lock_dispatch(aws: Aws) -> None:
+    web = FakeWeb(prefect=FakePrefect(status=500))
+    with pytest.raises(wd.WatchdogError, match="Prefect refused"):
+        _monday(aws, MON_RETRY, web)
+    assert len(web.dispatches) == 1
+    assert wd._exists(aws.s3, BUCKET, RUN_KEY)
+    [email] = aws.emails()
+    assert "retry FAILED" in email["subject"]
+
+
+def test_a_failed_lock_dispatch_never_skips_the_forecast_retry(aws: Aws) -> None:
+    web = FakeWeb(dispatch_status=500)
+    with pytest.raises(wd.WatchdogError, match="GitHub refused"):
+        _monday(aws, MON_RETRY, web)
+    assert len(web.prefect.calls) == 1
+    subjects = sorted(e["subject"] for e in aws.emails())
+    assert len(subjects) == 2
+    assert any("retry started" in s for s in subjects)
+    assert any("lock run NOT started" in s for s in subjects)
+
+
+def test_a_failed_lock_check_never_skips_the_forecast_verify(aws: Aws) -> None:
+    _put_lock_run(aws)
+    web = FakeWeb(run_status=500)
+    with pytest.raises(wd.WatchdogError, match="HTTP 500"):
+        _monday(aws, MON_VERIFY, web)
+    subjects = [e["subject"] for e in aws.emails()]
+    assert any("still missing" in s for s in subjects)
+    assert any("watchdog error" in s for s in subjects)
+
+
+def test_both_checks_failing_raises_the_first_and_emails_both(aws: Aws) -> None:
+    web = FakeWeb(prefect=FakePrefect(status=500), dispatch_status=403)
+    with pytest.raises(wd.WatchdogError, match="Prefect refused"):
+        _monday(aws, MON_RETRY, web)
+    assert len(aws.emails()) == 2
+
+
+def test_a_drill_dispatch_keeps_its_own_marker(aws: Aws) -> None:
+    """A drill on a coming Monday never uses up that week's real dispatch."""
+    web = FakeWeb()
+    drill = {**MON_RETRY, "drill": True}
+    result = _monday(aws, drill, web, now=datetime(2026, 11, 29, 20, tzinfo=UTC))
+    assert result["lock"] == "dispatched"
+    assert wd._exists(aws.s3, BUCKET, f"reports/lock-runs/date={MONDAY}/dispatch-drill.json")
+    assert not wd._exists(aws.s3, BUCKET, DISPATCH_KEY)
+    assert all("DRILL" in e["subject"] for e in aws.emails())
+
+
+@pytest.mark.usefixtures("lambda_logging")
+def test_the_github_token_never_reaches_an_email_or_log(
+    aws: Aws, caplog: pytest.LogCaptureFixture
+) -> None:
+    """Root at DEBUG, as the Prefect key's test: the SDK's own lines stay at WARNING."""
+    caplog.set_level(logging.DEBUG)
+    web = FakeWeb(dispatch_status=401, prefect=FakePrefect(status=500))
+    with pytest.raises(wd.WatchdogError):
+        _monday(aws, MON_RETRY, web)
+    _put_lock_run(aws)
+    with pytest.raises(wd.WatchdogError):
+        _monday(aws, MON_VERIFY, FakeWeb(run_status=401))
+    text = json.dumps(aws.emails()) + caplog.text
+    assert GH_TOKEN not in text
+    assert KEY not in text

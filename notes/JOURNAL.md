@@ -1902,6 +1902,11 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   - AirNow for 2026-11-23 passed (238 rows kept); the weather coverage passed (240 of 240
     files, no date fault; the 81 cloud-cover values counted).
 
+- **Merged:** #129 (`4baaaaa`, squash; owner: "go ahead") after its CI passed on a rerun (the
+  first run failed building the Vale hook: a stream error from the Go module proxy, not our
+  code). #20's boxes ticked and the issue closed. #112's mutation list now also names
+  `validation/reference.py`, `weather/cams.py` and `weather/cams_save.py` (owner's OK).
+
 ### Traps found
 
 - **A scratch script's name was already taken** by an earlier session's file: Write refused it
@@ -1910,12 +1915,9 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 
 ### Next
 
-- PR for `20-validation-part2` ("Refs #20"), CI, merge; then #20's boxes and close it.
 - **2026-11-25 after 12:00 UTC (06:00 CST):** check the first real `cams.json` in S3 (#78's last
   box), then close #78 and #19.
 - **2026-11-25:** #3's old key and IAM user deleted (owner confirms first); milestone B closes.
-- #112's mutation list: add `weather/cams.py`, `weather/cams_save.py`, `validation/checks.py`
-  and `validation/reference.py` (must-never rules); needs the owner's OK to edit the issue.
 - T15 (#21): what to do with the −1 and 101 % cloud-cover values (D-054 leaves it to the
   features).
 - Fill-in: #124, #122, #113, #86, #87.

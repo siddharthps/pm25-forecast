@@ -17,7 +17,7 @@ sheet is [STYLE.md](STYLE.md).
 | --- | --- | --- | --- | --- | --- |
 | Bottom line | `docs/index.md` | How good is the forecast, and how far to trust it? | `headline.*`, `test_vs.*`, `live.*`, `skew.*` | all below | T11 skeleton, T28 |
 | The forecast | `docs/forecast.md` | What is predicted, and how is it scored? | `design.*` | D-005, D-008, D-009, D-010, D-019, D-045 | T11 skeleton, T28 |
-| The data | `docs/data.md` | Where the data comes from, and what the checks found | validation counts; `skew.airnow_vs_aqs_mae_gap` | D-004, D-006, D-030 to D-033 | T12b, T28 |
+| The data | `docs/data.md` | Where the data comes from, and what the checks found | validation counts; `skew.airnow_vs_aqs_mae_gap` | D-004, D-006, D-030 to D-033, D-054 | T12b, T28 |
 | Models and evaluation | `docs/models.md` | Which variants, how the headline was chosen, the test result | CV MAE per variant; `test_vs.*`; **charts 1, 2, 4** | D-007 to D-010, D-045 | T16 to T23, T27, T28 |
 | The live record | `docs/live.md` | How the daily forecasts have scored, by forecaster | `live.*`; **chart 3** | D-042, D-044 | T28, after T29 |
 | How it runs | `docs/how-it-runs.md` | How the daily job stays up and acts once | job, watchdog, drill, tests, cost | D-011, D-019, D-040 to D-042 | T28 |

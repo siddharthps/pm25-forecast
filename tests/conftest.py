@@ -6,6 +6,8 @@ examples; save any shrunk failure in tests/regressions/ as an ordinary test.
 
 The Prefect flow module comes through the `daily` fixture, not a top-level import: every worker
 collects every file, and importing Prefect costs each about 2 s (#83, test_suite_speed.py).
+Every test using that fixture joins the `prefect` xdist group, so with `--dist loadgroup` one
+worker pays the import instead of two or three (#124: about 2 s off the suite, paired runs).
 """
 
 import importlib
@@ -24,3 +26,12 @@ settings.load_profile("default")
 @pytest.fixture(scope="session")
 def daily() -> ModuleType:
     return importlib.import_module("airwatch.flows.daily")
+
+
+PREFECT_GROUP = "prefect"
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    for item in items:
+        if "daily" in getattr(item, "fixturenames", ()):
+            item.add_marker(pytest.mark.xdist_group(PREFECT_GROUP))

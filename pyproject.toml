@@ -159,7 +159,7 @@ addopts = [
     "-n",
     "4",
     "--dist",
-    "load",
+    "loadgroup",
 ]
 markers = [
     "slow: model smoke tests on small data (not in the core suite)",

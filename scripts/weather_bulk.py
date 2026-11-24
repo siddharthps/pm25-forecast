@@ -26,8 +26,8 @@ from airwatch.logutil import configure
 from airwatch.observations.sites import TRAINING_SITES
 from airwatch.storage import S3Store
 from airwatch.weather.bulk import (
-    HOURLY_BUDGET,
-    HourlyBudget,
+    BUDGET,
+    CallBudget,
     Part,
     call_weight,
     load_manifest,
@@ -52,13 +52,13 @@ def main() -> int:
 
     parts = plan_parts(TRAINING_SITES, today=today, manifest_parts=load_manifest(store)["parts"])
     weight = sum(call_weight((p.days(today)[1] - p.days(today)[0]).days + 1) for p in parts)
+    hours = max(weight / BUDGET[3600.0], 24 * (weight // BUDGET[86400.0]))
     log.info(
-        "bucket %s: %d part(s), about %.0f weighted Open-Meteo calls, about %.1f h at %.0f an hour",
+        "bucket %s: %d part(s), about %.0f weighted Open-Meteo calls, about %.1f h at the budget",
         settings.data_bucket,
         len(parts),
         weight,
-        weight / HOURLY_BUDGET,
-        HOURLY_BUDGET,
+        hours,
     )
     if not args.apply:
         log.info("dry run: nothing fetched or written. Re-run with --apply to download.")
@@ -76,7 +76,7 @@ def main() -> int:
             TRAINING_SITES,
             today=today,
             now=lambda: datetime.now(UTC),
-            pace=HourlyBudget(monotonic=time.monotonic, sleep=time.sleep),
+            pace=CallBudget(monotonic=time.monotonic, sleep=time.sleep),
         )
     log.info("done: %d part(s) fetched, %d hourly rows", summary.fetched, summary.rows)
     return 0

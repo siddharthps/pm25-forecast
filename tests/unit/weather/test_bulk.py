@@ -14,14 +14,18 @@ from typing import Any
 import boto3
 import pandas as pd
 import pytest
+from hypothesis import example, given
+from hypothesis import strategies as st
 from moto import mock_aws
 
 from airwatch.storage import S3Store
 from airwatch.weather.bulk import (
     ARCHIVE_START,
+    BUDGET,
     ERA5_YEARS,
+    FREE_LIMITS,
     MANIFEST_KEY,
-    HourlyBudget,
+    CallBudget,
     Part,
     call_weight,
     plan_parts,
@@ -312,9 +316,30 @@ class FakeClock:
         self.t += seconds
 
 
-def test_the_budget_waits_once_the_hour_is_full_then_lets_the_oldest_expire() -> None:
+def budget_on(clock: FakeClock, limits: dict[float, float] | None = None) -> CallBudget:
+    return CallBudget(limits or BUDGET, monotonic=clock.monotonic, sleep=clock.sleep)
+
+
+def test_the_budget_is_half_of_each_published_limit() -> None:
+    assert FREE_LIMITS == {60.0: 600, 3600.0: 5000, 86400.0: 10000}
+    assert BUDGET == {60.0: 300, 3600.0: 2500, 86400.0: 5000}
+
+
+def test_the_minute_window_paces_a_burst_of_year_files() -> None:
+    """The 2026-11-24 failure: 37 year files (26 calls each) in 20 s tripped the 600/min limit."""
     clock = FakeClock()
-    budget = HourlyBudget(limit=2500, monotonic=clock.monotonic, sleep=clock.sleep)
+    budget = budget_on(clock)
+    year = call_weight(365)
+    for _ in range(11):
+        budget(year)
+    assert clock.slept == []
+    budget(year)
+    assert clock.slept == [pytest.approx(60)]
+
+
+def test_the_hour_window_waits_for_its_oldest_call_to_expire() -> None:
+    clock = FakeClock()
+    budget = budget_on(clock, {3600.0: 2500})
     budget(1000)
     clock.t += 60
     budget(1000)
@@ -323,16 +348,49 @@ def test_the_budget_waits_once_the_hour_is_full_then_lets_the_oldest_expire() ->
     assert clock.slept == [pytest.approx(3600 - 60)]
 
 
-def test_the_budget_never_waits_below_the_limit() -> None:
+def test_the_budget_never_waits_with_room_in_every_window() -> None:
     clock = FakeClock()
-    budget = HourlyBudget(limit=2500, monotonic=clock.monotonic, sleep=clock.sleep)
-    for _ in range(100):
+    budget = budget_on(clock)
+    for _ in range(11):
         budget(25)
+        clock.t += 6
     assert clock.slept == []
 
 
-def test_the_budget_refuses_a_single_request_over_the_limit() -> None:
+def test_the_budget_refuses_a_request_over_its_smallest_window() -> None:
+    budget = budget_on(FakeClock())
+    with pytest.raises(ValueError, match="over the budget of one window"):
+        budget(301)
+
+
+def test_a_call_still_counts_until_its_whole_window_has_passed() -> None:
     clock = FakeClock()
-    budget = HourlyBudget(limit=2500, monotonic=clock.monotonic, sleep=clock.sleep)
-    with pytest.raises(ValueError, match="over the hourly budget"):
-        budget(2501)
+    budget = budget_on(clock)
+    budget(300)
+    clock.t += 31
+    budget(1)
+    assert clock.slept == [pytest.approx(29)]
+
+
+gaps = st.one_of(st.floats(min_value=0, max_value=40), st.floats(min_value=0, max_value=900))
+requests = st.lists(
+    st.tuples(st.floats(min_value=1, max_value=60), gaps),
+    min_size=1,
+    max_size=80,
+)
+
+
+@given(requests=requests)
+@example(requests=[(60.0, 0.0)] * 5 + [(60.0, 31.0)])
+def test_no_window_ever_holds_more_than_its_budget(requests: list[tuple[float, float]]) -> None:
+    clock = FakeClock()
+    budget = budget_on(clock)
+    sent: list[tuple[float, float]] = []
+    for weight, gap in requests:
+        clock.t += gap
+        budget(weight)
+        sent.append((clock.t, weight))
+    for window, limit in BUDGET.items():
+        for t0, _ in sent:
+            spent = sum(w for t, w in sent if t0 <= t < t0 + window)
+            assert spent <= limit + 1e-9, (window, t0)

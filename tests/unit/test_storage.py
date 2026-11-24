@@ -100,3 +100,21 @@ def test_list_keys_returns_every_key_under_a_prefix_past_one_page(s3: Any) -> No
     assert len(keys) == 1005
     assert keys == sorted(keys)
     assert all(k.startswith("records/") for k in keys)
+
+
+@pytest.mark.parametrize(
+    ("response", "status"),
+    [
+        ({"Error": {"Code": "Conflict"}}, None),
+        ({"Error": {"Code": "Conflict"}, "ResponseMetadata": {}}, None),
+        ({"Error": {"Code": "Conflict"}, "ResponseMetadata": {"HTTPStatusCode": 409}}, 409),
+    ],
+    ids=["no metadata", "no status", "409"],
+)
+def test_an_errors_status_is_read_only_when_given(
+    response: dict[str, Any], status: int | None
+) -> None:
+    """Killed mutmut survivors (#112): an AWS error without metadata has no status, not a crash."""
+    from airwatch.storage import _status  # noqa: PLC0415  (a private helper, tested alone)
+
+    assert _status(ClientError(cast(Any, response), "PutObject")) == status

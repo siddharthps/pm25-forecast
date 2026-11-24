@@ -1832,9 +1832,42 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   synthetic `pm2_5` values until #78 settles public display.
 - **mypy reads `pd.isna(float)` as never true** (pandas stubs): `math.isnan` instead.
 
+- **Merged:** #127 (`2555b80`, squash) after its CI passed (owner: "you choose what's best and
+  do it" for part 2). #19 stays open for #78.
+
+## 2026-11-24: #78 the daily CAMS save, on branch `78-cams-daily-save` (CST, about 07:15 to 07:50)
+
+- **D-053:** each scheduled run saves CAMS global's PM2.5 for the target day at every monitor
+  to `records/forecast_date=<day>/cams.json` (private, create-only, every version kept), after
+  the forecast, scoring and `history.json`. Source: the live Air Quality API, read between two
+  reads of the run in `cams_global`'s metadata. A run newer than the as-issued one is refused;
+  an older one is saved with its own start. The file holds each monitor's 24 hours and mean, the
+  run's start and publication, the issue time and `published_before_issue`.
+  - **Premise checked first:** the live API's values for 2026-11-25/26 equal the 00 UTC run of
+    11-24 from the Single Runs API in 48 of 48 hours; the metadata named that run before and
+    after (published 09:48 UTC, 2.2 h before the issue time).
+  - **Terms (for public display later):** Open-Meteo CC BY 4.0; the Copernicus licence v1.2
+    allows communication to the public of modified values with "Contains modified Copernicus
+    Atmosphere Monitoring Service information <year>" and the EC/ECMWF disclaimer.
+  - No Terraform change: the run role already reads and writes `records/`. The scheduled run
+    clones `main`, so the merge deploys it.
+- **Built, tests first:** the save (13 tests, including a property that a second run never
+  changes a saved file), the live fetch (7), the job at each step in turn (6: a CAMS failure
+  keeps the forecast, its publish, `history.json` and the minutes, and fails the run; a scoring
+  failure still saves; a failed forecast saves nothing; a retry fetches nothing). Twelve planted
+  mistakes each caught. Core suite: 862 passed, 23.3 s. The opt-in live check and a real dry run
+  (all 10 monitors, 24 of 24 hours each) pass.
+
+### Traps found
+
+- **A shell heredoc with nested triple quotes** broke in Git Bash; edit scripts go through the
+  Write tool (the global rule).
+
 ### Next
 
-- PR for `19-weather-part2` ("Refs #19"), CI, merge.
-- **#78 on its own branch:** the daily save of CAMS's D+1 forecast as issued, with its D-entry
-  (terms above), before the 11-29 waypoint; then #19 closes.
+- PR for `78-cams-daily-save` ("Refs #78"), CI, merge.
+- **2026-11-25 after 12:00 UTC (06:00 CST):** check the first real `cams.json` in S3 (#78's last
+  box), then close #78 and #19.
+- **2026-11-25:** #3's old key and IAM user deleted (owner confirms first); milestone B closes.
+- `cams.py` and `cams_save.py` hold must-never rules: add them to #112's mutation list.
 - Fill-in: #124, #122, #113, #86, #87.

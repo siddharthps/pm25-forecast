@@ -1,4 +1,4 @@
-"""The scheduled job: the forecast, then the compute ledger, even when the forecast fails.
+"""The scheduled job: the forecast, scores, CAMS as issued, then the compute ledger.
 
 moto stands in for both buckets; AirNow is a fake fetch; the clock is frozen (#15, T8; D-040).
 """
@@ -23,6 +23,7 @@ from airwatch.monitoring.compute import MONTHLY_ALERT_MIN, PREFIX, TEARDOWN_PAD_
 from airwatch.monitoring.score import ScoringError
 from airwatch.storage import S3Store
 from airwatch.timeutil import local_day_window_utc
+from airwatch.weather.cams_save import cams_key
 from tests.unit.forecast.fakes import (
     ISSUE_AT,
     PHOENIX,
@@ -30,6 +31,7 @@ from tests.unit.forecast.fakes import (
     PUBLIC,
     SITES,
     TARGET,
+    CamsFetcher,
     fetcher,
     object_versions,
     observed_day,
@@ -51,7 +53,14 @@ def s3() -> Iterator[Any]:
         yield client
 
 
-def _job(s3: Any, *, publish: bool, fetch: Any = None, run_id: str = RUN) -> Any:
+def _job(
+    s3: Any,
+    *,
+    publish: bool,
+    fetch: Any = None,
+    run_id: str = RUN,
+    cams: CamsFetcher | None = None,
+) -> Any:
     return daily_job(
         Settings(_env_file=None, data_bucket=PRIVATE, public_bucket=PUBLIC),
         run_id=run_id,
@@ -59,6 +68,7 @@ def _job(s3: Any, *, publish: bool, fetch: Any = None, run_id: str = RUN) -> Any
         publish=publish,
         s3=s3,
         fetch_day=fetch or fetcher(observed_day()),
+        fetch_cams=cams or CamsFetcher(),
         now=lambda: NOW,
         sites=SITES,
     )
@@ -136,7 +146,9 @@ def _fetch_days(fail: set[date] | None = None) -> Any:
     return fetch
 
 
-def _later_job(s3: Any, *, publish: bool, fail: set[date] | None = None) -> Any:
+def _later_job(
+    s3: Any, *, publish: bool, fail: set[date] | None = None, cams: CamsFetcher | None = None
+) -> Any:
     return daily_job(
         Settings(_env_file=None, data_bucket=PRIVATE, public_bucket=PUBLIC),
         run_id="22222222-3333-4444-8555-666666666666",
@@ -144,6 +156,7 @@ def _later_job(s3: Any, *, publish: bool, fail: set[date] | None = None) -> Any:
         publish=publish,
         s3=s3,
         fetch_day=_fetch_days(fail),
+        fetch_cams=cams or CamsFetcher(),
         now=lambda: LATER,
         sites=SITES,
     )
@@ -187,3 +200,61 @@ def test_a_rerun_scores_nothing_twice(s3: Any) -> None:
     assert [s.status for s in again.scores if s.day == SCORED_DAY] == ["already_scored"]
     assert object_versions(s3, PRIVATE, score_key(SCORED_DAY)) == 1
     assert object_versions(s3, PUBLIC, HISTORY_KEY) == history_versions
+
+
+def test_a_scheduled_run_saves_cams_beside_its_record(s3: Any) -> None:
+    cams = CamsFetcher()
+    outcome = _job(s3, publish=True, cams=cams)
+    assert outcome.cams is not None
+    assert outcome.cams.status == "saved"
+    assert sorted(cams.calls) == [(site, TARGET) for site in SITES]
+    assert object_versions(s3, PRIVATE, cams_key(TARGET)) == 1
+    body = json.loads(S3Store(s3, PRIVATE).get(cams_key(TARGET)) or b"")
+    assert body["published_before_issue"] is True
+    assert S3Store(s3, PUBLIC).get(cams_key(TARGET)) is None
+
+
+def test_a_dry_run_saves_no_cams(s3: Any) -> None:
+    outcome = _job(s3, publish=False)
+    assert outcome.cams is not None
+    assert outcome.cams.status == "dry_run"
+    assert object_versions(s3, PRIVATE, cams_key(TARGET)) == 0
+
+
+def test_a_cams_failure_fails_the_run_but_never_its_forecast(
+    s3: Any, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.ERROR, logger="airwatch"), pytest.raises(ConnectionError):
+        _job(s3, publish=True, cams=CamsFetcher(fail=True))
+    assert object_versions(s3, PRIVATE, record_key(TARGET)) == 1
+    assert object_versions(s3, PUBLIC, LATEST_KEY) == 1
+    assert object_versions(s3, PUBLIC, HISTORY_KEY) == 1
+    assert object_versions(s3, PRIVATE, cams_key(TARGET)) == 0
+    assert len(_ledger(s3)) == 1
+    assert any("CAMS save failed (ConnectionError)" in r.getMessage() for r in caplog.records)
+    assert not any("Open-Meteo unreachable" in r.getMessage() for r in caplog.records)
+
+
+def test_a_failed_score_still_saves_cams(s3: Any) -> None:
+    _job(s3, publish=True)
+    with pytest.raises(ScoringError):
+        _later_job(s3, publish=True, fail={SCORED_DAY})
+    assert object_versions(s3, PRIVATE, cams_key(date(2026, 11, 24))) == 1
+
+
+def test_a_failed_forecast_saves_no_cams(s3: Any) -> None:
+    empty = fetcher(observed_day({SITES[0]: 10, SITES[1]: 10}))
+    cams = CamsFetcher()
+    with pytest.raises(NoForecastError):
+        _job(s3, publish=True, fetch=empty, cams=cams)
+    assert cams.calls == []
+
+
+def test_a_retry_saves_cams_once_and_fetches_nothing(s3: Any) -> None:
+    _job(s3, publish=True)
+    cams = CamsFetcher(value=99.0)
+    again = _job(s3, publish=True, cams=cams)
+    assert again.cams is not None
+    assert again.cams.status == "already_saved"
+    assert cams.calls == []
+    assert object_versions(s3, PRIVATE, cams_key(TARGET)) == 1

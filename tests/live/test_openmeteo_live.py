@@ -1,4 +1,4 @@
-"""Live check (opt-in: `uv run pytest -m live`): each Open-Meteo source answers as D-051 expects.
+"""Live check (opt-in: `uv run pytest -m live`): each Open-Meteo source answers as expected.
 
 One request per source for one monitor, checked by the client's own rules. Reports counts and
 run times only, never values. Never runs in CI or the core suite (pyproject markers).
@@ -6,15 +6,18 @@ run times only, never values. Never runs in CI or the core suite (pyproject mark
 
 import logging
 from datetime import UTC, date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import httpx
 import pytest
 
+from airwatch.weather import cams
 from airwatch.weather.leads import MAX_PUBLISH_DELAY
 from airwatch.weather.openmeteo import Query, Source, fetch_hourly, fetch_live
 
 log = logging.getLogger(__name__)
 SITE = "040134003"
+PHOENIX = ZoneInfo("America/Phoenix")
 
 
 def _now() -> datetime:
@@ -48,3 +51,21 @@ def test_the_live_forecast_names_a_run_published_within_the_assumed_delay() -> N
     )
     assert len(df) == 24
     assert available - started <= MAX_PUBLISH_DELAY
+
+
+@pytest.mark.live
+def test_the_live_cams_forecast_names_a_run_no_newer_than_the_as_issued_one() -> None:
+    target = (_now() + timedelta(days=1)).date()
+    with httpx.Client(timeout=60) as client:
+        df = cams.fetch_live(client, cams.CamsQuery.live_for(SITE, target, PHOENIX), now=_now)
+    started = df["run_start_utc"].iloc[0].to_pydatetime()
+    available = df["available_at_utc"].iloc[0].to_pydatetime()
+    log.info(
+        "cams live: %d rows, run %s published %s after it started",
+        len(df),
+        started,
+        available - started,
+    )
+    assert len(df) == 48
+    assert int(df[cams.VARIABLE].isna().sum()) == 0
+    assert started <= cams.issued_run_start(target)

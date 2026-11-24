@@ -66,7 +66,7 @@ AWS_PROFILE=pm25 uv run python scripts/weather_bulk.py       # ERA5, GFS archive
 AWS_PROFILE=pm25 uv run python -m airwatch.weather.coverage  # every hour and value of that download (reads only; report in data/reports/weather/)
 AWS_PROFILE=pm25 uv run python scripts/cams_gap.py            # D-052's CAMS gap, about 1 h (reads only; --days 2 to time it; data/reports/cams_gap/)
 uv run python scripts/city_check.py    # the frozen D-006 city check (reads only; cached in data/)
-AWS_PROFILE=pm25 uv run python -m airwatch.validation.report --source all  # D-033 report (reads only)
+AWS_PROFILE=pm25 uv run python -m airwatch.validation.report --source all  # D-033/D-054 report (reads only; AQS key from .env)
 AWS_PROFILE=pm25 uv run python -m airwatch.forecast.run   # D+1 forecast: dry run; --publish acts
 ```
 

@@ -8,12 +8,19 @@ part (`airwatch.weather.bulk.plan_parts`, as if nothing were done) against its o
 
 - **hard** (`failures`, exit 1): `not_in_manifest`, `file_missing`, `sha256_mismatch` (the file
   isn't the one recorded), `missing_hours` and `duplicate_hours` (a stamp absent or repeated).
+  T12b's dates (#20, D-054): `hours_outside_part` (a stamp outside the part's days, so also any
+  hour after yesterday), `run_after_valid` (a forecast whose run starts after its hour) and
+  `available_before_run` (a row available before its run started).
 - **reported:** `gaps`, each run of consecutive missing values in one variable, with its first
   and last hour. The GFS archive's known empty start, before `ARCHIVE_COMPLETE_FROM` (D-051),
-  is counted as `lead_in_hours` instead.
+  is counted as `lead_in_hours` instead. `outside_physical_range`: per variable, how many
+  values fall below or above `PHYSICAL_RANGE` (kept as received; D-031).
+
+Units and the grid point are checked when a response is read (`airwatch.weather.openmeteo`,
+`airwatch.weather.cams`), so a wrong unit or a far grid point never reaches the store.
 
 The report holds keys, variables, times and counts, never a value. It goes to
-`data/reports/weather/` (gitignored); T12b adds the other problem classes.
+`data/reports/weather/` (gitignored).
 """
 
 from __future__ import annotations
@@ -39,14 +46,41 @@ from airwatch.storage import S3Store
 from airwatch.weather.bulk import ERA5_YEARS, Part, load_manifest, plan_parts
 from airwatch.weather.openmeteo import Source
 
-__all__ = ["ARCHIVE_COMPLETE_FROM", "REPORT_DIR", "check_part", "check_store", "render_markdown"]
+__all__ = [
+    "ARCHIVE_COMPLETE_FROM",
+    "PHYSICAL_RANGE",
+    "REPORT_DIR",
+    "check_part",
+    "check_store",
+    "render_markdown",
+]
 
 log = logging.getLogger(__name__)
 
 ARCHIVE_COMPLETE_FROM = datetime(2024, 1, 21, 12, tzinfo=UTC)
 REPORT_DIR = Path("data/reports/weather")
 _HOUR = timedelta(hours=1)
-_HARD_COUNTS = ("missing_hours", "duplicate_hours")
+_HARD_COUNTS = (
+    "missing_hours",
+    "duplicate_hours",
+    "hours_outside_part",
+    "run_after_valid",
+    "available_before_run",
+)
+PHYSICAL_RANGE: dict[str, tuple[float, float]] = {
+    "temperature_2m": (-60.0, 60.0),
+    "relative_humidity_2m": (0.0, 100.0),
+    "wind_speed_10m": (0.0, 400.0),
+    "wind_direction_10m": (0.0, 360.0),
+    "precipitation": (0.0, 500.0),
+    "surface_pressure": (500.0, 1100.0),
+    "cloud_cover": (0.0, 100.0),
+    "shortwave_radiation": (0.0, 1500.0),
+    "pm2_5": (0.0, 10000.0),
+}
+"""Each variable's possible values, in its stored unit (`openmeteo.UNITS`, µg/m³ for CAMS).
+Percentages, directions and non-negative amounts by definition; the temperature, pressure,
+wind, rain and sunlight bounds are generous limits far outside anything Phoenix sees (D-054)."""
 
 
 def _iso(ts: pd.Timestamp) -> str:
@@ -91,6 +125,9 @@ def check_part(part: Part, df: pd.DataFrame, *, today: date) -> dict[str, Any]:
         for gap in _gaps(rows["valid_utc"], rows[v].isna() & ~lead_in, v)
     ]
     lead_in_hours = int((rows[list(part.variables)].isna().any(axis=1) & lead_in).sum())
+    runs = pd.to_datetime(df["run_start_utc"], utc=True)
+    available = pd.to_datetime(df["available_at_utc"], utc=True)
+    has_run = runs.notna()
     return {
         "source": part.source.value,
         "site_id": part.site_id,
@@ -99,9 +136,24 @@ def check_part(part: Part, df: pd.DataFrame, *, today: date) -> dict[str, Any]:
         "rows": len(df),
         "missing_hours": int((~expected.isin(stamps)).sum()),
         "duplicate_hours": int(stamps.duplicated().sum()),
+        "hours_outside_part": int((~stamps.isin(expected)).sum()),
+        "run_after_valid": int((has_run & (runs > stamps)).sum()),
+        "available_before_run": int((has_run & (available < runs)).sum()),
         "lead_in_hours": lead_in_hours,
         "gaps": gaps,
+        "outside_physical_range": _outside_physical(df, part.variables),
     }
+
+
+def _outside_physical(df: pd.DataFrame, variables: Iterable[str]) -> list[dict[str, Any]]:
+    """Per variable, how many values lie below or above `PHYSICAL_RANGE` (missing ones: gaps)."""
+    out = []
+    for v in variables:
+        lo, hi = PHYSICAL_RANGE[v]
+        low, high = int((df[v] < lo).sum()), int((df[v] > hi).sum())
+        if low or high:
+            out.append({"variable": v, "low": low, "high": high})
+    return out
 
 
 def check_store(
@@ -146,12 +198,16 @@ def render_markdown(report: dict[str, Any]) -> str:
     ]
     lines += [f"- **{f['rule']}:** `{f['key']}`" for f in report["failures"]]
     for key, part in sorted(report["parts"].items()):
-        if not part["gaps"] and not part["lead_in_hours"]:
+        if not part["gaps"] and not part["lead_in_hours"] and not part["outside_physical_range"]:
             continue
         lines += ["", f"## `{key}`", "", f"- lead-in hours: {part['lead_in_hours']}"]
         lines += [
             f"- gap in {g['variable']}: {g['first_utc']} to {g['last_utc']}, {g['hours']} h"
             for g in part["gaps"]
+        ]
+        lines += [
+            f"- outside the physical range in {r['variable']}: {r['low']} low, {r['high']} high"
+            for r in part["outside_physical_range"]
         ]
     return "\n".join(lines) + "\n"
 

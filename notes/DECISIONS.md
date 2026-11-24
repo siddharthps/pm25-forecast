@@ -539,7 +539,7 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
 - **Why:** This is the owner's own rule: validation is its own first module, run on every source
   from the start. In a previous project, bad records surfaced one at a time, the last one in the
   final rebuild. Cost: about +2 hours in week 1.
-- **Status:** Active. T12a's rules and severities: D-033.
+- **Status:** Active. T12a's rules and severities: D-033. T12b's: D-054.
 
 ---
 
@@ -840,7 +840,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   - out-of-range hours: keep them and only warn, or block the run;
   - flat lines: 6+ hours, or 24+ hours with exclusion.
 - **Status:** Active. Owner's choices, 2026-11-19. Refines D-021 and settles D-031's "how such
-  hours are treated".
+  hours are treated". *Refined 2026-11-24 (D-054):* AirNow hours are judged against their own
+  site's instrument, no longer the widest range.
 
 ---
 
@@ -1814,6 +1815,69 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
     mean keeps the record readable; both are small.
   - Saving under `raw/`: old versions expire there.
 - **Status:** Active. 2026-11-24.
+
+---
+
+## D-054 · 2026-11-24 · Validation's remaining classes: entity, key reuse, dates, units (#20, T12b)
+
+- **Decision (owner's choices, 2026-11-24):** a fault in the pipeline or a source stops the run;
+  a problem limited to some rows warns; an instrument change is counted.
+
+  | Class | Rule | Severity | Rows |
+  | --- | --- | --- | --- |
+  | Wrong entity | a row from a site that isn't listed (`site_not_listed`) | hard | excluded |
+  | Wrong entity | AQS places a listed site outside the city's CBSA, or lacks it | hard | none |
+  | Key reuse | a site's AQS, AirNow and our positions > 1 km apart (`site_moved`) | warn | none |
+  | Key reuse | AQS's instrument isn't `AIRNOW_METHOD`'s (`airnow_method_stale`) | warn | none |
+  | Key reuse | an instrument's method changes (`method_changed`, each change) | info | kept |
+  | Dates | an hour that hasn't ended at run time (`future_hour`) | hard | excluded |
+  | Dates | an AQS hour outside its monitor's dates (`outside_active_period`) | warn | excluded |
+  | Units | AirNow rows dropped for a unit other than µg/m³ (`unit_mismatch`) | warn | none |
+  | Weather dates | an hour outside its file; a run after its hour; early availability | hard | none |
+  | Weather values | outside its physical range (`outside_physical_range`) | reported | kept |
+
+  - **AirNow ranges (the T12a box, refines D-033):** AirNow rows carry no method, so each is
+    judged against its own site's instrument: `AIRNOW_METHOD` in `observations/sites.py`, the
+    site's open hourly AQS monitor (POC 3 at every site). Seven sites run method 182 (−10 to
+    5,000), JLG Supersite 638 (0 to 10,000), the two Pinal sites 170 (−10 to 975). A site with
+    no listed instrument is unverified (hard), as D-032 does for AQS. The list is fixed in code
+    so the daily run needs no AQS call; the AQS report warns when AQS's records disagree, and
+    the list changes only by a reviewed edit.
+  - **Reference data** (`validation/reference.py`): AQS's `monitors/bySite` records and AirNow's
+    `Monitoring_Site_Locations_V2.dat`. Only the report fetches them; the daily run carries
+    none, so the four rules that need them don't run there. Neither holds a measurement.
+  - **1 km** is the site list's existing tolerance: AQS and AirNow publish positions up to
+    0.57 km apart for the same monitor (Glendale), and the two closest monitors are over 2 km
+    apart (a test checks both).
+  - **Each excluded row is counted once**, by the first rule that excludes it: unlisted site,
+    future hour, unverified method, outside the valid range, outside the active period (a
+    property test).
+  - **Units** are checked where the unit is still known, when each source is read: AQS stops
+    parsing on another unit, Open-Meteo and CAMS refuse the response (`unit`), AirNow drops the
+    row and the report now counts it apart. Each has a test with a planted bad unit.
+  - **Weather's location** is checked when a response is read (`grid_too_far`), at the
+    coordinates in `SITE_COORDS`, which `site_moved` now checks against AQS and AirNow.
+  - **Physical ranges:** percentages 0 to 100, direction 0 to 360°, rain, wind, sunlight and
+    PM2.5 never negative; generous upper bounds and −60 to 60 °C, 500 to 1,100 hPa, far outside
+    anything Phoenix sees. Values outside are kept as received (D-031); the features (T15)
+    decide what to do with them.
+  - The flat-line rule (D-033) is unchanged.
+- **Measured before deciding (2026-11-24):**
+  - Every AQS hourly row lies inside its monitor's open period; each site's history starts on
+    its monitor's open date. All 10 sites are in CBSA 38060 in AQS and AirNow; each has one
+    position in AQS, equal to `SITE_COORDS`; AirNow's are within 0.57 km.
+  - AQS's hourly rows all come from POC 3. Seven method changes, each a clean switch in one
+    month (West Phoenix 181 → 170 → 181 → 182, a loaned instrument), none a reused ID.
+  - Two weeks of AirNow (2026-11-09 to 11-22): no hour outside its own site's range.
+  - Weather and CAMS: 81 values outside the physical ranges, all GFS-archive cloud cover at
+    exactly −1 or 101 % (37 and 44, every site, 2024 to 2025): rounding at the ends of the range.
+- **Why:** the owner's day-one rule, whole problem classes on every source (D-021). Stopping on
+  a fault and warning on a limited problem is D-033's split, kept.
+- **Alternatives (rejected by the owner):** every new rule a warning; the location rules hard
+  too; looking the AirNow instrument up in AQS on every run (an AQS call and key in the daily
+  run, and AQS lags months); keeping the widest AirNow range.
+- **Status:** Active. Owner's choices, 2026-11-24. Refines D-021 (T12b done) and D-033 (AirNow
+  ranges per site).
 
 ---
 

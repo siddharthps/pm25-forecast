@@ -155,6 +155,7 @@ def score_day(  # noqa: PLR0913  (each argument is one injected edge or the run'
         window=Window(*local_day_window_utc(day, tz)),
         tz=tz,
         sites=wanted,
+        now=now,
         ingest_drops=drops,
     )
     result.raise_if_failed()

@@ -32,6 +32,7 @@ from tests.unit.validation.helpers import SITE_A, SITE_B, START, concat, frame, 
 
 PHOENIX = ZoneInfo("America/Phoenix")
 DAY = Window(START, START + timedelta(days=1))
+NOW = datetime(2030, 1, 1, tzinfo=UTC)
 
 
 def check(
@@ -47,6 +48,7 @@ def check(
         window=window,
         tz=PHOENIX,
         sites=sites,
+        now=NOW,
         coverage_from=coverage_from,
         ingest_drops=ingest_drops,
     )
@@ -61,6 +63,9 @@ def test_a_clean_day_passes_with_every_rule_reported_at_zero() -> None:
     result = check(frame(varying(24)))
     assert result.passed
     assert {f.rule for f in result.findings} == {
+        "site_not_listed",
+        "future_hour",
+        "method_changed",
         "duplicate_hours",
         "unverified_method",
         "outside_valid_range",
@@ -151,14 +156,6 @@ def test_an_unverified_method_is_a_hard_failure_and_excluded() -> None:
     assert f.items == ({"site_id": SITE_A, "poc": 1, "method_code": "999", "hours": 24},)
     assert result.clean.empty
     assert not result.passed
-
-
-def test_airnow_rows_use_the_widest_verified_range() -> None:
-    vals = varying(24)
-    vals[1], vals[2] = 9000.0, 10_000.1
-    result = check(frame(vals, method=None, poc=POC_NOT_GIVEN, source="airnow"))
-    assert result.finding("outside_valid_range").count == 1
-    assert result.finding("unverified_method").count == 0
 
 
 def test_negative_readings_inside_the_range_are_kept_and_counted() -> None:

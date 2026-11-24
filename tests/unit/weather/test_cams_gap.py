@@ -27,6 +27,7 @@ from tests.unit.forecast.fakes import PHOENIX, SITES, observed_day
 
 A, B = SITES
 DAY = date(2026, 6, 10)
+NOW = datetime(2026, 11, 24, 12, tzinfo=UTC)
 OBS_OFFSET = 32.2 / 24
 OBSERVED_BASE = {A: 8.0, B: 2.0}
 
@@ -127,7 +128,7 @@ def test_an_empty_summary_has_no_figures() -> None:
 
 
 def test_observed_means_follow_the_scoring_path() -> None:
-    means = observed_means(airnow([DAY]), DAY, PHOENIX, SITES)
+    means = observed_means(airnow([DAY]), DAY, PHOENIX, SITES, now=NOW)
     assert means == pytest.approx({A: 8.0 + OBS_OFFSET, B: 2.0 + OBS_OFFSET})
 
 
@@ -136,7 +137,7 @@ def test_a_day_that_fails_validation_has_no_observed_means() -> None:
         df = observed_day(base=OBSERVED_BASE, day=day)
         return pd.concat([df, df.iloc[[0]]]).reset_index(drop=True), {}
 
-    assert observed_means(broken, DAY, PHOENIX, SITES) is None
+    assert observed_means(broken, DAY, PHOENIX, SITES, now=NOW) is None
 
 
 def test_measure_pairs_each_monitor_day_with_the_issued_run() -> None:
@@ -148,6 +149,7 @@ def test_measure_pairs_each_monitor_day_with_the_issued_run() -> None:
         PHOENIX,
         fetch_run=runs,
         stitched_rows=stitched({A: 9.0, B: 3.0}, days),
+        now=NOW,
         fetch_day=airnow(days),
     )
     assert sorted(runs.calls) == sorted((s, issued_run_start(d)) for d in days for s in SITES)
@@ -175,7 +177,13 @@ def test_each_skip_is_counted_by_its_first_reason() -> None:
         return observed_day({B: 10} if day == days[2] else None, base=OBSERVED_BASE, day=day), {}
 
     summary = measure(
-        days, SITES, PHOENIX, fetch_run=runs, stitched_rows=history, fetch_day=fetch_day
+        days,
+        SITES,
+        PHOENIX,
+        fetch_run=runs,
+        stitched_rows=history,
+        fetch_day=fetch_day,
+        now=NOW,
     )
     assert summary["skipped"] == {
         "no_as_issued_run": 1,
@@ -198,6 +206,7 @@ def test_a_day_failing_validation_skips_every_monitor_on_it() -> None:
         PHOENIX,
         fetch_run=FakeRuns({A: 1.0, B: 1.0}),
         stitched_rows=stitched({A: 1.0, B: 1.0}, [DAY]),
+        now=NOW,
         fetch_day=broken,
     )
     assert summary["skipped"]["observed_failed_validation"] == 2

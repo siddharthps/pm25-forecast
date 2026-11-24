@@ -19,9 +19,10 @@ import pytest
 from moto import mock_aws
 
 from airwatch.observations.aqs_bulk import MANIFEST_KEY, Part
-from airwatch.observations.sites import TRAINING_SITES
+from airwatch.observations.sites import SITE_COORDS, TRAINING_SITES
 from airwatch.storage import S3Store
 from airwatch.validation.checks import Window, run_checks
+from airwatch.validation.reference import Monitor, Reference
 from airwatch.validation.report import (
     MARKDOWN_ITEM_CAP,
     build_report,
@@ -41,7 +42,7 @@ SECRET = 123.456
 
 
 def report_for(df: pd.DataFrame, extra: dict[str, Any] | None = None) -> dict[str, Any]:
-    result = run_checks(df, window=DAY, tz=PHOENIX, sites=(SITE_A, SITE_B))
+    result = run_checks(df, window=DAY, tz=PHOENIX, sites=(SITE_A, SITE_B), now=NOW)
     return build_report(result, source="aqs", window=DAY, generated_at_utc=NOW, extra=extra)
 
 
@@ -83,7 +84,7 @@ def test_markdown_leads_with_the_verdict_and_lists_every_rule() -> None:
 
 def test_markdown_caps_long_item_lists() -> None:
     window = Window(datetime(2020, 1, 1, 7, tzinfo=UTC), datetime(2024, 3, 1, 7, tzinfo=UTC))
-    result = run_checks(frame(varying(24)), window=window, tz=PHOENIX, sites=(SITE_A,))
+    result = run_checks(frame(varying(24)), window=window, tz=PHOENIX, sites=(SITE_A,), now=NOW)
     rep = build_report(result, source="aqs", window=window, generated_at_utc=NOW)
     gaps = next(f for f in rep["findings"] if f["rule"] == "coverage_gap")
     assert len(gaps["items"]) > MARKDOWN_ITEM_CAP
@@ -97,7 +98,7 @@ def test_extra_facts_are_carried_into_the_report() -> None:
 
 
 def test_a_naive_generation_time_is_refused() -> None:
-    result = run_checks(frame(varying(24)), window=DAY, tz=PHOENIX, sites=(SITE_A,))
+    result = run_checks(frame(varying(24)), window=DAY, tz=PHOENIX, sites=(SITE_A,), now=NOW)
     with pytest.raises(ValueError, match="time zone"):
         build_report(result, source="aqs", window=DAY, generated_at_utc=datetime(2026, 1, 1))  # noqa: DTZ001
 
@@ -176,10 +177,12 @@ def test_the_aqs_run_checks_the_download_and_saves_a_report(store: S3Store, tmp_
     a = Part(SITE_A, 2024)
     put_part(store, a, frame(varying(24)))
     store.put(MANIFEST_KEY, json.dumps({"version": 1, "parts": {a.key: {"rows": 24}}}).encode())
-    result = validate_aqs_bulk(store, tz=PHOENIX, sites=(SITE_A,), now=NOW, out_dir=tmp_path)
+    result = validate_aqs_bulk(
+        store, tz=PHOENIX, sites=(SITE_A,), now=NOW, out_dir=tmp_path, reference=None
+    )
     assert result.passed
     rep = json.loads((tmp_path / "validation_aqs_20261120T010203Z.json").read_text("utf-8"))
-    assert rep["extra"] == {"parts": 1}
+    assert rep["extra"] == {"parts": 1, "reference": "none"}
     assert rep["window_utc"] == {
         "start": "2009-01-01T07:00:00+00:00",
         "end": "2026-01-01T07:00:00+00:00",
@@ -191,7 +194,9 @@ def test_the_aqs_run_reports_a_hard_failure(store: S3Store, tmp_path: Path) -> N
     df = frame(varying(24))
     put_part(store, a, concat(df, df.iloc[[0]]))
     store.put(MANIFEST_KEY, json.dumps({"version": 1, "parts": {a.key: {"rows": 25}}}).encode())
-    result = validate_aqs_bulk(store, tz=PHOENIX, sites=(SITE_A,), now=NOW, out_dir=tmp_path)
+    result = validate_aqs_bulk(
+        store, tz=PHOENIX, sites=(SITE_A,), now=NOW, out_dir=tmp_path, reference=None
+    )
     assert not result.passed
     assert "**FAILED**" in (tmp_path / "validation_aqs_20261120T010203Z.md").read_text("utf-8")
 
@@ -199,13 +204,19 @@ def test_the_aqs_run_reports_a_hard_failure(store: S3Store, tmp_path: Path) -> N
 def test_the_airnow_run_checks_one_local_day(tmp_path: Path) -> None:
     with httpx.Client(transport=day_transport(missing=frozenset({10}))) as client:
         result = validate_airnow_day(
-            client, date(2026, 11, 18), tz=PHOENIX, sites=TRAINING_SITES, now=NOW, out_dir=tmp_path
+            client,
+            date(2026, 11, 18),
+            tz=PHOENIX,
+            sites=TRAINING_SITES,
+            now=NOW,
+            out_dir=tmp_path,
+            reference=None,
         )
     assert result.passed
     assert result.finding("airnow_rows_dropped").items[0] == {"reason": "file_missing", "rows": 1}
     assert result.finding("coverage_gap").count == 0
     rep = json.loads((tmp_path / "validation_airnow_20261120T010203Z.json").read_text("utf-8"))
-    assert rep["extra"] == {"local_day": "2026-11-18"}
+    assert rep["extra"] == {"local_day": "2026-11-18", "reference": "none"}
     assert rep["window_utc"]["start"] == "2026-11-18T07:00:00+00:00"
 
 
@@ -233,7 +244,26 @@ def test_save_writes_nothing_if_either_file_already_exists(tmp_path: Path) -> No
 
 def test_markdown_shows_exactly_the_capped_number_of_items() -> None:
     window = Window(datetime(2020, 1, 1, 7, tzinfo=UTC), datetime(2024, 3, 1, 7, tzinfo=UTC))
-    result = run_checks(frame(varying(24)), window=window, tz=PHOENIX, sites=(SITE_A,))
+    result = run_checks(frame(varying(24)), window=window, tz=PHOENIX, sites=(SITE_A,), now=NOW)
     md = render_markdown(build_report(result, source="aqs", window=window, generated_at_utc=NOW))
     section = md.split("## `coverage_gap`", 1)[1]
     assert sum(line.startswith("- site_id") for line in section.splitlines()) == MARKDOWN_ITEM_CAP
+
+
+def test_the_aqs_run_applies_the_reference_rules(store: S3Store, tmp_path: Path) -> None:
+    a = Part(SITE_A, 2024)
+    put_part(store, a, frame(varying(24), method="182"))
+    store.put(MANIFEST_KEY, json.dumps({"version": 1, "parts": {a.key: {"rows": 24}}}).encode())
+    ref = Reference(
+        monitors=(
+            Monitor(SITE_A, 1, date(2024, 3, 2), None, *SITE_COORDS[SITE_A], "38060", "182"),
+        ),
+        airnow_coords={},
+        city_cbsa="38060",
+    )
+    result = validate_aqs_bulk(
+        store, tz=PHOENIX, sites=(SITE_A,), now=NOW, out_dir=tmp_path, reference=ref
+    )
+    assert result.finding("outside_active_period").count == 24
+    rep = json.loads((tmp_path / "validation_aqs_20261120T010203Z.json").read_text("utf-8"))
+    assert rep["extra"] == {"parts": 1, "reference": "aqs monitors + airnow site list"}

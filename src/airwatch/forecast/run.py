@@ -181,6 +181,7 @@ def run_daily(  # noqa: PLR0913  (each argument is one injected edge or the run'
         window=window,
         tz=tz,
         sites=sites,
+        now=started,
         ingest_drops={**drops, "published_after_issue": late},
     )
     if publish:

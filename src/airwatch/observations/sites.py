@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 __all__ = [
     "AGENCIES",
+    "AIRNOW_METHOD",
     "SITE_AGENCY",
     "SITE_COORDS",
     "SITE_NAMES",
@@ -108,6 +109,24 @@ VERIFIED_METHODS: dict[str, Method] = {
         10000.0,
     ),
 }
+
+
+AIRNOW_METHOD = {
+    "040130019": "182",
+    "040131003": "182",
+    "040131004": "182",
+    "040132001": "182",
+    "040134003": "182",
+    "040134005": "182",
+    "040139812": "182",
+    "040139997": "638",
+    "040210001": "170",
+    "040213015": "170",
+}
+"""The instrument behind each site's AirNow readings, which carry no method: the site's open
+hourly AQS monitor (POC 3 at every site), per AQS's monitor records on 2026-11-24. AirNow hours
+are judged against this method's range. The AQS report warns when AQS's records disagree, and
+the list changes only by a reviewed edit (D-054)."""
 
 
 def unverified_methods(codes: Iterable[object]) -> set[str]:

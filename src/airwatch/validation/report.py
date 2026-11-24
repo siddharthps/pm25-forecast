@@ -1,13 +1,15 @@
-"""Validation report (#12, T12a): one JSON + one Markdown file per run, counts only.
+"""Validation report (#12, T12a; #20, T12b): one JSON + one Markdown file per run, counts only.
 
     cd ~/code/pm25-forecast
     AWS_PROFILE=pm25 uv run python -m airwatch.validation.report --source aqs     # bulk history
     uv run python -m airwatch.validation.report --source airnow                   # yesterday
     AWS_PROFILE=pm25 uv run python -m airwatch.validation.report --source all
 
-Reads only: the private bucket's AQS download (its manifest and parts) and AirNow's public
-hourly files. Writes the reports to `data/reports/validation/` (gitignored). Exits 1 when a hard
-rule fails, so a caller can stop. Reports and logs carry counts, sites and times, never a
+Reads only: the private bucket's AQS download (its manifest and parts), AirNow's public
+hourly files, and the reference data the T12b rules need (AQS's monitor records, with the AQS
+key from `.env`, and AirNow's site list; `airwatch.validation.reference`). Writes the reports
+to `data/reports/validation/` (gitignored). Exits 1 when a hard rule fails, so a caller can
+stop. Reports and logs carry counts, sites and times, never a
 measurement or a credential.
 """
 
@@ -36,6 +38,7 @@ from airwatch.observations.sites import TRAINING_SITES
 from airwatch.storage import S3Store
 from airwatch.timeutil import ensure_utc, local_day_window_utc
 from airwatch.validation.checks import ValidationResult, Window, run_checks
+from airwatch.validation.reference import Reference, fetch_reference
 
 if TYPE_CHECKING:
     from zoneinfo import ZoneInfo
@@ -56,6 +59,7 @@ log = logging.getLogger(__name__)
 
 REPORT_VERSION = 1
 REPORT_DIR = Path("data/reports/validation")
+REFERENCE_NOTE = "aqs monitors + airnow site list"
 MARKDOWN_ITEM_CAP = 20
 
 
@@ -193,16 +197,29 @@ def _summarise(source: str, result: ValidationResult, paths: tuple[Path, Path]) 
     )
 
 
-def validate_aqs_bulk(
-    store: S3Store, *, tz: ZoneInfo, sites: Sequence[str], now: datetime, out_dir: Path
+def validate_aqs_bulk(  # noqa: PLR0913  (the store, and the run's context)
+    store: S3Store,
+    *,
+    tz: ZoneInfo,
+    sites: Sequence[str],
+    now: datetime,
+    out_dir: Path,
+    reference: Reference | None,
 ) -> ValidationResult:
     """Check the whole bulk download (final years for coverage) and save its report."""
     hourly, n_parts = load_aqs_bulk(store)
     window = _aqs_window(ensure_utc(now).astimezone(tz).date(), tz)
-    result = run_checks(hourly, window=window, tz=tz, sites=sites, coverage_from="first_reading")
-    report = build_report(
-        result, source="aqs", window=window, generated_at_utc=now, extra={"parts": n_parts}
+    result = run_checks(
+        hourly,
+        window=window,
+        tz=tz,
+        sites=sites,
+        now=now,
+        coverage_from="first_reading",
+        reference=reference,
     )
+    extra = {"parts": n_parts, "reference": REFERENCE_NOTE if reference else "none"}
+    report = build_report(result, source="aqs", window=window, generated_at_utc=now, extra=extra)
     _summarise("aqs", result, save_report(report, out_dir))
     return result
 
@@ -215,17 +232,29 @@ def validate_airnow_day(  # noqa: PLR0913  (the client, the day, and the run's c
     sites: Sequence[str],
     now: datetime,
     out_dir: Path,
+    reference: Reference | None,
 ) -> ValidationResult:
     """Check one local day of AirNow (as the daily flow sees it) and save its report."""
     hourly, drops = fetch_local_day(client, day, tz, sites)
     window = Window(*local_day_window_utc(day, tz))
-    result = run_checks(hourly, window=window, tz=tz, sites=sites, ingest_drops=drops)
+    result = run_checks(
+        hourly,
+        window=window,
+        tz=tz,
+        sites=sites,
+        now=now,
+        ingest_drops=drops,
+        reference=reference,
+    )
     report = build_report(
         result,
         source="airnow",
         window=window,
         generated_at_utc=now,
-        extra={"local_day": day.isoformat()},
+        extra={
+            "local_day": day.isoformat(),
+            "reference": REFERENCE_NOTE if reference else "none",
+        },
     )
     _summarise("airnow", result, save_report(report, out_dir))
     return result
@@ -245,18 +274,36 @@ def main(argv: Sequence[str] | None = None) -> int:  # pragma: no cover  (real e
     tz = settings.city_tz
     now = datetime.now(UTC).replace(microsecond=0)
     passed = True
-    if args.source in ("aqs", "all"):
-        session = boto3.Session(profile_name=settings.aws_profile, region_name=settings.aws_region)
-        store = S3Store(session.client("s3"), settings.data_bucket)
-        result = validate_aqs_bulk(store, tz=tz, sites=TRAINING_SITES, now=now, out_dir=args.out)
-        passed &= result.passed
-    if args.source in ("airnow", "all"):
-        day = args.day or (now.astimezone(tz) - timedelta(days=1)).date()
-        with httpx.Client(timeout=60) as client:
-            result = validate_airnow_day(
-                client, day, tz=tz, sites=TRAINING_SITES, now=now, out_dir=args.out
+    with httpx.Client(timeout=60) as client:
+        reference = fetch_reference(
+            client, settings.aqs_credentials(), TRAINING_SITES, city_cbsa=settings.city_cbsa
+        )
+        if args.source in ("aqs", "all"):
+            session = boto3.Session(
+                profile_name=settings.aws_profile, region_name=settings.aws_region
             )
-        passed &= result.passed
+            store = S3Store(session.client("s3"), settings.data_bucket)
+            result = validate_aqs_bulk(
+                store,
+                tz=tz,
+                sites=TRAINING_SITES,
+                now=now,
+                out_dir=args.out,
+                reference=reference,
+            )
+            passed &= result.passed
+        if args.source in ("airnow", "all"):
+            day = args.day or (now.astimezone(tz) - timedelta(days=1)).date()
+            result = validate_airnow_day(
+                client,
+                day,
+                tz=tz,
+                sites=TRAINING_SITES,
+                now=now,
+                out_dir=args.out,
+                reference=reference,
+            )
+            passed &= result.passed
     return 0 if passed else 1
 
 

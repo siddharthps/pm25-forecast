@@ -82,6 +82,7 @@ def main() -> int:
             fetch_run=fetch_run,
             stitched_rows=stitched,
             fetch_day=lambda d: fetch_local_day(client, d, settings.city_tz, TRAINING_SITES),
+            now=datetime.now(UTC),
         )
 
     summary["computed_at_utc"] = datetime.now(UTC).isoformat()

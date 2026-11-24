@@ -30,7 +30,7 @@ line** (2026-12-16) · **D: Complete**.
 | T10 | [#17](https://github.com/siddharthps/pm25-forecast/issues/17) | Daily scoring | B | closed (merged #74, 2026-11-21, D-042) |
 | T11 | [#18](https://github.com/siddharthps/pm25-forecast/issues/18) | Docs stub, number check and README skeleton | B | closed (merged #84, 2026-11-22 UTC, D-043) |
 | T14 | [#19](https://github.com/siddharthps/pm25-forecast/issues/19) | Weather ingestion | C | open: parts 1 and 2 merged (#125, #127; D-051, D-052); closes with #78 |
-| T12b | [#20](https://github.com/siddharthps/pm25-forecast/issues/20) | Validation, remaining problem classes and weather sources | C | open |
+| T12b | [#20](https://github.com/siddharthps/pm25-forecast/issues/20) | Validation, remaining problem classes and weather sources | C | open: in review 2026-11-24 (D-054) |
 | T15 | [#21](https://github.com/siddharthps/pm25-forecast/issues/21) | Leakage-safe features | C | open |
 | T16 | [#22](https://github.com/siddharthps/pm25-forecast/issues/22) | CV harness and baselines | C | open |
 | T17 | [#23](https://github.com/siddharthps/pm25-forecast/issues/23) | MLflow backend and promotion pointer | C | open |

@@ -174,6 +174,18 @@ only_mutate = [
     "src/airwatch/timeutil.py",
     "src/airwatch/config.py",
     "src/airwatch/weather/leads.py",
+    "src/airwatch/observations/schema.py",
+    "src/airwatch/forecast/run.py",
+    "src/airwatch/forecast/record.py",
+    "src/airwatch/storage.py",
+    "src/airwatch/monitoring/compute.py",
+    "src/airwatch/monitoring/score.py",
+    "src/airwatch/validation/checks.py",
+    "src/airwatch/validation/reference.py",
+    "src/airwatch/forecast/publish.py",
+    "src/airwatch/watchdog/handler.py",
+    "src/airwatch/weather/cams.py",
+    "src/airwatch/weather/cams_save.py",
 ]
 also_copy = [
     ".claude/",
@@ -211,6 +223,7 @@ also_copy = [
 pytest_add_cli_args_test_selection = [
     "tests/unit",
     "tests/property",
+    "tests/integration",
     "--deselect",
     "tests/unit/devtools/test_comments.py::test_the_repository_keeps_to_its_baseline",
     "--deselect",

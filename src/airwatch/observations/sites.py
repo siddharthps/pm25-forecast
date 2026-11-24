@@ -8,6 +8,7 @@ from dataclasses import dataclass
 __all__ = [
     "AGENCIES",
     "SITE_AGENCY",
+    "SITE_COORDS",
     "SITE_NAMES",
     "TRAINING_SITES",
     "VERIFIED_METHODS",
@@ -41,6 +42,20 @@ SITE_NAMES = {
     "040210001": "Casa Grande Downtown",
     "040213015": "Hidden Valley",
 }
+SITE_COORDS = {
+    "040130019": (33.48378, -112.14256),
+    "040131003": (33.41018, -111.86536),
+    "040131004": (33.56031, -112.06619),
+    "040132001": (33.57453, -112.19193),
+    "040134003": (33.40314, -112.07526),
+    "040134005": (33.41123, -111.93471),
+    "040139812": (33.4265, -112.11821),
+    "040139997": (33.503833, -112.095767),
+    "040210001": (32.877583, -111.752222),
+    "040213015": (32.884761, -112.03705),
+}
+"""Latitude and longitude from AQS's daily-summary rows (one value per site in every year read,
+NAD83 or WGS84, which differ by about a metre). Used to fetch each monitor's weather (D-051)."""
 _MARICOPA = "Maricopa County Air Quality Department"
 _ADEQ = "Arizona Department of Environmental Quality"
 _PINAL = "Pinal County Air Quality Control District"

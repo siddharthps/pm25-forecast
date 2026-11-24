@@ -43,8 +43,11 @@ jobs:
         with:
           version: "0.13.9"
 
+      # A release must be 7 days old to come in, as Dependabot's cooldown does for Actions
+      # (D-056). uv turns the span into a cutoff at this run; every pyproject minimum must be
+      # older than it, or uv's error names the package and its upload time.
       - name: Upgrade the lockfile
-        run: uv lock --upgrade
+        run: uv lock --upgrade --exclude-newer "7 days"
 
       # The Prefect run installs from this export, so it moves with the lock (D-040).
       - name: Regenerate the Prefect run's requirements

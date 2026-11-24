@@ -180,6 +180,28 @@ def test_dependabot_updates_actions_but_not_python() -> None:
     assert not ecosystems & {"uv", "pip"}
 
 
+COOLDOWN_DAYS = 7
+LOCK_UPGRADE_CMD = f'uv lock --upgrade --exclude-newer "{COOLDOWN_DAYS} days"'
+
+
+def test_the_weekly_lock_waits_as_long_as_dependabot_does_for_actions() -> None:
+    """D-056: a release reaches the lock PR only once it's a week old, as Actions updates do
+    (Dependabot's cooldown). Only the job sets it, so a local `uv lock` is unaffected."""
+    (actions,) = [
+        u for u in load_yaml(DEPENDABOT)["updates"] if u["package-ecosystem"] == "github-actions"
+    ]
+    assert actions["cooldown"]["default-days"] == COOLDOWN_DAYS
+    runs = [str(step.get("run", "")).strip() for step in steps(load_yaml(LOCK_UPGRADE))]
+    (upgrade,) = [r for r in runs if r.startswith("uv lock")]
+    assert upgrade.startswith(LOCK_UPGRADE_CMD), "no upgrade without the wait"
+    extra = upgrade.removeprefix(LOCK_UPGRADE_CMD).split()
+    assert all(re.fullmatch(r"--exclude-newer-package=[a-z0-9-]+=false", e) for e in extra), (
+        "only an urgent release's exemption (DEVELOPMENT.md) may follow"
+    )
+    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert "exclude-newer" not in pyproject["tool"]["uv"], "the wait lives in the job only"
+
+
 def test_the_weekly_lock_upgrade_refreshes_both_exports_then_opens_its_pr() -> None:
     """Both requirements files are regenerated and committed with the lock, or the lock job's
     own PR would fail the drift tests (test_prefect_deployment.py, watchdog/test_build.py)."""
@@ -188,7 +210,7 @@ def test_the_weekly_lock_upgrade_refreshes_both_exports_then_opens_its_pr() -> N
     assert "schedule" in on
     assert "workflow_dispatch" in on
     runs = [str(step.get("run", "")).strip() for step in steps(workflow)]
-    upgrade = runs.index("uv lock --upgrade")
+    upgrade = next(i for i, r in enumerate(runs) if r.startswith(LOCK_UPGRADE_CMD))
     prefect = " ".join(PREFECT_EXPORT) + " > requirements/prefect-run.txt"
     watchdog = " ".join(WATCHDOG_EXPORT) + " > requirements/watchdog.txt"
     assert runs[upgrade + 1] == prefect

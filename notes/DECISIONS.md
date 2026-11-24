@@ -1728,12 +1728,12 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
     mean of the 24 hourly stamps in the local day's half-open window (`city_tz`, the same day
     as our target, D-005), and all 24 must be present; a day with any gap has no CAMS value and
     is listed.
-  - **The gap, declared before any number is seen:** over target days from 2026-04-02 (the
-    first as-issued run) to the day the check runs, each monitor-day with an as-issued mean, a
-    stitched mean and a valid observed mean (AirNow, ≥ 18 hours): the MAE of each against the
-    observed mean, their difference, and the mean absolute difference between the two CAMS
-    means; skipped monitor-days are counted by reason. Descriptive only: never used to choose,
-    tune or correct anything.
+  - **The gap, declared before any number is seen:** over target days from 2026-04-03 (the
+    first whose as-issued run, 2026-04-02 00 UTC, is kept) to the day the check runs, each
+    monitor-day with an as-issued mean, a stitched mean and a valid observed mean (AirNow,
+    ≥ 18 hours): the MAE of each against the observed mean, their difference, and the mean
+    absolute difference between the two CAMS means; skipped monitor-days are counted by reason.
+    Descriptive only: never used to choose, tune or correct anything.
 - **Why the 00 UTC run:** at the issue time (12:00 UTC in winter, 11:00 UTC in summer) it has
   been out about 2.2 h in winter and 1.2 h in summer on the readings below. The day before's
   12 UTC run is always out but 12 h staler, and would make CAMS look worse than it is live,
@@ -1751,7 +1751,10 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
     `pm2_5` equals the history exactly.
   - **Single runs** (Single Runs API, `models=cams_global`, `&run=`): from the 00 UTC run of
     2026-04-02 (none on 2026-04-01 or earlier), 121 hours each. Missing to 2026-11-23: the 12 UTC
-    runs of 05-10, 05-12, 06-24, 06-28, 08-27 and the 00 UTC run of 06-25.
+    runs of 05-10, 05-12, 06-24, 06-28, 08-27 and the 00 UTC run of 06-25. A missing run inside
+    that span answers with every value empty; one before it, with an error naming the model
+    `cams_global_greenhouse_gases`. The values are still CAMS global's: leads 0–11 h equal the
+    `cams_global` history exactly (above).
   - **History:** from 2022-08-04 00:00 UTC (the 3 days before it are empty), no gaps to
     2026-11-23 at any monitor. The 10 monitors fall in 7 grid cells.
   - **Publication delay** (`/data/cams_global/static/meta.json`): the 00 UTC run of 2026-11-24

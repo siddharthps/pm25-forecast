@@ -1765,7 +1765,55 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
   - The day before's 12 UTC run: always out in time, but staler than live (above).
   - Both runs, one as a sensitivity: more to build and explain, for a descriptive figure.
   - CAMS scored only on the live record: D-009 is Frozen and lists CAMS on the test.
-- **Status:** Active. Owner's choice, 2026-11-24.
+- **Status:** Active. Owner's choice, 2026-11-24. The live save: D-053.
+
+---
+
+## D-053 · 2026-11-24 · The daily CAMS save: as issued, beside the forecast record (#78)
+
+- **Decision:**
+  - **What:** each scheduled run saves CAMS global's PM2.5 forecast for the target day at every
+    monitor (its own coordinates): the run Open-Meteo's Air Quality API serves at that moment,
+    named by the API's metadata read before and after the data, as for live GFS (D-051). A run
+    that changed in between is refused.
+  - **Which run:** the as-issued run is 00 UTC on the issue day (D-052). A run started later is
+    refused (`run_after_as_issued`), never saved as issued. An older run (the 00 UTC run not yet
+    out) is saved with its own start: what was really there.
+  - **Where:** `records/forecast_date=<target>/cams.json` in the private bucket, create-only,
+    beside `forecast.json`. `records/` keeps every version; `raw/` expires old ones, and an
+    as-issued forecast can't be fetched again from the live API.
+  - **Holds:** per monitor, the 24 hourly values of the target's local day, the hours present
+    and the daily mean (D-052's rule: all 24, else none); the run's start and publication time;
+    the issue time and whether the run was published before it; the fetch time (all UTC, with
+    zone); the source and model.
+  - **When and how it fails:** after the forecast is recorded and published, and after scoring
+    and `history.json`, so a failure can't stop or undo either. A failure is logged by type and
+    fails the run, as scoring does (D-042). A second run the same morning finds the file and
+    fetches nothing. A dry run fetches and builds but writes nothing.
+- **Public display: allowed, with notices.** Open-Meteo's data is CC BY 4.0: credit, a link to
+  the licence, changes indicated, and a link to Open-Meteo where the data is shown. The
+  Copernicus licence (v1.2, Nov 2019) allows any lawful use, including "communication to the
+  public" and "adaptation" (4.2). A page showing these values (a later task, D-044) carries
+  "Contains modified Copernicus Atmosphere Monitoring Service information <year>", says that
+  neither the European Commission nor ECMWF is responsible for any use of it (5.1.2, 5.1.3), and
+  credits Open-Meteo. Until then the values stay in the private bucket, and test fixtures keep
+  synthetic values.
+- **Why:** persistence and climatology can be recomputed later; CAMS as issued can't from the
+  live API. The Single Runs API keeps runs too (D-052), but its timing is unrecorded, and the
+  live API is what a forecaster would have read.
+- **Facts (checked 2026-11-24 about 13:10 UTC, central Phoenix):** the live API's values for
+  2026-11-25/26 equal the 00 UTC run of 2026-11-24 from the Single Runs API in 48 of 48 hours;
+  the metadata named that run before and after the fetch (published 09:48 UTC). The next run
+  (12 UTC) appears about 22 UTC, so a run at the 06:00 Chicago issue time normally gets the
+  as-issued run. Terms: open-meteo.com/en/licence and /en/terms (free API non-commercial: private
+  or non-profit sites without subscriptions or ads), apps.ecmwf.int/datasets/licences/copernicus/.
+- **Alternatives:**
+  - The Single Runs API: the same values, an unrecorded delay. Kept for a backfill if a morning
+    is missed.
+  - Saving the hourly values only, or the mean only: the hours keep the rule recomputable, the
+    mean keeps the record readable; both are small.
+  - Saving under `raw/`: old versions expire there.
+- **Status:** Active. 2026-11-24.
 
 ---
 

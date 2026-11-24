@@ -27,6 +27,7 @@ from airwatch.observations.sites import SITE_COORDS
 from airwatch.weather.cams import (
     COLUMNS,
     HISTORY_START,
+    META_URL,
     PUBLISH_DELAY,
     UNIT,
     URLS,
@@ -34,10 +35,11 @@ from airwatch.weather.cams import (
     CamsSource,
     daily_means,
     fetch,
+    fetch_live,
     issued_run_start,
     parse,
 )
-from airwatch.weather.openmeteo import WeatherResponseError
+from airwatch.weather.openmeteo import LiveRun, WeatherResponseError
 
 FIXTURES = Path(__file__).resolve().parents[2] / "fixtures" / "openmeteo"
 SITE = "040134003"
@@ -265,7 +267,7 @@ def client_for(
     return httpx.Client(transport=httpx.MockTransport(handler)), seen
 
 
-@pytest.mark.parametrize("source", list(CamsSource), ids=lambda s: s.value)
+@pytest.mark.parametrize("source", [CamsSource.HISTORY, CamsSource.RUN], ids=lambda s: s.value)
 def test_fetch_sends_the_query_to_its_api(source: CamsSource) -> None:
     client, seen = client_for({URLS[source]: [PAYLOADS[source]]})
     df = fetch(client, QUERIES[source], backoff_s=0)
@@ -278,3 +280,82 @@ def test_fetch_passes_on_a_failed_request() -> None:
     client, _ = client_for({})
     with pytest.raises(FetchError, match="404"):
         fetch(client, QUERIES[CamsSource.HISTORY], backoff_s=0)
+
+
+LIVE = load("cams_live_040134003_20261125.json")
+CAMS_META = load("meta_cams_global.json")
+LIVE_RUN = LiveRun(
+    started_utc=datetime(2026, 11, 24, tzinfo=UTC),
+    available_utc=datetime(2026, 11, 24, 9, 48, 6, tzinfo=UTC),
+)
+LIVE_FETCHED = datetime(2026, 11, 24, 12, 10, tzinfo=UTC)
+
+
+def live_query() -> CamsQuery:
+    return CamsQuery.live_for(SITE, date(2026, 11, 25), PHOENIX)
+
+
+def test_a_live_query_asks_for_the_utc_days_of_the_target_local_day() -> None:
+    query = live_query()
+    assert (query.source, query.start, query.end) == (
+        CamsSource.LIVE,
+        date(2026, 11, 25),
+        date(2026, 11, 26),
+    )
+    assert query.params() == {
+        **QUERIES[CamsSource.HISTORY].params(),
+        **{
+            "start_date": "2026-11-25",
+            "end_date": "2026-11-26",
+        },
+    }
+    assert URLS[CamsSource.LIVE] == URLS[CamsSource.HISTORY]
+
+
+def test_fetch_live_reads_the_run_before_and_after_and_stamps_it() -> None:
+    client, seen = client_for({META_URL: [CAMS_META, CAMS_META], URLS[CamsSource.LIVE]: [LIVE]})
+    df = fetch_live(client, live_query(), now=lambda: LIVE_FETCHED, backoff_s=0)
+    assert [str(r.url.copy_with(query=None)) for r in seen] == [
+        META_URL,
+        URLS[CamsSource.LIVE],
+        META_URL,
+    ]
+    assert len(df) == 48
+    assert (df["source"] == "cams_live").all()
+    assert (df["run_start_utc"] == pd.Timestamp(LIVE_RUN.started_utc)).all()
+    assert (df["available_at_utc"] == pd.Timestamp(LIVE_RUN.available_utc)).all()
+
+
+def test_fetch_live_refuses_a_run_that_changed_mid_fetch() -> None:
+    newer = dict(
+        CAMS_META, last_run_initialisation_time=CAMS_META["last_run_initialisation_time"] + 43200
+    )
+    client, _ = client_for({META_URL: [CAMS_META, newer], URLS[CamsSource.LIVE]: [LIVE]})
+    with pytest.raises(WeatherResponseError, match=r"^run_changed:"):
+        fetch_live(client, live_query(), now=lambda: LIVE_FETCHED, backoff_s=0)
+
+
+def test_fetch_live_refuses_a_run_published_after_the_fetch() -> None:
+    client, _ = client_for({META_URL: [CAMS_META, CAMS_META], URLS[CamsSource.LIVE]: [LIVE]})
+    early = LIVE_RUN.available_utc - timedelta(minutes=1)
+    with pytest.raises(WeatherResponseError, match=r"^run_from_the_future:"):
+        fetch_live(client, live_query(), now=lambda: early, backoff_s=0)
+
+
+def test_fetch_live_takes_only_a_live_query() -> None:
+    client, seen = client_for({})
+    with pytest.raises(ValueError, match="takes a LIVE query"):
+        fetch_live(client, QUERIES[CamsSource.HISTORY], now=lambda: LIVE_FETCHED)
+    assert seen == []
+
+
+def test_live_rows_need_their_run() -> None:
+    with pytest.raises(ValueError, match="live rows need the run"):
+        parse(live_query(), LIVE)
+
+
+def test_fetch_refuses_the_live_source() -> None:
+    client, seen = client_for({})
+    with pytest.raises(ValueError, match="use fetch_live"):
+        fetch(client, live_query())
+    assert seen == []

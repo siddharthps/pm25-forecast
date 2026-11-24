@@ -9,17 +9,19 @@ Two sources, `pm2_5` (instant, µg/m³) at each monitor's coordinates:
 - `RUN`: the Single Runs API with `models=cams_global` and `run=`, from the 00 UTC run of
   2026-04-02. "As issued" for a target day is the run started at 00 UTC on the issue day
   (`issued_run_start`). The gap between the two is measured on these runs (D-052).
+- `LIVE`: the Air Quality API's forecast for the target's UTC days, read between two reads of
+  the metadata naming its run (`fetch_live`), for the daily save (D-053).
 
-Rows carry the run each hour came from and when that run was out: its start plus
-`PUBLISH_DELAY`, rounded up from the delays read in Open-Meteo's metadata. Every response is
-checked before it becomes rows; a refusal is a `WeatherResponseError` whose message holds rule
-names, counts and dates, never a value.
+Rows carry the run each hour came from and when that run was out: for `LIVE`, the metadata's
+times; otherwise its start plus `PUBLISH_DELAY`, rounded up from the delays read there. Every
+response is checked before it becomes rows; a refusal is a `WeatherResponseError` whose message
+holds rule names, counts and dates, never a value.
 """
 
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from enum import StrEnum
@@ -30,7 +32,7 @@ import pandas as pd
 from airwatch.observations.metadata import fetch_json
 from airwatch.observations.sites import SITE_COORDS
 from airwatch.timeutil import ensure_utc, issue_time_utc, local_day_window_utc
-from airwatch.weather.openmeteo import WeatherResponseError
+from airwatch.weather.openmeteo import LiveRun, WeatherResponseError, parse_live_run
 
 if TYPE_CHECKING:
     from zoneinfo import ZoneInfo
@@ -43,6 +45,7 @@ __all__ = [
     "FIRST_RUN",
     "HISTORY_START",
     "MAX_GRID_OFFSET_DEG",
+    "META_URL",
     "PUBLISH_DELAY",
     "RUN_LENGTH",
     "STITCHED_LEADS",
@@ -53,6 +56,7 @@ __all__ = [
     "CamsSource",
     "daily_means",
     "fetch",
+    "fetch_live",
     "issued_run_start",
     "parse",
     "stitched_run_start",
@@ -62,12 +66,15 @@ __all__ = [
 class CamsSource(StrEnum):
     HISTORY = "cams_history"
     RUN = "cams_run"
+    LIVE = "cams_live"
 
 
 URLS = {
     CamsSource.HISTORY: "https://air-quality-api.open-meteo.com/v1/air-quality",
     CamsSource.RUN: "https://single-runs-api.open-meteo.com/v1/forecast",
+    CamsSource.LIVE: "https://air-quality-api.open-meteo.com/v1/air-quality",
 }
+META_URL = "https://air-quality-api.open-meteo.com/data/cams_global/static/meta.json"
 VARIABLE = "pm2_5"
 UNIT = "μg/m³"
 COLUMNS = ("site_id", "valid_utc", VARIABLE, "source", "run_start_utc", "available_at_utc")
@@ -98,7 +105,7 @@ def issued_run_start(target: date) -> datetime:
 
 @dataclass(frozen=True)
 class CamsQuery:
-    """One request at one monitor: UTC days `start` to `end` of the history, or one `run`."""
+    """One request at one monitor: UTC days `start` to `end` (history, live), or one `run`."""
 
     source: CamsSource
     site: str
@@ -109,7 +116,7 @@ class CamsQuery:
     run: datetime | None = None
 
     def __post_init__(self) -> None:
-        if self.source is CamsSource.HISTORY:
+        if self.source is not CamsSource.RUN:
             if self.start is None or self.end is None:
                 raise ValueError("a history query needs its days")
             if self.end < self.start:
@@ -127,6 +134,13 @@ class CamsQuery:
             raise ValueError(f"{start} is before the CAMS history starts ({HISTORY_START})")
         lat, lon = SITE_COORDS[site]
         return cls(CamsSource.HISTORY, site, lat, lon, start=start, end=end)
+
+    @classmethod
+    def live_for(cls, site: str, target: date, tz: ZoneInfo) -> CamsQuery:
+        """The live forecast at `site` for the UTC days that hold `target`'s local day."""
+        start, end = local_day_window_utc(target, tz)
+        lat, lon = SITE_COORDS[site]
+        return cls(CamsSource.LIVE, site, lat, lon, start=start.date(), end=(end - _HOUR).date())
 
     @classmethod
     def run_at(cls, site: str, run: datetime) -> CamsQuery:
@@ -147,7 +161,7 @@ class CamsQuery:
     def params(self) -> dict[str, str]:
         """The query string."""
         params = {"latitude": repr(self.lat), "longitude": repr(self.lon), "hourly": VARIABLE}
-        if self.source is CamsSource.HISTORY:
+        if self.source is not CamsSource.RUN:
             start, end = self._days()
             params |= {
                 "domains": "cams_global",
@@ -160,15 +174,16 @@ class CamsQuery:
 
     def first_hour(self) -> datetime:
         """The first stamp a response holds: the first day's midnight, or the run day's."""
-        day = self._days()[0] if self.source is CamsSource.HISTORY else self._run().date()
+        day = self._days()[0] if self.source is not CamsSource.RUN else self._run().date()
         return datetime.combine(day, time.min, tzinfo=UTC)
 
     def hours_ok(self, count: int) -> bool:
         """Whether `count` hourly stamps from `first_hour` are what this query must return.
 
-        A history holds exactly its days; a run holds whole days, through its last hour.
+        A history or live answer holds exactly its days; a run holds whole days, through its
+        last hour.
         """
-        if self.source is CamsSource.HISTORY:
+        if self.source is not CamsSource.RUN:
             start, end = self._days()
             return count == ((end - start).days + 1) * 24
         last = self._run() + RUN_LENGTH
@@ -207,11 +222,17 @@ def _check(query: CamsQuery, payload: Mapping[str, Any]) -> list[datetime]:
     return stamps
 
 
-def parse(query: CamsQuery, payload: Mapping[str, Any]) -> pd.DataFrame:
+def parse(
+    query: CamsQuery, payload: Mapping[str, Any], live_run: LiveRun | None = None
+) -> pd.DataFrame:
     """One checked response as rows (`COLUMNS`), one per UTC hour it holds."""
+    if query.source is CamsSource.LIVE and live_run is None:
+        raise ValueError("live rows need the run they came from")
     stamps = _check(query, payload)
     values = [math.nan if v is None else float(v) for v in payload["hourly"][VARIABLE]]
-    if query.source is CamsSource.HISTORY:
+    if live_run is not None and query.source is CamsSource.LIVE:
+        runs = [live_run.started_utc] * len(stamps)
+    elif query.source is CamsSource.HISTORY:
         runs = [stitched_run_start(s) for s in stamps]
     else:
         run = query._run()
@@ -219,6 +240,10 @@ def parse(query: CamsQuery, payload: Mapping[str, Any]) -> pd.DataFrame:
         if early:
             raise _refuse("before_run_start", f"{early} value(s) stamped before the run started")
         runs = [run] * len(stamps)
+    if live_run is not None and query.source is CamsSource.LIVE:
+        available = [live_run.available_utc] * len(stamps)
+    else:
+        available = [r + PUBLISH_DELAY for r in runs]
     return pd.DataFrame(
         {
             "site_id": query.site,
@@ -226,7 +251,7 @@ def parse(query: CamsQuery, payload: Mapping[str, Any]) -> pd.DataFrame:
             VARIABLE: values,
             "source": query.source.value,
             "run_start_utc": pd.to_datetime(runs, utc=True),
-            "available_at_utc": pd.to_datetime([r + PUBLISH_DELAY for r in runs], utc=True),
+            "available_at_utc": pd.to_datetime(available, utc=True),
         },
         columns=list(COLUMNS),
     )
@@ -235,11 +260,42 @@ def parse(query: CamsQuery, payload: Mapping[str, Any]) -> pd.DataFrame:
 def fetch(
     client: httpx.Client, query: CamsQuery, *, attempts: int = 4, backoff_s: float = 5.0
 ) -> pd.DataFrame:
-    """Fetch and parse one history or run query."""
+    """Fetch and parse one history or run query (the live forecast goes through `fetch_live`)."""
+    if query.source is CamsSource.LIVE:
+        raise ValueError("the live forecast needs its run: use fetch_live")
     payload = fetch_json(
         client, URLS[query.source], query.params(), attempts=attempts, backoff_s=backoff_s
     )
     return parse(query, payload)
+
+
+def fetch_live(
+    client: httpx.Client,
+    query: CamsQuery,
+    *,
+    now: Callable[[], datetime],
+    attempts: int = 4,
+    backoff_s: float = 5.0,
+) -> pd.DataFrame:
+    """The live forecast, between two reads of the run it came from (refused if it changed)."""
+    if query.source is not CamsSource.LIVE:
+        raise ValueError("fetch_live takes a LIVE query")
+
+    def run() -> LiveRun:
+        return parse_live_run(
+            fetch_json(client, META_URL, {}, attempts=attempts, backoff_s=backoff_s)
+        )
+
+    before = run()
+    payload = fetch_json(
+        client, URLS[CamsSource.LIVE], query.params(), attempts=attempts, backoff_s=backoff_s
+    )
+    fetched = ensure_utc(now())
+    if run().started_utc != before.started_utc:
+        raise _refuse("run_changed", "a new CAMS run was published during the fetch")
+    if before.available_utc > fetched:
+        raise _refuse("run_from_the_future", "the run was published after the fetch")
+    return parse(query, payload, live_run=before)
 
 
 def daily_means(rows: pd.DataFrame, days: Iterable[date], tz: ZoneInfo) -> pd.DataFrame:

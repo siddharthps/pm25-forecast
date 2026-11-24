@@ -1,4 +1,4 @@
-"""Fakes for the daily forecast: an observed day of AirNow hours, and S3 buckets in moto."""
+"""Fakes for the daily job: an observed day of AirNow hours, CAMS as issued, S3 buckets."""
 
 from __future__ import annotations
 
@@ -11,6 +11,8 @@ import pandas as pd
 
 from airwatch.observations.schema import POC_NOT_GIVEN, concat_hourly
 from airwatch.timeutil import local_day_window_utc
+from airwatch.weather import cams
+from airwatch.weather.cams import CamsSource, issued_run_start
 from tests.unit.validation.helpers import frame, varying
 
 PHOENIX = ZoneInfo("America/Phoenix")
@@ -58,6 +60,39 @@ def fetcher(
 
     fetch_day.calls = 0  # type: ignore[attr-defined]
     return fetch_day
+
+
+class CamsFetcher:
+    """A live CAMS fetch: the target's as-issued run, published 9 h 48 min after it started.
+
+    Every hour holds `value`. `fail` raises like an unreachable Open-Meteo. Calls are counted.
+    """
+
+    def __init__(self, *, value: float = 6.0, fail: bool = False) -> None:
+        self.value, self.fail = value, fail
+        self.calls: list[tuple[str, date]] = []
+
+    def __call__(self, site: str, target: date) -> pd.DataFrame:
+        self.calls.append((site, target))
+        if self.fail:
+            raise ConnectionError("Open-Meteo unreachable")
+        start, end = local_day_window_utc(target, PHOENIX)
+        first = datetime.combine(start.date(), datetime.min.time(), tzinfo=UTC)
+        hours = (end.date() - start.date()).days * 24 + 24
+        run = issued_run_start(target)
+        return pd.DataFrame(
+            {
+                "site_id": site,
+                "valid_utc": pd.to_datetime(
+                    [first + timedelta(hours=h) for h in range(hours)], utc=True
+                ),
+                cams.VARIABLE: self.value,
+                "source": CamsSource.LIVE.value,
+                "run_start_utc": pd.Timestamp(run),
+                "available_at_utc": pd.Timestamp(run + timedelta(hours=9, minutes=48)),
+            },
+            columns=list(cams.COLUMNS),
+        )
 
 
 def object_versions(s3: Any, bucket: str, key: str) -> int:

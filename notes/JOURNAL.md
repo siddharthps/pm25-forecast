@@ -1921,3 +1921,44 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - T15 (#21): what to do with the −1 and 101 % cloud-cover values (D-054 leaves it to the
   features).
 - Fill-in: #124, #122, #113, #86, #87.
+
+## 2026-11-24: fill-ins #87, #86, #122 done, #124 measured (CST, about 11:15 to 12:15)
+
+- **#87 (#131):** the leakage property's "invalid" draws are Hypothesis's bookkeeping: status
+  `gave_up`, "exceeded maximum test case size", never running the body (1,431 at 0.00 s against
+  226 s for 2,000 passing; Hypothesis's observability output). A bare list of 1 to 4 bounded
+  floats does the same in an empty test. Events now label the cases; under `explore` about 3%
+  draw a value outside the site's range, none in the default 100.
+- **#86 (#132, D-055):** `daily_job` re-raises a foreign error as `JobFailedError` (the day and
+  the type, `from None`); our own errors pass unchanged; interrupts are never caught. Found
+  along the way: scoring's `log.exception` put the foreign message and traceback in Prefect's
+  log; now it logs the type, and `ScoringError` is a `ReportableError`. 7 planted mistakes caught.
+- **#122 (#133, D-056, owner's choice):** the weekly job runs
+  `uv lock --upgrade --exclude-newer "7 days"`; `pyproject.toml` has no cutoff; new minimums must
+  be a week old. Tried on a copy: a cutoff in `pyproject.toml` fails every local lock while a
+  minimum is under a week old (ours are set to the newest release when added), and `--upgrade`
+  under a cutoff downgrades a newer locked version, so an urgent release needs a one-week
+  exemption (DEVELOPMENT.md). Every current minimum is old enough by 2026-11-30 (PyPI times).
+- **#124 measured, kept open:** before T14 (`72b8396`) vs `main`, summed test time 58.9 → 79.0 s
+  (about +5 s wall), all new tests (validation properties +6.1 s, daily job +3.7 s, weather +3.0
+  s, leakage +1.6 s); no old test slower. `main` 26.8 to 27.0 s on a quiet PC, 28.4 to 34.0 s
+  later the same day; #132 and #133 add about 1.3 s. Next lever: the validation properties
+  (`run_checks` is about 40% of each example, building the frames the rest).
+
+### Traps found
+
+- **A command on its own line runs even when the one before failed:** a fix to a records script
+  failed its assertion, and the next line still ran the unfixed script (caught in the diff,
+  reverted). Chain dependent steps with `&&`.
+- The stacked branch conflicted on `DECISIONS.md` after #132's squash merge, as CLAUDE.md
+  warns; the branch's copy was kept, checked to differ from `main` only by D-056.
+
+### Next
+
+- **2026-11-25 after 12:00 UTC (06:00 CST):** check the first real `cams.json` in S3 (#78's last
+  box), then close #78 and #19.
+- **2026-11-25:** #3's old key and IAM user deleted (owner confirms first); milestone B closes.
+- **2026-11-30 (Mon):** the first lock run with the 7-day wait (#122); check it resolves.
+- T15 (#21) next, with the −1 and 101 % cloud-cover values to settle.
+- Fill-in left: #113 (watchdog starts the lock run: token, Terraform apply, drill), #124
+  (validation properties first), #112 (mutation list).

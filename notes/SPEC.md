@@ -57,12 +57,12 @@ module in the order validation → features → training → monitoring → site
   continuous FEM instruments (D-032).
 - **Training labels** come from AQS. **Live labels** come from AirNow: day T is scored on the
   morning of T+2, once its files have settled (D-042). The AQS re-score follows later (D-004).
-- **Weather lead mapping (D-051):** for target day D+1 issued at 06:00 on day D, weather values
-  valid during D+1 are 18–42 hours ahead of issue. When rebuilding history from the Previous
-  Runs API, every hour of D+1 uses `_previous_day2`: the last GFS run started at or before 48 h
-  ahead of that hour, so the newest is the 00 UTC run of day D, published hours before the issue
-  time. The live run uses the newest run published before it starts. This mapping gets one
-  property test.
+- **Weather lead mapping (D-051):** for target day D+1 (a Phoenix day) issued at 06:00 Chicago
+  on day D, weather values valid during D+1 are 19–44 hours ahead of issue. When rebuilding
+  history from the Previous Runs API, every hour of D+1 uses `_previous_day3`: the last GFS run
+  started at or before 72 h ahead of that hour, published about a day before the issue time.
+  The live run uses the newest run published before it starts. This mapping gets one property
+  test.
 
 ---
 

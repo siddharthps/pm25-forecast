@@ -1626,7 +1626,7 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
 
 ---
 
-## D-051 · 2026-11-23 · Weather: GFS Global, 8 variables, the 48-hour rule (#19, refines D-007)
+## D-051 · 2026-11-23 · Weather: GFS Global, 8 variables, the 72-hour rule (#19, refines D-007)
 
 - **Decision:**
   - **Training weather:** Open-Meteo's Historical Weather API with `models=era5`, fixed. Not
@@ -1640,17 +1640,26 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
     - Boundary-layer height is left out: it is in ERA5, but the forecast archive has none.
   - **Where:** each monitor's own coordinates (10 points). Points in the same grid cell repeat
     the same values.
-  - **Lead rule (replaces SPEC's 24/48 h split):** the test rebuild takes `_previous_day2` for
-    every hour of D+1. The live run takes the newest run published before it starts, and records
-    that run's start time (the metadata's `last_run_initialisation_time`).
-- **Why the lead rule changed:** SPEC's rule took `_previous_day1` (the run started 24 h
-  earlier) for hours up to 24 h after issue. For most of those hours that run started after
-  06:00 on day D, so the live job could never have had it, and the test would flatter the
-  model. With `_previous_day2`, the newest run any hour of D+1 can use is the 00 UTC run of day
-  D. It is published around 06:17 UTC, about 5–6 h before the issue time (12 UTC in winter,
-  11 UTC in summer). Live gets the same 00 UTC run, because the 06 UTC one arrives about 12:17
-  UTC. For D+1's early hours the test uses runs from D−1, staler than live, so the test errs
-  pessimistic, never flattering.
+  - **Lead rule (replaces SPEC's 24/48 h split):** the test rebuild and the forecasts-only
+    variant take `_previous_day3` for every hour of D+1: the last GFS run started at or before
+    72 h ahead of that hour. The live run takes the newest run published before it starts, and
+    records that run's start time (the metadata's `last_run_initialisation_time`).
+- **Why the lead rule changed:** the leakage rule is "only what was published before the issue
+  time"; the archive instead offers fixed offsets counted back from each *valid* hour. The
+  target day is a Phoenix day (UTC−7 all year), 07:00 UTC on D+1 to 07:00 UTC on D+2, and the
+  issue time is 12:00 UTC in winter and 11:00 UTC in summer.
+  - `_previous_day1` (SPEC's rule for the first 24 h) always lands on runs started at or after
+    06 UTC on day D. They are published about 12:17 UTC, after the issue time, so it leaks for
+    every hour it covers.
+  - `_previous_day2`, every hour (this entry's first draft, from a Chicago-day reckoning): the
+    last hour or two (06:00 UTC, and 07:00 UTC for end-stamped sums like precipitation) land on
+    the 06 UTC run of day D, which also leaks.
+  - `_previous_day3`: the newest run any hour can use is the 06 UTC run of D−1, published about
+    a day before the issue time. Safe whatever GFS's delay, up to about 29 h.
+  - The cost is small: at Phoenix, February–December 2024 (the development period; 8,040 hours,
+    against ERA5), GFS's mean absolute error grew from 2 to 3 days ahead by about 1–4%
+    (temperature 2.64 → 2.69 °C, wind 4.48 → 4.51 km/h, humidity 8.75 → 9.11%). Live's
+    forecasts are made 31–55 h ahead, so the test errs pessimistic, never flattering.
 - **Facts (checked 2026-11-23 to 11-24 UTC, Phoenix, 33.45 N 112.07 W):**
   - Open-Meteo docs: `_previous_day1` is "the value predicted 24 hours before valid time",
     `_previous_day2` 48 hours. "Most models are archived from January 2024." There is no
@@ -1661,6 +1670,8 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
   - **The offset rounds down:** matching `_previous_day2` for 2026-11-22 against named runs
     (Single Runs API, `&run=`) found, for the hours one run alone matched, the last run started
     at or before 48 h earlier. At 10:00 and 16:00 UTC it was the earlier run, not the nearest.
+    The Single Runs API had no GFS run from 2024 or 2025 (four dates tried), so the offset
+    archive is the only record of past forecasts.
   - **Publication delay (metadata API):** GFS's 18 UTC run of 2026-11-23 was available 6.29 h
     after it started (one reading). CAMS global: 2 runs a day, the 12 UTC run available 9.92 h
     after it started.
@@ -1672,12 +1683,20 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
 - **Alternatives:**
   - ECMWF IFS 0.25°: about 6 weeks less complete history. Best match: its model mix shifts by
     place and lead.
-  - SPEC's 24/48 h split: leaks. `_previous_day3` for every hour: safe, but much staler than live.
+  - SPEC's 24/48 h split, and `_previous_day2` for every hour: both leak (above).
+  - `_previous_day2` with a `_previous_day3` fallback for the last hours: also safe and a little
+    closer to live, but a two-case rule that leans on GFS's delay staying under about 11 h. The
+    owner chose the one-offset rule for simplicity.
+  - Moving the issue time (e.g. to 07:00 Phoenix, 14:00 UTC all year) would let
+    `_previous_day2` work with about 1 h 45 min of margin. Not taken: D-019 is Frozen, and the
+    gain is the 1–4% above.
   - Dew point kept: a duplicate feature. One city-centre point: weather 60 km off for two
     monitors.
   - The models were not compared on accuracy: that would mean choosing by results.
-- **Checks:** one property test of the lead rule (every run used was published before the issue
-  time, given the delay); the live job's recorded start times show the margin really holds.
+- **Checks:** one property test of the lead rule: on every target day 2009–2030, in both
+  seasons, every hour of the Phoenix day (and the end-stamped hour after it) uses a run published
+  before the issue time, given a generous delay. The live job's recorded run start times show the
+  margin holds in practice.
 - **Status:** Active. Owner's choices, 2026-11-23.
 
 ---

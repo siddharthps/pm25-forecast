@@ -1767,9 +1767,17 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   29.9–33.5 s on other runs): filed **#124**. The bulk tests moved to `MemoryStore` (4.4 s to
   2.3 s), one still on the real `S3Store`.
 
+- **A closing keyword inside a denial:** #125's description said it "doesn't close #19", and
+  GitHub closed #19 on the merge (`3e6995f`), reading "close #19" as a keyword. Reopened at once
+  with a comment. For a partial PR, write "Refs #N" and never put "close", "fix" or "resolve"
+  next to the number.
+- **Merges (owner's OK, given before bed: merge if the full suite passes):** #125 and this
+  records PR, after the full suite passed on `main` with both merged together and each PR's own
+  CI passed.
+
 ### Next
 
 - **2026-11-25:** #3's old key and IAM user deleted (owner confirms first); milestone B closes.
-- **T14 part 2 (#19), by the 11-29 waypoint:** the archive's coverage check (2024-01-20 on),
+- **T14 part 2 (#19), by the 11-29 waypoint:** the archive's coverage check (2024-01-21 12 UTC on),
   the CAMS download and its archive-bias check, and the daily live save with #78.
 - Fill-in: #124, #122, #113, #86, #87.

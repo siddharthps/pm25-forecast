@@ -2003,3 +2003,25 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - **Owner:** #113's token, apply and drill (T9 guide section 9), before Monday 2026-11-30.
 - **2026-11-30 (Mon):** the first watchdog-started lock run, with the 7-day wait (D-056).
 - #112's full run and survivors; then T15 (#21).
+
+## 2026-11-24: #113 applied and drilled (CST, about 14:35 to 15:05)
+
+- **Owner:** fine-grained token `pm25-forecast-watchdog-lock` (this repo, Actions read and write,
+  expires 2027-02-28) in SSM `/pm25-forecast/github-lock-token`; zip rebuilt (sha256 `efaa4df3…`,
+  the merged code); `apply`: 0 added, 3 changed, 0 destroyed (the guide said 2: it missed the
+  role's description; corrected).
+- **Drill for Monday 2026-11-30:** 08:00 → `"lock": "dispatched"`, run 45484178486 (GitHub lists
+  it, `workflow_dispatch`); the same call twice more → `"already dispatched"`, no new run; 09:00 →
+  `"lock": "failure"` with the DRILL email and the run's link; a Monday with no run (12-07) →
+  `"lock": "missing"`. Five `watchdog {...}` log lines, no token or key in the logs.
+- **The run failed as D-056 intends:** today's 7-day cutoff (11-17) excludes `zensical==0.1.3`
+  (11-20). By Monday 11-30 every minimum is older than the cutoff, so the first real run should
+  open the lock PR with CI, which closes #113's drill box and #43's last box.
+- The lock email now reads "hadn't succeeded by 09:00 Chicago (state: …)" (was "is failure").
+
+### Next
+
+- **2026-11-30 (Mon) after 09:00 Chicago:** the first watchdog-started lock run: check it
+  succeeded and its PR's CI ran; then close #113 and #43.
+- **2026-11-25:** the first real `cams.json` (#78, #19); #3's old key and user (owner confirms).
+- #112's full run and survivors; then T15 (#21).

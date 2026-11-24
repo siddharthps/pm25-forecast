@@ -395,7 +395,8 @@ def _lock_verify(config: Config, aws: Clients, at: datetime, *, drill: bool) -> 
         aws.sns,
         config.topic_arn,
         f"weekly lock run {shown} ({day})",
-        f"The weekly uv lock run for Monday {day} is {shown} at 09:00 Chicago: "
+        f"The weekly uv lock run for Monday {day} hadn't succeeded by 09:00 Chicago "
+        f"(state: {shown}): "
         f"{run.get('html_url', run_id)}",
         drill=drill,
     )

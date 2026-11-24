@@ -227,3 +227,46 @@ def test_scoring_twice_writes_the_same_bytes() -> None:
 
 def test_scores_live_under_reports_where_the_pipeline_may_write() -> None:
     assert sc.score_key(DAY) == "reports/scores/forecast_date=2026-11-21/score.json"
+
+
+def test_a_reused_score_is_the_stored_one() -> None:
+    """Killed mutmut survivors (#112): reuse returns the file, no-record names its day."""
+    store = _store(DAY)
+    _score(store, Fetch({DAY: _actuals()}))
+    stored = json.loads(store.get(sc.score_key(DAY)) or b"{}")
+    [again] = [o for o in _score(store, Fetch({}), now=READY + timedelta(days=1)) if o.day == DAY]
+    assert again.score == stored
+
+
+def test_a_no_record_outcome_names_its_day() -> None:
+    outcomes = _score(MemoryStore(), Fetch({}))
+    assert outcomes
+    assert all(isinstance(o.day, date) for o in outcomes)
+    assert DAY in {o.day for o in outcomes}
+
+
+def test_a_lost_race_with_nothing_readable_keeps_its_own_score() -> None:
+    class Refusing(MemoryStore):
+        def create_if_absent(self, key: str, data: bytes) -> bool:
+            if key.startswith(sc.SCORE_PREFIX):
+                return False
+            return super().create_if_absent(key, data)
+
+    store = Refusing()
+    store.put(record_key(DAY), json.dumps(_record()).encode())
+    [outcome] = [o for o in _score(store, Fetch({DAY: _actuals()})) if o.day == DAY]
+    assert outcome.status == "already_scored"
+    assert outcome.score is not None
+    assert outcome.score["forecast_date"] == DAY.isoformat()
+
+
+def test_a_forecast_monitor_with_no_hours_counted_has_zero_hours() -> None:
+    score = sc.build_score(_record(), {}, {}, READY)
+    assert score["no_actual"] == [{"site_id": s, "n_hours": 0} for s in sorted(FORECAST)]
+
+
+def test_the_score_file_is_byte_stable() -> None:
+    store = _store(DAY)
+    _score(store, Fetch({DAY: _actuals()}))
+    raw = store.get(sc.score_key(DAY)) or b""
+    assert raw == (json.dumps(json.loads(raw), indent=2, sort_keys=True) + "\n").encode()

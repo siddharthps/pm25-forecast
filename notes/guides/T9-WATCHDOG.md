@@ -230,6 +230,15 @@ the lock run (at most one missed Monday).
 
 ---
 
+**"Error acquiring the state lock"** (412 PreconditionFailed): an earlier `apply` stopped and
+left its lock (2026-11-24). First check that nothing else is running (no `terraform` process)
+and that the change didn't land, then release that one lock by the ID the error prints, and
+apply again:
+
+```bash
+AWS_PROFILE=pm25 terraform -chdir=infra force-unlock -force <Lock Info ID>
+```
+
 **If something fails:** copy me the error's first lines, never a key. To undo everything, run
 `terraform -chdir=infra destroy` with `-target` on the 13 resources, and delete the parameter in
 the console; ask me first.

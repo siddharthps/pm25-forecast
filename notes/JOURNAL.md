@@ -2025,3 +2025,28 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   succeeded and its PR's CI ran; then close #113 and #43.
 - **2026-11-25:** the first real `cams.json` (#78, #19); #3's old key and user (owner confirms).
 - #112's full run and survivors; then T15 (#21).
+
+## 2026-11-24: the email wording deployed; a stale Terraform lock (CST, about 15:05 to 15:15)
+
+- **Deployed #138's wording:** the zip rebuilt from `main` (`ab41361`, sha256 `618df6d5…`, the same
+  as from the branch); `plan`: 1 change, the Lambda's code; `apply`: 0 added, 1 changed. The live
+  Lambda's `CodeSha256` equals the zip's.
+- **Records:** DEVELOPMENT.md gains the mutmut timings; the T9 guide, the stale-lock fix; todo.md,
+  the #113 and #112 rows.
+
+### Traps found
+
+- **A stopped `apply` leaves Terraform's S3 state lock** ("Error acquiring the state lock", 412,
+  an apply from this PC at 20:56 UTC). Checked first: no `terraform` process, and the Lambda
+  still on the old code, so nothing had landed. `force-unlock -force <ID>` released it and the
+  saved plan applied (T9 guide).
+- **Pasting a reply into `!` runs its prose as commands:** harmless "command not found" lines,
+  but a pasted `! rm` would run. Copy only the code block.
+
+### Next
+
+- **2026-11-25 after 12:00 UTC (06:00 CST):** the first real `cams.json` (#78), then close #78
+  and #19; #3's old key and user (owner confirms); milestone B closes.
+- **2026-11-30 (Mon) after 09:00 Chicago:** the first watchdog-started lock run succeeded and its
+  PR's CI ran; then close #113 and #43.
+- #112's full run and survivors; then T15 (#21).

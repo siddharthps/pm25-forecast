@@ -1962,3 +1962,44 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - T15 (#21) next, with the −1 and 101 % cloud-cover values to settle.
 - Fill-in left: #113 (watchdog starts the lock run: token, Terraform apply, drill), #124
   (validation properties first), #112 (mutation list).
+
+## 2026-11-24: fill-ins #124 and #113 merged, #112 timed (CST, about 13:15 to 14:35)
+
+- **#124 (#135, D-057, owner's choice):** the 30 s goal is the median of three quiet runs. Tests
+  using the `daily` fixture join one xdist group with `--dist loadgroup` (about 1.2 s faster over
+  six paired runs; a test checks both). No test or example removed. Closed.
+- **#113 (#136, D-058):** the watchdog starts `uv-lock-upgrade.yml` on Mondays at 08:00 Chicago
+  (create-once marker, GitHub dispatch, run ID recorded) and reads the run back at 09:00; the
+  forecast and lock checks never skip each other; the workflow lost its cron and a test bans one
+  in any workflow (D-003; the issue's "D-001" was a slip). GitHub's REST docs re-read: the
+  dispatch answers 200 with `workflow_run_id`; Actions write to dispatch, read to read a run.
+  - **mutmut on `handler.py`** (WSL, about 5 min): every survivor in the new or changed code
+    killed, except 8 explained: `"UTF-8"` for `"utf-8"` (3, the same codec); a missing run `path`
+    defaulting to `None` or `"XXXX"` instead of `""` (3, the run is refused either way); message
+    text only (2: "reply named no run ID", "drill must be true or false"). 52 survivors in older
+    code are left to #112. Killed with new tests: drill labels on lock and error emails, the
+    stored marker and run, the JSON content type, the 09:00 result's run ID, the "unknown" state,
+    GitHub not answering at 09:00, the unknown-mode message, and the drill guard on the real
+    clock (`datetime.now(None)` would have compared a naive time and crashed a Lambda drill).
+  - mutmut's own copy of a module imports `mutmut`; the handler's stdlib-only import check now
+    allows that only for files under `mutants/`.
+  - **Open for the owner:** the token, SSM, the zip, plan and apply, and the drill (T9 guide
+    section 9). Until the apply nothing starts the lock run.
+- **#112 timed:** `validation/checks.py` alone, 1,111 mutants in 14.3 min (1,007 killed, 103
+  survived, 1 timeout); `watchdog/handler.py` about 5 min. The whole list (12 modules, about
+  2,400 lines) is about an hour per run, and the survivors need a session or two.
+
+### Traps found
+
+- **A mutmut results script must set `only_mutate` first:** with the config reset it listed no
+  mutants and printed nothing.
+- **A commit isn't gated on the tests:** a commit went in with one failing test, and mutmut's clean
+  run then failed in 33 s. Dependent steps now chain on the test result.
+
+### Next
+
+- **2026-11-25 after 12:00 UTC:** the first real `cams.json` (#78), then close #78 and #19.
+- **2026-11-25:** #3's old key and IAM user (owner confirms); milestone B closes.
+- **Owner:** #113's token, apply and drill (T9 guide section 9), before Monday 2026-11-30.
+- **2026-11-30 (Mon):** the first watchdog-started lock run, with the 7-day wait (D-056).
+- #112's full run and survivors; then T15 (#21).

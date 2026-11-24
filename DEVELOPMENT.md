@@ -40,7 +40,7 @@ if it doesn't, prefix each `uv` with `uvx --from uv==<floor>`. The paths it muta
 `pyproject.toml`'s `[tool.mutmut]`: add a module by extending `only_mutate`.
 
 ```bash
-uv sync --frozen && uv run mutmut run  # in WSL; about 2 min for timeutil, config and weather.leads
+uv sync --frozen && uv run mutmut run  # in WSL; about 25 to 35 min for the 15 modules (#112)
 uv run mutmut results                  # every mutant not killed; `uv run mutmut show <name>` for one
 gh workflow run mutmut.yml --ref <branch>  # the same on GitHub (UTC); results in the run's summary
 ```
@@ -49,7 +49,9 @@ Each survivor is killed by a new test or explained in the journal. Run it after 
 mutated module, before its merge.
 
 Timed in WSL (12 CPUs, 2026-11-24): `validation/checks.py` alone takes about 14 min (1,111
-mutants), `watchdog/handler.py` about 5 min; #112's whole list is about an hour. `mutmut
+mutants), `watchdog/handler.py` about 5 min, the whole list of 15 modules 22 to 36 min. The test
+selection includes `tests/integration`: without it, every mutant only those tests catch is
+reported as a survivor. `mutmut
 results` and `mutmut show` read the same `only_mutate` as the run: with a different list they
 show nothing.
 

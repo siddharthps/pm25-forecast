@@ -25,7 +25,7 @@ from airwatch.weather.leads import (
 
 PHOENIX = ZoneInfo("America/Phoenix")
 GFS_START_HOURS = (0, 6, 12, 18)
-OBSERVED_GFS_DELAY = timedelta(hours=6, minutes=18)
+OBSERVED_GFS_DELAYS = (timedelta(hours=5, minutes=21), timedelta(hours=6, minutes=17))
 
 days = st.dates(min_value=date(2009, 1, 1), max_value=date(2030, 12, 31))
 
@@ -83,30 +83,40 @@ def test_target_hours_cover_the_local_day_and_the_hour_that_ends_it(target: date
     assert all(h.tzinfo is UTC for h in hours)
 
 
-def test_the_assumed_delay_covers_the_one_observed() -> None:
-    assert MAX_PUBLISH_DELAY >= 2 * OBSERVED_GFS_DELAY
+def test_the_assumed_delay_covers_every_observed_one() -> None:
+    assert 2 * max(OBSERVED_GFS_DELAYS) <= MAX_PUBLISH_DELAY
 
 
 @pytest.mark.parametrize(
     ("target", "season"), [(date(2025, 1, 15), "CST"), (date(2025, 7, 15), "CDT")]
 )
-def test_two_days_back_would_leak_at_the_end_of_the_day(target: date, season: str) -> None:
-    """Why not 48 h: tomorrow's last stamps land on the 06 UTC run of the issue day, which
-    appears about 12:17 UTC, after the issue time in both seasons."""
-    issued = issue_time_utc(target)
-    late = [
-        valid
-        for valid in target_hours_utc(target, PHOENIX)
-        if archived_run_start(valid, offset_days=2) + OBSERVED_GFS_DELAY > issued
-    ]
-    assert [v.hour for v in late] == [6, 7], season
-
-
-def test_one_day_back_would_leak_for_every_hour() -> None:
-    target = date(2025, 1, 15)
+def test_two_days_back_would_use_a_run_from_hours_before_the_issue(
+    target: date, season: str
+) -> None:
+    """Why not 48 h: tomorrow's last stamps land on the 06 UTC run of the issue day, which starts
+    only 5 h (summer) or 6 h (winter) before the issue time. GFS has been seen taking 5.35 and
+    6.29 h to appear, so that is a leak or a near miss, and it fails the assumed delay."""
     issued = issue_time_utc(target)
     hours = target_hours_utc(target, PHOENIX)
-    assert all(archived_run_start(v, offset_days=1) + OBSERVED_GFS_DELAY > issued for v in hours)
+    issue_day_06 = datetime(issued.year, issued.month, issued.day, 6, tzinfo=UTC)
+    assert [archived_run_start(v, offset_days=2) for v in hours[-2:]] == [issue_day_06] * 2
+    assert issued - issue_day_06 <= max(OBSERVED_GFS_DELAYS), season
+    assert any(archived_run_start(v, offset_days=2) + MAX_PUBLISH_DELAY > issued for v in hours)
+
+
+@pytest.mark.parametrize("target", [date(2025, 1, 15), date(2025, 7, 15)])
+def test_one_day_back_fails_the_assumed_delay_for_every_hour(target: date) -> None:
+    issued = issue_time_utc(target)
+    hours = target_hours_utc(target, PHOENIX)
+    assert all(archived_run_start(v, offset_days=1) + MAX_PUBLISH_DELAY > issued for v in hours)
+
+
+def test_one_day_back_leaks_every_summer_hour_even_at_the_fastest_delay_seen() -> None:
+    target = date(2025, 7, 15)
+    issued = issue_time_utc(target)
+    hours = target_hours_utc(target, PHOENIX)
+    fastest = min(OBSERVED_GFS_DELAYS)
+    assert all(archived_run_start(v, offset_days=1) + fastest > issued for v in hours)
 
 
 def test_known_values() -> None:

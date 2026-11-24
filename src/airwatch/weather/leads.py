@@ -6,8 +6,10 @@ was published before the issue time", so the offset must be large enough that ev
 target day lands on a run already published at 06:00 Chicago on the day before.
 
 Every hour of D+1 uses `_previous_day3`. Its newest run is the 06 UTC run of D-1, about a day
-before the issue time. `_previous_day2` would leak for the target day's last hour or two, and
-`_previous_day1` for every hour (tests/property/test_weather_leads.py shows both).
+before the issue time. `_previous_day2` (for the target day's last hour or two) and
+`_previous_day1` (for every hour) land on runs started only 5-6 h before the issue time, and GFS
+has been seen taking 5.35-6.29 h to appear: leaks or near misses
+(tests/property/test_weather_leads.py shows both).
 
 The target day's hourly stamps run from local midnight to the next local midnight inclusive:
 instant values are stamped at their hour, and sums such as precipitation at the end of the hour

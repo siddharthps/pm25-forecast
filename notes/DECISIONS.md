@@ -1649,11 +1649,13 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
   target day is a Phoenix day (UTC−7 all year), 07:00 UTC on D+1 to 07:00 UTC on D+2, and the
   issue time is 12:00 UTC in winter and 11:00 UTC in summer.
   - `_previous_day1` (SPEC's rule for the first 24 h) always lands on runs started at or after
-    06 UTC on day D. They are published about 12:17 UTC, after the issue time, so it leaks for
-    every hour it covers.
+    06 UTC on day D, 5–6 h or less before the issue time, so it leaks or nearly leaks for every
+    hour it covers. GFS appears 5.35–6.29 h after it starts (the readings below).
   - `_previous_day2`, every hour (this entry's first draft, from a Chicago-day reckoning): the
     last hour or two (06:00 UTC, and 07:00 UTC for end-stamped sums like precipitation) land on
-    the 06 UTC run of day D, which also leaks.
+    the 06 UTC run of day D. In summer it starts 5 h before the issue time and appears after
+    it; in winter it starts 6 h before and may appear minutes before it. A leak or a near miss
+    either way.
   - `_previous_day3`: the newest run any hour can use is the 06 UTC run of D−1, published about
     a day before the issue time. Safe whatever GFS's delay, up to about 29 h.
   - The cost is small: at Phoenix, February–December 2024 (the development period; 8,040 hours,
@@ -1672,9 +1674,11 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
     at or before 48 h earlier. At 10:00 and 16:00 UTC it was the earlier run, not the nearest.
     The Single Runs API had no GFS run from 2024 or 2025 (four dates tried), so the offset
     archive is the only record of past forecasts.
-  - **Publication delay (metadata API):** GFS's 18 UTC run of 2026-11-23 was available 6.29 h
-    after it started (one reading). CAMS global: 2 runs a day, the 12 UTC run available 9.92 h
-    after it started.
+  - **Publication delay (metadata API, `/data/<model>/static/meta.json`):** `gfs_global` is
+    served from `ncep_gfs013` (the model the Single Runs API names in its error for
+    `gfs_global`). Its 18 UTC run of 2026-11-23 was available 5.35 h after it started;
+    `ncep_gfs025`'s same run took 6.29 h (one reading each). CAMS global: 2 runs a day, the
+    12 UTC run available 9.92 h after it started.
   - ERA5 from 2009 has all 8 variables plus boundary-layer height; ERA5-Land lacks 7 of them.
   - The 10 monitors fall in about 5 cells of a 0.25° grid. The two Pinal County monitors are
     about 60 km south of central Phoenix.
@@ -1688,8 +1692,8 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
     closer to live, but a two-case rule that leans on GFS's delay staying under about 11 h. The
     owner chose the one-offset rule for simplicity.
   - Moving the issue time (e.g. to 07:00 Phoenix, 14:00 UTC all year) would let
-    `_previous_day2` work with about 1 h 45 min of margin. Not taken: D-019 is Frozen, and the
-    gain is the 1–4% above.
+    `_previous_day2` work with about 1 h 40 min to 2 h 40 min of margin. Not taken: D-019 is
+    Frozen, and the gain is the 1–4% above.
   - Dew point kept: a duplicate feature. One city-centre point: weather 60 km off for two
     monitors.
   - The models were not compared on accuracy: that would mean choosing by results.

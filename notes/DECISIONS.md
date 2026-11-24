@@ -905,6 +905,8 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   checks less); a separate CI step for these tests (locally they'd only run on request).
 - **Status:** Active. Owner's choice, 2026-11-19. Refined by D-046 (2026-11-22): the suite's
   creep fixed, 4 workers re-measured, and CI's 75 s limit.
+  *Refined 2026-11-24 (D-057):* the goal is the median of three quiet runs; tests
+  distribute by group.
 
 ---
 
@@ -1483,6 +1485,8 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
   both limits; report the time without failing (all offered, not chosen). Fewer property
   examples stays rejected (D-035).
 - **Status:** Active. Owner's choice, 2026-11-22 (the CI limit). Refines D-035.
+  *Refined 2026-11-24 (D-057):* the goal is the median of three quiet runs; tests
+  distribute by group.
 
 ---
 
@@ -1932,6 +1936,32 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
 - **Alternatives (rejected by the owner):** the cutoff in `pyproject.toml` for everyone (an
   exemption for every new minimum until it ages); no wait, holding each lock PR by hand.
 - **Status:** Active. 2026-11-24.
+
+---
+
+## D-057 · 2026-11-24 · The 30 s goal is the median of three quiet runs; tests grouped by Prefect (#124)
+
+- **Decision (owner's choice, 2026-11-24):** the core suite's 30 s goal (D-035) is judged as the
+  median of three back-to-back runs on the owner's PC with other heavy apps closed, pytest's own
+  figure. A busy-PC timing is noise and doesn't fail the goal. CI's 75 s limit (D-046) is
+  unchanged. The suite distributes with `--dist loadgroup`, and every test using the `daily`
+  fixture joins one `prefect` group (`tests/conftest.py`), so one worker imports Prefect instead
+  of two or three; a test checks both.
+- **Measured (2026-11-24):**
+  - Before T14 (`72b8396`) vs `main` (`ea33d84`): summed test time 58.9 → 79.0 s, about +5 s
+    wall over 4 workers, all from new tests (validation properties +6.1 s, the daily job +3.7 s,
+    weather +3.0 s, leakage properties +1.6 s); no old test slower.
+  - The same code: 26.8 to 27.0 s over five quiet runs in the morning; 31 to 35 s in the
+    afternoon with a browser and editor busy (CPU about 20%), an 8 s swing.
+  - `loadgroup` against `load`, six alternating pairs: about 1.2 s faster on average (−2.9 to
+    +1.1 s per pair). `worksteal`: about 1 s faster in three pairs.
+  - Profiling a validation property: `run_checks` is about 40% of an example, spread across
+    pandas' overhead on small frames, with no single hot spot.
+- **Why:** a goal that the same code passes or fails depending on what else the PC is doing
+  measures the PC, not the suite.
+- **Alternatives (rejected by the owner):** raising the goal to 35 s; keeping 30 s at any time and
+  spending hours speeding up the property tests without cutting examples.
+- **Status:** Active. 2026-11-24. Refines D-035 and D-046.
 
 ---
 

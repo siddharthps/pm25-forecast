@@ -7,6 +7,9 @@ import it through the `daily` fixture instead, so only a worker that runs one pa
 
 import ast
 from pathlib import Path
+from types import ModuleType
+
+import pytest
 
 TESTS = Path(__file__).resolve().parents[1]
 HEAVY = ("prefect", "airwatch.flows")
@@ -50,3 +53,15 @@ def test_no_test_file_imports_prefect_at_the_top() -> None:
         if (heavy := _heavy(_top_level_imports(p)))
     }
     assert not found, f"import these through the `daily` fixture instead: {found}"
+
+
+def test_every_prefect_test_shares_one_worker(
+    request: pytest.FixtureRequest, daily: ModuleType
+) -> None:
+    """#124: the `daily` fixture's users are one xdist group, and the suite distributes by group."""
+    marker = request.node.get_closest_marker("xdist_group")
+    assert marker is not None
+    assert marker.args == ("prefect",)
+    assert daily.__name__ == "airwatch.flows.daily"
+    addopts = request.config.getini("addopts")
+    assert addopts[addopts.index("--dist") + 1] == "loadgroup"

@@ -32,7 +32,7 @@ from typing import Any
 
 import pandas as pd
 
-from airwatch.storage import S3Store
+from airwatch.forecast.record import Store
 from airwatch.weather.openmeteo import VARIABLES, Source
 
 __all__ = [
@@ -145,7 +145,7 @@ def plan_parts(
     return sorted(p for p in todo if not manifest_parts.get(p.key, {}).get("final", False))
 
 
-def load_manifest(store: S3Store) -> dict[str, Any]:
+def load_manifest(store: Store) -> dict[str, Any]:
     raw = store.get(MANIFEST_KEY)
     if raw is None:
         return {"version": 1, "parts": {}}
@@ -160,7 +160,7 @@ def _parquet_bytes(df: pd.DataFrame) -> bytes:
 
 
 def run_download(  # noqa: PLR0913  (each argument is an injected edge: store, fetch, clock, pace)
-    store: S3Store,
+    store: Store,
     fetch: Callable[[Part], pd.DataFrame],
     sites: Iterable[str],
     *,

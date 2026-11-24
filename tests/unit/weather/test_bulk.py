@@ -1,6 +1,7 @@
 """Weather bulk download (#19, T14; D-051): resumable, idempotent, private, quiet, paced.
 
-S3 is moto's in-memory fake; Open-Meteo is a fake fetch that counts calls and can fail on demand.
+The bucket is the in-memory `MemoryStore` (one test runs the real `S3Store` on moto); Open-Meteo
+is a fake fetch that counts calls and can fail on demand.
 """
 
 import io
@@ -27,6 +28,7 @@ from airwatch.weather.bulk import (
     run_download,
 )
 from airwatch.weather.openmeteo import COLUMNS, VARIABLES, Source
+from tests.unit.forecast.fakes import MemoryStore
 
 BUCKET = "test-private-bucket"
 SITES = ("040130019", "040131003")
@@ -37,7 +39,12 @@ SMALL_ERA5 = range(2023, 2025)
 
 
 @pytest.fixture
-def store() -> Iterator[S3Store]:
+def store() -> MemoryStore:
+    return MemoryStore()
+
+
+@pytest.fixture
+def s3_store() -> Iterator[S3Store]:
     with mock_aws():
         s3 = boto3.client("s3", region_name="us-east-1")
         s3.create_bucket(Bucket=BUCKET)
@@ -87,7 +94,7 @@ class RecordingPace:
 
 
 def run(
-    store: S3Store,
+    store: MemoryStore | S3Store,
     fetch: FakeOpenMeteo,
     *,
     today: date = TODAY,
@@ -104,7 +111,7 @@ def run(
     )
 
 
-def manifest(store: S3Store) -> dict[str, Any]:
+def manifest(store: MemoryStore | S3Store) -> dict[str, Any]:
     raw = store.get(MANIFEST_KEY)
     assert raw is not None
     loaded: dict[str, Any] = json.loads(raw)
@@ -158,7 +165,7 @@ def test_call_weight_matches_open_meteos_examples(days: int, variables: int, wei
     assert call_weight(days, variables) == pytest.approx(weight)
 
 
-def test_a_fresh_run_fetches_every_part_once(store: S3Store) -> None:
+def test_a_fresh_run_fetches_every_part_once(store: MemoryStore) -> None:
     fake = FakeOpenMeteo()
     run(store, fake)
     assert sorted(fake.calls) == sorted(all_parts())
@@ -166,7 +173,15 @@ def test_a_fresh_run_fetches_every_part_once(store: S3Store) -> None:
     assert {e["key"] for e in manifest(store)["parts"].values()} == {p.key for p in all_parts()}
 
 
-def test_each_part_is_parquet_with_its_rows_and_counts(store: S3Store) -> None:
+def test_a_run_and_a_rerun_work_against_the_real_s3_store(s3_store: S3Store) -> None:
+    run(s3_store, FakeOpenMeteo())
+    again = FakeOpenMeteo()
+    run(s3_store, again)
+    assert again.calls == [Part(Source.GFS_ARCHIVE, s, 2026) for s in SITES]
+    assert set(s3_store.list_keys("raw/weather/")) == {p.key for p in all_parts()} | {MANIFEST_KEY}
+
+
+def test_each_part_is_parquet_with_its_rows_and_counts(store: MemoryStore) -> None:
     run(store, FakeOpenMeteo())
     part = Part(Source.ERA5, SITES[0], 2023)
     raw = store.get(part.key)
@@ -179,14 +194,14 @@ def test_each_part_is_parquet_with_its_rows_and_counts(store: S3Store) -> None:
     assert entry["fetched_at_utc"] == NOW.isoformat()
 
 
-def test_a_rerun_the_same_day_only_refreshes_this_years_archive(store: S3Store) -> None:
+def test_a_rerun_the_same_day_only_refreshes_this_years_archive(store: MemoryStore) -> None:
     run(store, FakeOpenMeteo())
     again = FakeOpenMeteo()
     run(store, again)
     assert again.calls == [Part(Source.GFS_ARCHIVE, s, 2026) for s in SITES]
 
 
-def test_an_interrupted_run_resumes_without_refetching_what_is_done(store: S3Store) -> None:
+def test_an_interrupted_run_resumes_without_refetching_what_is_done(store: MemoryStore) -> None:
     failing = Part(Source.GFS_ARCHIVE, SITES[0], 2025)
     first = FakeOpenMeteo(fail_on=failing)
     with pytest.raises(OSError, match="network down"):
@@ -200,7 +215,7 @@ def test_an_interrupted_run_resumes_without_refetching_what_is_done(store: S3Sto
     assert {e["key"] for e in manifest(store)["parts"].values()} == {p.key for p in all_parts()}
 
 
-def test_a_crash_between_data_and_manifest_is_repaired_by_a_rerun(store: S3Store) -> None:
+def test_a_crash_between_data_and_manifest_is_repaired_by_a_rerun(store: MemoryStore) -> None:
     real_put = store.put
     calls = {"n": 0}
 
@@ -221,7 +236,7 @@ def test_a_crash_between_data_and_manifest_is_repaired_by_a_rerun(store: S3Store
     assert all(store.get(e["key"]) is not None for e in entries)
 
 
-def test_the_manifest_never_claims_a_part_whose_data_write_failed(store: S3Store) -> None:
+def test_the_manifest_never_claims_a_part_whose_data_write_failed(store: MemoryStore) -> None:
     real_put = store.put
     failing_key = Part(Source.ERA5, SITES[1], 2024).key
 
@@ -240,7 +255,7 @@ def test_the_manifest_never_claims_a_part_whose_data_write_failed(store: S3Store
     assert all(store.get(e["key"]) is not None for e in parts.values())
 
 
-def test_this_years_archive_becomes_final_next_year(store: S3Store) -> None:
+def test_this_years_archive_becomes_final_next_year(store: MemoryStore) -> None:
     key = Part(Source.GFS_ARCHIVE, SITES[0], 2026).key
     run(store, FakeOpenMeteo())
     assert manifest(store)["parts"][key]["final"] is False
@@ -250,7 +265,7 @@ def test_this_years_archive_becomes_final_next_year(store: S3Store) -> None:
     assert manifest(store)["parts"][key]["final"] is True
 
 
-def test_every_fetch_is_paced_by_its_weight_first(store: S3Store) -> None:
+def test_every_fetch_is_paced_by_its_weight_first(store: MemoryStore) -> None:
     pace = RecordingPace()
     fake = FakeOpenMeteo()
     run(store, fake, pace=pace)
@@ -258,7 +273,9 @@ def test_every_fetch_is_paced_by_its_weight_first(store: S3Store) -> None:
     assert pace.weights == pytest.approx(expected)
 
 
-def test_logs_hold_counts_never_values(store: S3Store, caplog: pytest.LogCaptureFixture) -> None:
+def test_logs_hold_counts_never_values(
+    store: MemoryStore, caplog: pytest.LogCaptureFixture
+) -> None:
     """Only our own records: botocore's debug lines carry S3 checksums, which hold any digits."""
     with caplog.at_level(logging.DEBUG):
         run(store, FakeOpenMeteo())

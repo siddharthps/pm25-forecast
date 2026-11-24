@@ -117,7 +117,8 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
   action (2026-11-21: the forecast for 2026-11-22)
 - [x] The watchdog dry drill passes (record present → no action; record absent → trigger)
   (2026-11-20, four drill invokes, D-041)
-- [ ] **Re-evaluate the timeline (D-014)**; any change becomes a new D-entry before results are seen
+- [x] **Re-evaluate the timeline (D-014)**; any change becomes a new D-entry before results are seen
+  (2026-11-23, D-050: dates kept, one check-in on Sat 12-12, waypoints below)
 
 ### Phase 3: Deepen (weeks 2–5)
 
@@ -141,6 +142,15 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
 - [ ] T24: Weekly Evidently drift + flags (email + GitHub issue)
 - [ ] T25: Page: per-monitor map + track-record charts, **second on the cut line**
 - [ ] T26: AQS re-scoring of past forecasts, **third on the cut line**
+
+Soft waypoints (D-050; signals for the check-in, not deadlines): **11-29** T14 and #78 ·
+**12-05** T12b, T15, T16, T17 · **12-12** the check-in: T18–T20, T22, #79, #81 · **12-16**
+the rest. Fill-in work (#113, #86, #87) goes in gaps or after the freeze.
+
+### Check-in (Sat 2026-12-12, D-050)
+
+- [ ] Keep the cut line or move it later, once: by progress and the owner's free time only,
+  never by scores; at most one week, and the freeze moves with it; a new D-entry that day
 
 ### Checkpoint C: Cut line (2026-12-16)
 

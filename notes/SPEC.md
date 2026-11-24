@@ -287,8 +287,9 @@ Every task states its check before its code. The checks:
 
 V1 is done when all of the following hold. Each is checkable.
 
-1. **Live:** the page has shown a new D+1 forecast every day for **14 days in a row** without
-   manual action. The S3 records prove it (one per date, none duplicated).
+1. **Live:** from the day the headline model goes live (T23; D-050), the page has shown its
+   new D+1 forecast every day for **14 days in a row** without manual action. The S3 records
+   prove it (one per date, none duplicated).
 2. **Watchdog proven:** in a deliberate drill (the primary run disabled for one day), the watchdog
    triggered the run, or emailed when that failed, and the day still has exactly one record.
 3. **Honest evaluation:**

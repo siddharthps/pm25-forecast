@@ -33,7 +33,7 @@ MLflow, Evidently and AWS). See [INTENT.md](INTENT.md).
 | Module id | Responsibility | Depends on |
 | --- | --- | --- |
 | `observations` | PM2.5 from EPA AQS (validated history) and AirNow (live, preliminary) (D-004) | — |
-| `weather` | Open-Meteo observed weather (ERA5), forecasts as issued (Previous Runs), live forecast, CAMS PM2.5 (D-007, D-009) | — |
+| `weather` | Open-Meteo observed weather (ERA5), GFS forecasts as issued (Previous Runs), live GFS forecast, CAMS PM2.5 (D-007, D-009, D-051) | — |
 | `validation` | Data-quality report on every source; blocks the pipeline on hard failures | observations, weather |
 | `features` | Leakage-safe feature rows "as known at issue time" | validation |
 | `training` | Baselines, 6 variants, rolling-origin CV, one-time test read, MLflow tracking and registry (D-008 to D-010) | features |
@@ -134,7 +134,7 @@ pm25-forecast/                 new public repo (D-002, D-017); package name `air
 │   ├── errors.py              ReportableError: errors whose message is safe to log (#56)
 │   ├── observations/          aqs.py, airnow.py, schema.py, sites.py (D-030 sites, D-032 methods),
 │   │                          metadata.py (city check, HTTP retries), aqs_bulk.py (T13)
-│   ├── weather/               openmeteo.py, cams.py
+│   ├── weather/               leads.py (the 72-hour rule), openmeteo.py, bulk.py (T14), cams.py
 │   ├── validation/            checks.py (whole problem classes), report.py
 │   ├── features/              build.py (as-of-issue-time feature rows)
 │   ├── training/              split.py, baselines.py, models/, cv.py, final_test.py, registry.py

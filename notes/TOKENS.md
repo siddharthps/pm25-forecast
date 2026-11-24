@@ -24,6 +24,7 @@ widens only what it needs (`tests/unit/test_ci_config.py` checks the default).
 
 **The Prefect run holds no credential (D-040).** Its AWS access is the role `pm25-forecast-prefect-run`,
 assumed through Prefect Cloud's OIDC provider, with temporary credentials that Prefect injects. No key
-to store, expire or rotate. AirNow's hourly files need no key.
+to store, expire or rotate. AirNow's hourly files need no key, and nor does Open-Meteo's free,
+non-commercial API (limited by IP: 600 calls a minute, 5,000 an hour, 10,000 a day; D-051).
 
 To add as they're created: the GitHub fine-grained token for flag issues (T24).

@@ -48,6 +48,14 @@ gh workflow run mutmut.yml --ref <branch>  # the same on GitHub (UTC); results i
 Each survivor is killed by a new test or explained in the journal. Run it after changing a
 mutated module, before its merge.
 
+Started from Git Bash on Windows, `wsl.exe` drops the quotes inside a `bash -c "…"` command and
+Git Bash rewrites `/mnt/c/…` paths. Put the commands in a script with Linux line endings and run
+it as a login shell (WSL's `uv` is only on a login shell's path), with path rewriting off:
+
+```bash
+MSYS_NO_PATHCONV=1 wsl.exe -d Ubuntu -- bash -l /mnt/c/<path>/script.sh
+```
+
 ## Data, forecast and AWS
 
 ```bash

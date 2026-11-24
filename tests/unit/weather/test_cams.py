@@ -359,3 +359,104 @@ def test_fetch_refuses_the_live_source() -> None:
     with pytest.raises(ValueError, match="use fetch_live"):
         fetch(client, live_query())
     assert seen == []
+
+
+def test_a_history_query_is_built_from_the_monitor_and_its_days() -> None:
+    """Killed mutmut survivors (#112): built inside the test, so mutmut maps it."""
+    lat, lon = SITE_COORDS[SITE]
+    query = CamsQuery.history(SITE, HISTORY_START, HISTORY_START)
+    assert (query.source, query.site, query.lat, query.lon) == (CamsSource.HISTORY, SITE, lat, lon)
+    assert (query.start, query.end, query.run) == (HISTORY_START, HISTORY_START, None)
+    assert query.hours_ok(24)
+    assert not query.hours_ok(48)
+    with pytest.raises(ValueError, match="before the CAMS history starts"):
+        CamsQuery.history(SITE, HISTORY_START - timedelta(days=1), HISTORY_START)
+
+
+def test_a_run_query_keeps_the_monitors_coordinates() -> None:
+    lat, lon = SITE_COORDS[SITE]
+    query = CamsQuery.run_at(SITE, RUN)
+    assert (query.source, query.site) == (CamsSource.RUN, SITE)
+    params = query.params()
+    assert (params["latitude"], params["longitude"], params["hourly"]) == (
+        repr(lat),
+        repr(lon),
+        "pm2_5",
+    )
+    assert params["timezone"] == "GMT"
+
+
+def test_a_live_query_on_utc_ends_on_its_own_day() -> None:
+    query = CamsQuery.live_for(SITE, date(2026, 11, 25), ZoneInfo("UTC"))
+    assert (query.site, query.start, query.end) == (SITE, date(2026, 11, 25), date(2026, 11, 25))
+
+
+@pytest.mark.parametrize(("count", "ok"), [(144, True), (168, True), (120, False), (143, False)])
+def test_a_run_must_hold_whole_days_through_its_last_hour(count: int, ok: bool) -> None:
+    """A 00 UTC run lasts 120 hours: whole days from its midnight need at least 144 stamps."""
+    assert CamsQuery.run_at(SITE, RUN).hours_ok(count) is ok
+
+
+def test_a_grid_point_exactly_at_the_limit_is_accepted() -> None:
+    query = CamsQuery(
+        CamsSource.HISTORY, SITE, 0.0, 0.0, start=date(2026, 11, 20), end=date(2026, 11, 21)
+    )
+    payload = copy.deepcopy(HISTORY)
+    payload["latitude"], payload["longitude"] = 0.4, 0.0
+    assert len(parse(query, payload)) == 48
+    payload["latitude"] = 0.40001
+    with pytest.raises(WeatherResponseError, match=r"^grid_too_far:"):
+        parse(query, payload)
+
+
+def test_a_history_parse_ignores_a_live_run_handed_to_it() -> None:
+    df = parse(QUERIES[CamsSource.HISTORY], HISTORY, live_run=LIVE_RUN)
+    assert list(df.columns) == list(COLUMNS)
+    stitched = df["run_start_utc"] + PUBLISH_DELAY
+    assert (df["available_at_utc"] == stitched).all()
+    assert (df["source"] == "cams_history").all()
+
+
+def test_values_before_the_run_are_counted_in_the_refusal() -> None:
+    late_run = CamsQuery.run_at(SITE, RUN + timedelta(hours=12))
+    with pytest.raises(WeatherResponseError, match=r"^before_run_start: 12 value\(s\)"):
+        parse(late_run, SINGLE_RUN)
+
+
+def _flaky(queues: dict[str, list[dict[str, Any]]]) -> tuple[httpx.Client, list[httpx.Request]]:
+    """Each URL answers 503 once, then its queue."""
+    seen: list[httpx.Request] = []
+    failed: set[str] = set()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        url = str(request.url.copy_with(query=None))
+        if url not in failed:
+            failed.add(url)
+            return httpx.Response(503)
+        return httpx.Response(200, json=queues[url].pop(0))
+
+    return httpx.Client(transport=httpx.MockTransport(handler)), seen
+
+
+def test_both_fetches_retry_a_server_error() -> None:
+    client, _ = _flaky({URLS[CamsSource.HISTORY]: [HISTORY]})
+    assert len(fetch(client, QUERIES[CamsSource.HISTORY], backoff_s=0)) == 48
+    client, seen = _flaky({META_URL: [CAMS_META, CAMS_META], URLS[CamsSource.LIVE]: [LIVE]})
+    assert len(fetch_live(client, live_query(), now=lambda: LIVE_FETCHED, backoff_s=0)) == 48
+    data = [r for r in seen if str(r.url.copy_with(query=None)) == URLS[CamsSource.LIVE]]
+    assert dict(parse_qsl(data[-1].url.query.decode())) == live_query().params()
+
+
+def test_a_run_published_exactly_at_the_fetch_is_not_from_the_future() -> None:
+    client, _ = client_for({META_URL: [CAMS_META, CAMS_META], URLS[CamsSource.LIVE]: [LIVE]})
+    df = fetch_live(client, live_query(), now=lambda: LIVE_RUN.available_utc, backoff_s=0)
+    assert len(df) == 48
+
+
+def test_daily_means_come_sorted_by_site() -> None:
+    one = rows(CamsSource.HISTORY)
+    other = one.assign(site_id="040139997")
+    first = one.assign(site_id="040130019")
+    means = daily_means(pd.concat([other, one, first]), [date(2026, 11, 20)], PHOENIX)
+    assert means["site_id"].tolist() == ["040130019", "040134003", "040139997"]

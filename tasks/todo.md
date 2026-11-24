@@ -29,7 +29,7 @@ line** (2026-12-16) · **D: Complete**.
 | T9 | [#16](https://github.com/siddharthps/pm25-forecast/issues/16) | Watchdog (EventBridge → Lambda → Prefect / SNS) | B | closed (applied and drilled 2026-11-20, D-041) |
 | T10 | [#17](https://github.com/siddharthps/pm25-forecast/issues/17) | Daily scoring | B | closed (merged #74, 2026-11-21, D-042) |
 | T11 | [#18](https://github.com/siddharthps/pm25-forecast/issues/18) | Docs stub, number check and README skeleton | B | closed (merged #84, 2026-11-22 UTC, D-043) |
-| T14 | [#19](https://github.com/siddharthps/pm25-forecast/issues/19) | Weather ingestion | C | open |
+| T14 | [#19](https://github.com/siddharthps/pm25-forecast/issues/19) | Weather ingestion | C | open: part 1 (the 72-hour rule, the client, the bulk history; D-051) in review, 2026-11-24 |
 | T12b | [#20](https://github.com/siddharthps/pm25-forecast/issues/20) | Validation, remaining problem classes and weather sources | C | open |
 | T15 | [#21](https://github.com/siddharthps/pm25-forecast/issues/21) | Leakage-safe features | C | open |
 | T16 | [#22](https://github.com/siddharthps/pm25-forecast/issues/22) | CV harness and baselines | C | open |
@@ -80,6 +80,7 @@ line** (2026-12-16) · **D: Complete**.
 | [#115](https://github.com/siddharthps/pm25-forecast/issues/115) | Lock PR: open it with a GitHub App token so its own CI counts (merged #116, 2026-11-23 UTC) | #43 (#114's blocked merge, 2026-11-23) | B |
 | [#120](https://github.com/siddharthps/pm25-forecast/issues/120) | D-014 timeline review, Checkpoint B (merged #121, 2026-11-24 UTC, D-050) | Checkpoint B's last box | B |
 | [#122](https://github.com/siddharthps/pm25-forecast/issues/122) | Lock job: a 7-day cooldown on new Python releases, as for Actions (fill-in, D-050) | #119 (a 2-minute-old release, 2026-11-23) | C |
+| [#124](https://github.com/siddharthps/pm25-forecast/issues/124) | Core suite back under its 30 s goal after T14's weather tests (fill-in, D-050) | T14 (#19), 2026-11-24 | C |
 
 The **State** column is a snapshot. GitHub is the source of truth, and this column is not kept in
 sync.

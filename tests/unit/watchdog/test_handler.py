@@ -844,3 +844,86 @@ def test_the_github_token_never_reaches_an_email_or_log(
     text = json.dumps(aws.emails()) + caplog.text
     assert GH_TOKEN not in text
     assert KEY not in text
+
+
+def test_the_lock_records_hold_the_dispatch_time_and_run(aws: Aws) -> None:
+    """Killed mutmut survivors (#113): what the marker and the run record hold."""
+    _put_record(aws, MONDAY + timedelta(days=1))
+    web = FakeWeb()
+    _monday(aws, MON_RETRY, web)
+    marker = json.loads(aws.s3.get_object(Bucket=BUCKET, Key=DISPATCH_KEY)["Body"].read())
+    assert marker == {"dispatched_utc": "2026-11-30T14:00:00+00:00"}
+    run = json.loads(aws.s3.get_object(Bucket=BUCKET, Key=RUN_KEY)["Body"].read())
+    assert run == {"run_id": LOCK_RUN_ID, "dispatched_utc": "2026-11-30T14:00:00+00:00"}
+    [(_, _, headers)] = web.dispatches
+    assert headers["Content-Type"] == "application/json"
+
+
+def test_the_0900_result_names_the_run(aws: Aws) -> None:
+    _put_record(aws, MONDAY + timedelta(days=1))
+    _put_lock_run(aws)
+    assert _monday(aws, MON_VERIFY, FakeWeb())["lock_run_id"] == LOCK_RUN_ID
+    web = FakeWeb()
+    web.run.update(status="completed", conclusion="failure")
+    assert _monday(aws, MON_VERIFY, web)["lock_run_id"] == LOCK_RUN_ID
+
+
+def test_a_run_with_no_state_or_link_is_unknown_and_named_by_id(aws: Aws) -> None:
+    _put_record(aws, MONDAY + timedelta(days=1))
+    _put_lock_run(aws)
+    web = FakeWeb()
+    web.run = {"id": LOCK_RUN_ID, "path": f".github/workflows/{WORKFLOW}"}
+    assert _monday(aws, MON_VERIFY, web)["lock"] == "unknown"
+    [email] = aws.emails()
+    assert "weekly lock run unknown" in email["subject"]
+    assert email["message"].endswith(f": {LOCK_RUN_ID}")
+
+
+def test_github_not_answering_at_0900_emails_its_type(aws: Aws) -> None:
+    _put_record(aws, MONDAY + timedelta(days=1))
+    _put_lock_run(aws)
+
+    def broken(url: str, headers: Mapping[str, str]) -> tuple[int, bytes]:
+        raise TimeoutError(f"timed out at {url} with {headers}")
+
+    clients = wd.Clients(s3=aws.s3, ssm=aws.ssm, sns=aws.sns, post=FakeWeb().post, get=broken)
+    at = datetime(2026, 11, 30, 15, 30, tzinfo=UTC)
+    with pytest.raises(wd.WatchdogError, match=r"^GitHub didn't answer: TimeoutError$"):
+        wd.handle(MON_VERIFY, config=_config(aws), aws=clients, now=at)
+    [email] = aws.emails()
+    assert "TimeoutError" in email["message"]
+    assert GH_TOKEN not in email["message"]
+
+
+def _drill_run(aws: Aws) -> None:
+    body = json.dumps({"run_id": LOCK_RUN_ID, "dispatched_utc": "2026-11-30T14:00:00+00:00"})
+    aws.s3.put_object(
+        Bucket=BUCKET, Key=f"reports/lock-runs/date={MONDAY}/run-drill.json", Body=body.encode()
+    )
+
+
+DRILL_NOW_MON = datetime(2026, 11, 29, 20, tzinfo=UTC)
+
+
+def test_a_drill_verify_reads_the_drills_own_run(aws: Aws) -> None:
+    _put_record(aws, MONDAY + timedelta(days=1))
+    _drill_run(aws)
+    result = _monday(aws, {**MON_VERIFY, "drill": True}, FakeWeb(), now=DRILL_NOW_MON)
+    assert result["lock"] == "succeeded"
+
+
+@pytest.mark.parametrize("case", ["dispatch refused", "run missing", "run failed"])
+def test_every_drill_lock_email_says_drill(aws: Aws, case: str) -> None:
+    _put_record(aws, MONDAY + timedelta(days=1))
+    web = FakeWeb(dispatch_status=500)
+    if case == "dispatch refused":
+        with pytest.raises(wd.WatchdogError):
+            _monday(aws, {**MON_RETRY, "drill": True}, web, now=DRILL_NOW_MON)
+    else:
+        if case == "run failed":
+            _drill_run(aws)
+            web.run.update(conclusion="failure")
+        _monday(aws, {**MON_VERIFY, "drill": True}, web, now=DRILL_NOW_MON)
+    lock = [e for e in aws.emails() if "lock run" in e["subject"]]
+    assert len(lock) == 1
+    assert lock[0]["subject"].startswith("[pm25-forecast] DRILL ")

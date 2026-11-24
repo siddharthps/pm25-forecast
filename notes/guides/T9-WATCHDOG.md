@@ -204,10 +204,10 @@ the lock run (at most one missed Monday).
    - **Generate**, copy it, keep the tab open.
 2. **Put it in Parameter Store** (3 min): as step 2, with Name `/pm25-forecast/github-lock-token`,
    SecureString, `alias/aws/ssm`. Paste, **Create parameter**, close the GitHub tab.
-3. **Rebuild the zip, plan and apply** (5 min): steps 4 and 5. The plan shows 2 changes: the
+3. **Rebuild the zip, plan and apply** (5 min): steps 4 and 5. The plan shows 3 changes: the
    Lambda (its code and three new settings, `GITHUB_TOKEN_PARAMETER`, `GITHUB_REPO`,
-   `LOCK_WORKFLOW`) and the watchdog role's policy (the token's parameter, and
-   `reports/lock-runs/`). Nothing is destroyed.
+   `LOCK_WORKFLOW`), the watchdog role's policy (the token's parameter, and
+   `reports/lock-runs/`) and the role's description. Nothing is destroyed (applied 2026-11-24).
 4. **The drill** (10 min). Replace **MONDAY** with the coming Monday (`YYYY-MM-DD`). In winter
    08:00 and 09:00 Chicago are `14:00Z` and `15:00Z`. A drill keeps its own marker, so it never
    uses up that Monday's real run.

@@ -7,6 +7,7 @@
 """
 
 import json
+import re
 from datetime import date, timedelta
 from typing import Any
 
@@ -268,3 +269,43 @@ def test_history_picks_up_the_private_scores() -> None:
     assert publish_history(public, private) is True
     days = json.loads(public.objects[HISTORY_KEY])["days"]
     assert [("score" in d) for d in days] == [True, False]
+
+
+def test_a_new_version_of_the_same_day_replaces_latest() -> None:
+    """Killed mutmut survivor (#112): only an older day is refused; the same day may change."""
+    store = MemoryStore()
+    assert publish(store, record(a=8.0, b=9.0)) is True
+    assert publish(store, record(a=8.0, b=12.0)) is True
+    assert json.loads(store.objects[LATEST_KEY]) == public_payload(record(a=8.0, b=12.0))
+
+
+def test_an_older_day_never_replaces_latest() -> None:
+    store = MemoryStore()
+    publish(store, record("2026-11-22"))
+    before = store.objects[LATEST_KEY]
+    assert publish(store, record("2026-11-21")) is False
+    assert store.objects[LATEST_KEY] == before
+
+
+def test_public_files_are_byte_stable() -> None:
+    store = MemoryStore()
+    publish(store, record())
+    raw = store.objects[LATEST_KEY]
+    assert raw == (json.dumps(json.loads(raw), indent=2, sort_keys=True) + "\n").encode()
+
+
+@pytest.mark.parametrize(
+    ("change", "where"),
+    [
+        (lambda p: p.pop("forecast_date"), "(top)"),
+        (lambda p: p["forecasts"][0].update(site_id=123), "forecasts/0/site_id"),
+    ],
+    ids=["missing key", "nested field"],
+)
+def test_a_refusal_names_where_the_schema_failed(change: Any, where: str) -> None:
+    payload = public_payload(record())
+    change(payload)
+    with pytest.raises(
+        PublishRefusedError, match=f"^latest schema: refused at {re.escape(where)}$"
+    ):
+        check_public(payload, "latest")

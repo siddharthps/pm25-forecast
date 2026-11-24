@@ -40,7 +40,7 @@ if it doesn't, prefix each `uv` with `uvx --from uv==<floor>`. The paths it muta
 `pyproject.toml`'s `[tool.mutmut]`: add a module by extending `only_mutate`.
 
 ```bash
-uv sync --frozen && uv run mutmut run  # in WSL; about 2 min for timeutil and config
+uv sync --frozen && uv run mutmut run  # in WSL; about 2 min for timeutil, config and weather.leads
 uv run mutmut results                  # every mutant not killed; `uv run mutmut show <name>` for one
 gh workflow run mutmut.yml --ref <branch>  # the same on GitHub (UTC); results in the run's summary
 ```

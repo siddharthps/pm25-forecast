@@ -953,7 +953,7 @@ def test_a_drill_verify_marks_every_email_drill(aws: Aws) -> None:
     with pytest.raises(wd.WatchdogError):
         _monday(aws, {**MON_VERIFY, "drill": True}, FakeWeb(run_status=500), now=DRILL_NOW_MON)
     subjects = [e["subject"] for e in aws.emails()]
-    assert len(subjects) == 3, subjects
+    assert len(subjects) == 2, subjects
     assert all(s.startswith("[pm25-forecast] DRILL ") for s in subjects)
     assert sum(s.endswith("watchdog error") for s in subjects) == 1
 

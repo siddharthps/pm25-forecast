@@ -66,8 +66,8 @@ line** (2026-12-16) · **D: Complete**.
 | [#81](https://github.com/siddharthps/pm25-forecast/issues/81) | Block-bootstrap intervals and verdicts (D-045) | the write-up plan (T11, D-045) | C |
 | [#82](https://github.com/siddharthps/pm25-forecast/issues/82) | Publish the write-up at /report/, kept switched off until T28 | the write-up plan (T11, D-044) | C |
 | [#83](https://github.com/siddharthps/pm25-forecast/issues/83) | Core test suite back under its 30 s budget (merged #85, 2026-11-22 UTC, D-046) | T11 timing checks | B |
-| [#86](https://github.com/siddharthps/pm25-forecast/issues/86) | Scheduled run: report a failed step's error by type, as #56 did for the CLI | #56 | C |
-| [#87](https://github.com/siddharthps/pm25-forecast/issues/87) | Leakage property: why the unfinished-day test discards 1,220 of 3,220 examples | #59 | C |
+| [#86](https://github.com/siddharthps/pm25-forecast/issues/86) | Scheduled run: report a failed step's error by type, as #56 did for the CLI (merged #132, D-055, 2026-11-24) | #56 | C |
+| [#87](https://github.com/siddharthps/pm25-forecast/issues/87) | Leakage property: why the unfinished-day test discards 1,220 of 3,220 examples (merged #131, 2026-11-24) | #59 | C |
 | [#88](https://github.com/siddharthps/pm25-forecast/issues/88) | One process-zone test helper for the time-zone tests (after #52 and #42 merge; done with the 2026-11-22 audit, group 5; merged #110, 2026-11-23 UTC) | #42 | C |
 | [#98](https://github.com/siddharthps/pm25-forecast/issues/98) | Test suite: fix a CI flake and strengthen five weak assertions (audit group 1; merged #104, 2026-11-23 UTC) | the 2026-11-22 test-suite audit | C |
 | [#99](https://github.com/siddharthps/pm25-forecast/issues/99) | Test suite: cover the untested error paths and boundaries (audit group 2; merged #105, 2026-11-23 UTC) | the 2026-11-22 test-suite audit | C |
@@ -79,8 +79,8 @@ line** (2026-12-16) · **D: Complete**.
 | [#113](https://github.com/siddharthps/pm25-forecast/issues/113) | Watchdog starts the weekly uv-lock run; drop the GitHub cron | the 2026-11-23 dropped lock run | C |
 | [#115](https://github.com/siddharthps/pm25-forecast/issues/115) | Lock PR: open it with a GitHub App token so its own CI counts (merged #116, 2026-11-23 UTC) | #43 (#114's blocked merge, 2026-11-23) | B |
 | [#120](https://github.com/siddharthps/pm25-forecast/issues/120) | D-014 timeline review, Checkpoint B (merged #121, 2026-11-24 UTC, D-050) | Checkpoint B's last box | B |
-| [#122](https://github.com/siddharthps/pm25-forecast/issues/122) | Lock job: a 7-day cooldown on new Python releases, as for Actions (fill-in, D-050) | #119 (a 2-minute-old release, 2026-11-23) | C |
-| [#124](https://github.com/siddharthps/pm25-forecast/issues/124) | Core suite back under its 30 s goal after T14's weather tests (fill-in, D-050) | T14 (#19), 2026-11-24 | C |
+| [#122](https://github.com/siddharthps/pm25-forecast/issues/122) | Lock job: a 7-day cooldown on new Python releases, as for Actions (fill-in, D-050; merged #133, D-056, 2026-11-24) | #119 (a 2-minute-old release, 2026-11-23) | C |
+| [#124](https://github.com/siddharthps/pm25-forecast/issues/124) | Core suite back under its 30 s goal after T14's weather tests (fill-in, D-050; measured 2026-11-24, open) | T14 (#19), 2026-11-24 | C |
 
 The **State** column is a snapshot. GitHub is the source of truth, and this column is not kept in
 sync.

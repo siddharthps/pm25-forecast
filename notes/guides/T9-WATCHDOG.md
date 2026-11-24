@@ -185,6 +185,49 @@ Every day at 08:00 and 09:00 Chicago the watchdog checks the record. On a normal
 You get an email only when the 06:00 run was missed (and what the retry did), when the record is
 still missing at 09:00, once a month above 300 Prefect minutes, or when the watchdog itself fails.
 
+## 9. The weekly lock run (#113, D-058; owner, about 30 min)
+
+From #113 on, the watchdog also starts `uv-lock-upgrade.yml` on Mondays at 08:00 Chicago and
+checks the run at 09:00, and the workflow has no GitHub cron. It needs a GitHub token in SSM.
+Do this **after #113's PR is merged**, from an up-to-date `main`. Until the apply, nothing starts
+the lock run (at most one missed Monday).
+
+**Golden rule, as for the Prefect key:** the token goes **only** into the AWS console box.
+
+1. **Create the token** (5 min, in the browser). GitHub → Settings → Developer settings →
+   Personal access tokens → **Fine-grained tokens** → **Generate new token**.
+   - Name `pm25-forecast-watchdog-lock`. Expiration: **custom, 2027-02-28**, the Prefect keys'
+     day, so one renewal covers all three (TOKENS.md).
+   - Repository access: **Only select repositories** → `siddharthps/pm25-forecast`.
+   - Repository permissions: **Actions: Read and write** (Metadata: read is added for you).
+     Nothing else.
+   - **Generate**, copy it, keep the tab open.
+2. **Put it in Parameter Store** (3 min): as step 2, with Name `/pm25-forecast/github-lock-token`,
+   SecureString, `alias/aws/ssm`. Paste, **Create parameter**, close the GitHub tab.
+3. **Rebuild the zip, plan and apply** (5 min): steps 4 and 5. The plan shows 2 changes: the
+   Lambda (its code and three new settings, `GITHUB_TOKEN_PARAMETER`, `GITHUB_REPO`,
+   `LOCK_WORKFLOW`) and the watchdog role's policy (the token's parameter, and
+   `reports/lock-runs/`). Nothing is destroyed.
+4. **The drill** (10 min). Replace **MONDAY** with the coming Monday (`YYYY-MM-DD`). In winter
+   08:00 and 09:00 Chicago are `14:00Z` and `15:00Z`. A drill keeps its own marker, so it never
+   uses up that Monday's real run.
+   1. **08:00 → one real lock run.**
+      `{"mode":"retry","scheduled_time":"MONDAYT14:00:00Z","drill":true}`. Expect
+      `"lock": "dispatched"` and a `lock_run_id`. In GitHub → Actions, a **uv lock upgrade** run
+      starts; if the lock changes, it opens or refreshes the lock PR with CI on it (#43's last
+      box). The forecast half also runs as a drill for Monday's target day: as in step 7.3, one
+      Prefect run that stops as too early, and its DRILL email.
+   2. **The same call again → nothing.** Expect `"lock": "already dispatched"` and no new run.
+   3. **09:00 with the run finished → silent for the lock.** Once the run has finished:
+      `{"mode":"verify","scheduled_time":"MONDAYT15:00:00Z","drill":true}`. Expect
+      `"lock": "succeeded"` and no lock email. (The forecast half emails "DRILL forecast for …
+      still missing", because Monday's forecast doesn't exist yet. That one is expected.)
+   4. **09:00 with no run → one email.** The same verify for the Monday after (MONDAY + 7 days).
+      Expect `"lock": "missing"` and an email "DRILL weekly lock run missing".
+5. **The first real Monday:** silent if all is well. At 09:00 a failed, cancelled or unfinished
+   run emails its state and link; a missing run or a refused dispatch emails how to start it by
+   hand (`gh workflow run uv-lock-upgrade.yml --ref main`).
+
 ---
 
 **If something fails:** copy me the error's first lines, never a key. To undo everything, run

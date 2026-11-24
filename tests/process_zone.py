@@ -14,6 +14,8 @@ from contextlib import contextmanager
 import pytest
 
 SKIP_REASON = "time.tzset is POSIX only (runs in WSL and CI)"
+CAN_MOVE_ZONE = hasattr(time, "tzset")
+"""For a test that must skip as a whole, such as a Hypothesis test (a skip inside one fails it)."""
 
 
 @contextmanager

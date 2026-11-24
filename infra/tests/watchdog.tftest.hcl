@@ -80,13 +80,16 @@ run "the_lambda_runs_the_zipped_handler" {
 
   assert {
     condition = aws_lambda_function.watchdog.environment[0].variables == tomap({
-      DATA_BUCKET           = aws_s3_bucket.private.bucket
-      ALERT_TOPIC_ARN       = aws_sns_topic.alerts.arn
-      PREFECT_KEY_PARAMETER = "/pm25-forecast/prefect-api-key"
-      PREFECT_API_URL       = "https://api.prefect.cloud/api/accounts/1d2c3b4a-5f6e-4a7b-8c9d-0e1f2a3b4c5d/workspaces/2e3d4c5b-6a7f-4b8c-9d0e-1f2a3b4c5d6e"
-      PREFECT_DEPLOYMENT_ID = "3f4e5d6c-7b8a-4c9d-8e1f-2a3b4c5d6e7f"
+      DATA_BUCKET            = aws_s3_bucket.private.bucket
+      ALERT_TOPIC_ARN        = aws_sns_topic.alerts.arn
+      PREFECT_KEY_PARAMETER  = "/pm25-forecast/prefect-api-key"
+      PREFECT_API_URL        = "https://api.prefect.cloud/api/accounts/1d2c3b4a-5f6e-4a7b-8c9d-0e1f2a3b4c5d/workspaces/2e3d4c5b-6a7f-4b8c-9d0e-1f2a3b4c5d6e"
+      PREFECT_DEPLOYMENT_ID  = "3f4e5d6c-7b8a-4c9d-8e1f-2a3b4c5d6e7f"
+      GITHUB_TOKEN_PARAMETER = "/pm25-forecast/github-lock-token"
+      GITHUB_REPO            = "siddharthps/pm25-forecast"
+      LOCK_WORKFLOW          = "uv-lock-upgrade.yml"
     })
-    error_message = "The Lambda's settings: names and IDs only, never the key itself."
+    error_message = "The Lambda's settings: names and IDs only, never the key or the token."
   }
 
   assert {
@@ -130,24 +133,33 @@ run "the_lambda_may_only_check_start_and_email" {
     condition = one([
       for s in jsondecode(aws_iam_role_policy.watchdog.policy).Statement : s.Resource
       if s.Action == "s3:PutObject"
-    ]) == "arn:aws:s3:::pm25-forecast-data-65bc08/reports/compute-alerts/*"
-    error_message = "The only write is the monthly alert marker, outside the ledger and the records."
+      ]) == [
+      "arn:aws:s3:::pm25-forecast-data-65bc08/reports/compute-alerts/*",
+      "arn:aws:s3:::pm25-forecast-data-65bc08/reports/lock-runs/*",
+    ]
+    error_message = "It writes only the alert and lock-run markers, outside the ledger and the records."
   }
 
   assert {
     condition = one([
       for s in jsondecode(aws_iam_role_policy.watchdog.policy).Statement : s.Resource
       if s.Action == "s3:GetObject"
-    ]) == "arn:aws:s3:::pm25-forecast-data-65bc08/reports/compute/*"
-    error_message = "It reads only the compute ledger (records are checked by listing)."
+      ]) == [
+      "arn:aws:s3:::pm25-forecast-data-65bc08/reports/compute/*",
+      "arn:aws:s3:::pm25-forecast-data-65bc08/reports/lock-runs/*",
+    ]
+    error_message = "It reads only the ledger and its lock runs (records are checked by listing)."
   }
 
   assert {
     condition = one([
       for s in jsondecode(aws_iam_role_policy.watchdog.policy).Statement : s.Resource
       if s.Action == "ssm:GetParameter"
-    ]) == "arn:aws:ssm:us-east-1:123456789012:parameter/pm25-forecast/prefect-api-key"
-    error_message = "It reads exactly one parameter: the Prefect key."
+      ]) == [
+      "arn:aws:ssm:us-east-1:123456789012:parameter/pm25-forecast/prefect-api-key",
+      "arn:aws:ssm:us-east-1:123456789012:parameter/pm25-forecast/github-lock-token",
+    ]
+    error_message = "It reads exactly two parameters: the Prefect key and the GitHub lock token."
   }
 
   assert {

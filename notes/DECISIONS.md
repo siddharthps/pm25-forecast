@@ -717,6 +717,7 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   `.claude/skills/**` exclusions in markdownlint and `ruff format` now list exactly the vendored
   skills in `skills-lock.json`, so our own skills (`delete-comment`) stay checked; a test keeps
   the lists in step with the lock. *Refined 2026-11-24 (D-056):* releases wait 7 days in the job.
+  *Refined 2026-11-24 (D-058):* the watchdog starts the weekly lock run on Mondays.
 
 ---
 
@@ -1286,6 +1287,7 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
       drill verify through the real scheduler. It logged `target_day 2026-11-22, record
       present` (so a real time was substituted), sent no email, and deleted itself. The
       guide now has this test as step 7b.
+  *Refined 2026-11-24 (D-058):* the watchdog starts the weekly lock run on Mondays.
 
 ---
 
@@ -1962,6 +1964,48 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
 - **Alternatives (rejected by the owner):** raising the goal to 35 s; keeping 30 s at any time and
   spending hours speeding up the property tests without cutting examples.
 - **Status:** Active. 2026-11-24. Refines D-035 and D-046.
+
+---
+
+## D-058 · 2026-11-24 · The watchdog starts the weekly lock run; no GitHub cron (#113)
+
+- **Decision (the shape the owner chose on 2026-11-23: watchdog only):**
+  - **Monday 08:00 Chicago** (the existing `retry` call): after the forecast check, a create-once
+    marker `reports/lock-runs/date=<Monday>/dispatch.json`, then GitHub's workflow dispatch of
+    `uv-lock-upgrade.yml` on `main`, then the returned run ID in `…/run.json`. A second call the
+    same Monday finds the marker and dispatches nothing; a dispatch that fails after the marker
+    emails how to start it by hand, and isn't retried that week.
+  - **Monday 09:00** (the `verify` call): the recorded run is read back; anything but
+    `completed`/`success` emails its state and link; no recorded run emails too. A run from
+    another workflow is refused.
+  - **"Monday"** is Chicago's date of the scheduled time; 08:00 and 09:00 exist every day across
+    DST (D-041). A property checks it under four process zones.
+  - **Independent checks:** the forecast check and the lock check each run, each failure is
+    emailed, and the first is re-raised after both (the Lambda's error alarm still fires).
+  - **Drills** keep their own marker (`dispatch-drill.json`), so a drill never uses up a Monday.
+  - **The workflow loses its `schedule:`**; a test fails if any workflow gains one. That is
+    D-003's rule ("GitHub Actions is for CI only"; the issue said D-001 by mistake).
+  - **Token:** a fine-grained token, this repo only, Actions read and write, in SSM
+    `/pm25-forecast/github-lock-token`, created by the owner so the value never enters Terraform
+    state (as the Prefect key, D-041). The watchdog's role reads only the two parameters and
+    writes only `reports/compute-alerts/` and `reports/lock-runs/`.
+- **Facts (GitHub's REST docs, read 2026-11-24):**
+  - `POST /repos/{owner}/{repo}/actions/workflows/{workflow_id}/dispatches` with `ref`; the
+    workflow must have `workflow_dispatch`; it answers **200** with `workflow_run_id`, `run_url`
+    and `html_url` (any other status is treated as refused).
+  - `GET /repos/{owner}/{repo}/actions/runs/{run_id}` returns `status`, `conclusion` and `path`.
+  - Fine-grained permissions: dispatch needs Actions **write**, reading a run Actions **read**;
+    a token can be limited to one repository; at most 366 days.
+  - Headers: `Accept: application/vnd.github+json`, `X-GitHub-Api-Version: 2026-03-10`.
+  - Scheduled workflows "can be delayed during periods of high loads" and some "may be dropped";
+    in a public repository they are disabled after 60 days without activity. The 2026-11-23 run
+    was dropped (no run by 16:12 UTC).
+- **Cost:** none added: the same two daily invocations, two HTTPS calls on Mondays.
+- **Why:** the owner's rule that a scheduled job runs in one reliable place, with a backup and an
+  alert (D-003, D-011). The watchdog already runs every day and already emails.
+- **Alternatives (rejected by the owner, 2026-11-23):** a Cloudflare Worker (a second scheduler
+  to keep); keeping GitHub's cron as a backup (two triggers for one job).
+- **Status:** Active. 2026-11-24. Refines D-027 (the weekly lock job) and D-041 (the watchdog).
 
 ---
 

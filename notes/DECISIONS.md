@@ -263,6 +263,9 @@ Format: **ID · date · decision**, then *Why*, *Alternatives*, and *Status*.
   skipped and listed, never filled from an older day): D-034.
   *Refined 2026-11-21 (D-045):* a reported-only 95% interval and verdict per baseline;
   the metrics and the selection are unchanged.
+  *Noted 2026-11-24 (D-052):* the CAMS history is stitched from each run's first 12 hours, so
+  the test's CAMS bar is stronger than CAMS was live; the gap is measured and stated, the
+  baseline unchanged.
 - **Clarification (2026-11-18, before any result was seen; no change to the decision):**
   **Persistence** means *the forecast for D+1 equals the last complete day's observed mean, which
   is D−1*. At the 06:00 issue time (D-019), day D is not yet observed, so using D would leak. In
@@ -1704,6 +1707,65 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
   before the issue time, given a generous delay. The live job's recorded run start times show the
   margin holds in practice.
 - **Status:** Active. Owner's choices, 2026-11-23.
+
+---
+
+## D-052 · 2026-11-24 · CAMS: the history is stitched; "as issued" is the issue day's 00 UTC run (#19)
+
+- **Decision:**
+  - **The archive is stitched** (the #19 check). Open-Meteo's CAMS global history takes each
+    hour from the first 12 hours of a run, so on paper CAMS forecasts 0–11 h ahead. A real
+    day-ahead CAMS forecast at our issue time is 31–54 h ahead.
+  - **The test year's CAMS baseline uses the stitched history.** No as-issued CAMS forecast from
+    2025 survives, and D-009 (Frozen) keeps CAMS as a baseline. The write-up says this bar is
+    stronger than CAMS really was live, and gives the measured gap below. CAMS's score is never
+    adjusted by the gap.
+  - **"As issued"** (the gap check below, and the live save, #78) means the CAMS global run that
+    started at **00 UTC on the issue day** D: the newest run on a normal morning (owner's choice,
+    2026-11-24). A later run is never used. The live save records the run it really got, so the
+    premise is checked as days accrue.
+  - **Daily mean:** CAMS `pm2_5` is an instant value per hour. A monitor's daily mean is the
+    mean of the 24 hourly stamps in the local day's half-open window (`city_tz`, the same day
+    as our target, D-005), and all 24 must be present; a day with any gap has no CAMS value and
+    is listed.
+  - **The gap, declared before any number is seen:** over target days from 2026-04-03 (the
+    first whose as-issued run, 2026-04-02 00 UTC, is kept) to the day the check runs, each
+    monitor-day with an as-issued mean, a stitched mean and a valid observed mean (AirNow,
+    ≥ 18 hours): the MAE of each against the observed mean, their difference, and the mean
+    absolute difference between the two CAMS means; skipped monitor-days are counted by reason.
+    Descriptive only: never used to choose, tune or correct anything.
+- **Why the 00 UTC run:** at the issue time (12:00 UTC in winter, 11:00 UTC in summer) it has
+  been out about 2.2 h in winter and 1.2 h in summer on the readings below. The day before's
+  12 UTC run is always out but 12 h staler, and would make CAMS look worse than it is live,
+  flattering our model. If the 00 UTC run is ever late, this choice understates the gap, which
+  errs against us.
+- **Facts (checked 2026-11-24 UTC, central Phoenix and the 10 monitors):**
+  - Docs (open-meteo.com/en/docs/air-quality-api): CAMS global, 0.4°, 3-hourly, 5-day forecasts,
+    "August 2022 onwards", updated every 12 hours; `pm2_5` is instant, in µg/m³ (the response
+    spells the unit with a Greek mu, `μg/m³`). The docs don't say how past data is built.
+  - **Stitched:** 12 runs (00 and 12 UTC, 2026-11-01 to 11-21) against the history: equal at
+    every lead 0–11 h in 12 of 12, and at leads 12–23 h in 0–2 of 12; differences at 24–45 h
+    reached 20 µg/m³.
+  - **No offset archive:** `pm2_5_previous_day1` to `_day3` are empty on every date tried
+    (2022–2026), in the Air Quality and Previous Runs APIs alike. The Previous Runs API's plain
+    `pm2_5` equals the history exactly.
+  - **Single runs** (Single Runs API, `models=cams_global`, `&run=`): from the 00 UTC run of
+    2026-04-02 (none on 2026-04-01 or earlier), 121 hours each. Missing to 2026-11-23: the 12 UTC
+    runs of 05-10, 05-12, 06-24, 06-28, 08-27 and the 00 UTC run of 06-25. A missing run inside
+    that span answers with every value empty; one before it, with an error naming the model
+    `cams_global_greenhouse_gases`. The values are still CAMS global's: leads 0–11 h equal the
+    `cams_global` history exactly (above).
+  - **History:** from 2022-08-04 00:00 UTC (the 3 days before it are empty), no gaps to
+    2026-11-23 at any monitor. The 10 monitors fall in 7 grid cells.
+  - **Publication delay** (`/data/cams_global/static/meta.json`): the 00 UTC run of 2026-11-24
+    appeared 9.80 h after it started; the 12 UTC run of 2026-11-23, 9.92 h (D-051).
+  - Terms: the attribution to the CAMS ENSEMBLE data provider and to Open-Meteo is required. The
+    docs say nothing about showing the values publicly; #78 settles that.
+- **Alternatives:**
+  - The day before's 12 UTC run: always out in time, but staler than live (above).
+  - Both runs, one as a sensitivity: more to build and explain, for a descriptive figure.
+  - CAMS scored only on the live record: D-009 is Frozen and lists CAMS on the test.
+- **Status:** Active. Owner's choice, 2026-11-24.
 
 ---
 

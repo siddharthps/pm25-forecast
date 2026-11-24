@@ -1781,3 +1781,60 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - **T14 part 2 (#19), by the 11-29 waypoint:** the archive's coverage check (2024-01-21 12 UTC on),
   the CAMS download and its archive-bias check, and the daily live save with #78.
 - Fill-in: #124, #122, #113, #86, #87.
+
+## 2026-11-24: T14 (#19) part 2, on branch `19-weather-part2` (CST, about 05:35 to 07:15)
+
+- **D-052, the CAMS check (owner's choice of run):** Open-Meteo's CAMS global history is
+  **stitched** from each run's first 12 hours: 12 runs (2026-11-01 to 11-21) equal the history
+  at every lead 0–11 h, 12 of 12, and at leads 12–23 h in 0–2 of 12. A real day-ahead CAMS
+  forecast at our issue time is 31–54 h ahead. No offset archive exists for CAMS
+  (`pm2_5_previous_dayN` empty everywhere); whole runs are kept only from 2026-04-02 (Single Runs
+  API). So the 2025 test's CAMS baseline is the stitched history, a bar stronger than CAMS was
+  live, and the gap is measured on 2026.
+  - "As issued" is the issue day's 00 UTC run (owner, after a plainer re-ask: the first prompt
+    was too dense). It was out 9.80 h after starting (one reading): 2.2 h before the winter issue
+    time, 1.2 h before the summer one.
+  - The gap's figures were declared in D-052 before any were seen; the first target day was
+    corrected to 2026-04-03 (the first whose run is kept) before the run.
+- **Built, tests first, each module's planted mistakes caught after a clean baseline:**
+  `weather/cams.py` (36 tests, 7 plants; the as-issued rule as a property against a stepping
+  reference, 2022–2030), CAMS in the bulk download, `weather/coverage.py` (10 tests, 6 plants)
+  and `weather/cams_gap.py` with `scripts/cams_gap.py` (9 tests, 7 plants). Core suite: 836
+  passed, 25.7 s.
+- **The CAMS download (owner's OK):** 50 parts, 2022-08-04 to 2026-11-23, 0 missing values;
+  12:01 to 12:05 UTC, with this year's 10 GFS parts refreshed.
+- **The coverage check on the real bucket:** 240 of 240 planned parts, 0 failures. Gaps: the GFS
+  archive's 36-hour lead-in in 2024 at every monitor, and `cloud_cover` 2026-04-18 13:00 to
+  04-19 17:00 UTC (29 h) at all 10. Nothing else.
+- **The gap run (12:11 to 13:05 UTC; reads only):** 2,271 monitor-days, 2026-04-03 to 11-22.
+  MAE against observed: as issued 6.16 µg/m³, stitched 5.61, difference 0.55 (the stitched
+  history's error about 9% smaller); mean absolute difference between the two CAMS means 1.93.
+  Skipped 69: 10 without an as-issued run (the missing 00 UTC run of 06-25, target 06-26, all
+  10 monitors), 59 without a valid observed day; none for incomplete CAMS or failed validation.
+  Summary: `data/reports/cams_gap/cams-gap-2026-11-24.json` (gitignored). The write-up takes the
+  figures through `results.json` (#79), never typed.
+- **#78's terms, looked up for its D-entry:** Open-Meteo data is CC BY 4.0 (credit, licence
+  link, changes indicated; a link where the data is shown); the Copernicus licence (v1.2) allows
+  any lawful use including public display of modified values, with "Contains modified
+  Copernicus Atmosphere Monitoring Service information [Year]" and a statement that neither the
+  European Commission nor ECMWF is responsible for the use. The free API is non-commercial.
+
+### Traps found
+
+- **The AWS login expired 52 s after the dry run;** the first `--apply` stopped at its first S3
+  call and wrote nothing. Its task reported exit 0 because an `echo` followed it: the script
+  itself exits 3 on a login error. Logs now end with the script's own exit code.
+- **A missing CAMS run answers two ways:** inside the kept span, 200 with every value empty;
+  before it, an error naming `cams_global_greenhouse_gases`. Both count as no run.
+- **Greek mu:** the unit comes back as `μg/m³` (U+03BC), not the micro sign; under `python -I`
+  the Windows console can't print it (`-I` ignores `PYTHONIOENCODING`).
+- **Test fixtures in a public repo:** CAMS responses keep their real structure and stamps with
+  synthetic `pm2_5` values until #78 settles public display.
+- **mypy reads `pd.isna(float)` as never true** (pandas stubs): `math.isnan` instead.
+
+### Next
+
+- PR for `19-weather-part2` ("Refs #19"), CI, merge.
+- **#78 on its own branch:** the daily save of CAMS's D+1 forecast as issued, with its D-entry
+  (terms above), before the 11-29 waypoint; then #19 closes.
+- Fill-in: #124, #122, #113, #86, #87.

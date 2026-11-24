@@ -19,6 +19,7 @@ from hypothesis import strategies as st
 from moto import mock_aws
 
 from airwatch.storage import S3Store
+from airwatch.weather import cams
 from airwatch.weather.bulk import (
     ARCHIVE_START,
     BUDGET,
@@ -31,6 +32,7 @@ from airwatch.weather.bulk import (
     plan_parts,
     run_download,
 )
+from airwatch.weather.cams import CamsSource
 from airwatch.weather.openmeteo import COLUMNS, VARIABLES, Source
 from tests.unit.forecast.fakes import MemoryStore
 
@@ -68,10 +70,12 @@ def frame(part: Part) -> pd.DataFrame:
             "run_start_utc": None,
             "available_at_utc": NOW,
         }
-        row.update(dict.fromkeys(VARIABLES, value))
+        variables = (cams.VARIABLE,) if part.source is CamsSource.HISTORY else VARIABLES
+        row.update(dict.fromkeys(variables, value))
         rows.append(row)
-    rows[1]["cloud_cover"] = None
-    df = pd.DataFrame(rows, columns=list(COLUMNS))
+    rows[1][variables[-1]] = None
+    columns = cams.COLUMNS if part.source is CamsSource.HISTORY else COLUMNS
+    df = pd.DataFrame(rows, columns=list(columns))
     for column in ("valid_utc", "run_start_utc", "available_at_utc"):
         df[column] = pd.to_datetime(df[column], utc=True)
     return df
@@ -126,11 +130,13 @@ def all_parts(today: date = TODAY) -> set[Part]:
     return set(plan_parts(SITES, today=today, manifest_parts={}, era5_years=SMALL_ERA5))
 
 
-def test_the_real_plan_is_d051s() -> None:
+def test_the_real_plan_is_d051s_and_d052s() -> None:
     assert range(2009, 2025) == ERA5_YEARS
     assert date(2024, 1, 20) == ARCHIVE_START
+    assert date(2022, 8, 4) == cams.HISTORY_START
     parts = plan_parts(("040130019",), today=TODAY, manifest_parts={})
     assert [(p.source, p.year) for p in parts] == [
+        *((CamsSource.HISTORY, y) for y in range(2022, 2027)),
         *((Source.ERA5, y) for y in range(2009, 2025)),
         (Source.GFS_ARCHIVE, 2024),
         (Source.GFS_ARCHIVE, 2025),
@@ -153,8 +159,17 @@ def test_parts_live_under_the_private_raw_prefix() -> None:
         (Part(Source.GFS_ARCHIVE, "040130019", 2024), (ARCHIVE_START, date(2024, 12, 31))),
         (Part(Source.GFS_ARCHIVE, "040130019", 2025), (date(2025, 1, 1), date(2025, 12, 31))),
         (Part(Source.GFS_ARCHIVE, "040130019", 2026), (date(2026, 1, 1), date(2026, 11, 23))),
+        (Part(CamsSource.HISTORY, "040130019", 2022), (date(2022, 8, 4), date(2022, 12, 31))),
+        (Part(CamsSource.HISTORY, "040130019", 2026), (date(2026, 1, 1), date(2026, 11, 23))),
     ],
-    ids=["era5", "archive-first-year", "archive-past-year", "archive-this-year-to-yesterday"],
+    ids=[
+        "era5",
+        "archive-first-year",
+        "archive-past-year",
+        "archive-this-year-to-yesterday",
+        "cams-first-year",
+        "cams-this-year-to-yesterday",
+    ],
 )
 def test_a_part_spans_its_year(part: Part, days: tuple[date, date]) -> None:
     assert part.days(TODAY) == days
@@ -181,7 +196,10 @@ def test_a_run_and_a_rerun_work_against_the_real_s3_store(s3_store: S3Store) -> 
     run(s3_store, FakeOpenMeteo())
     again = FakeOpenMeteo()
     run(s3_store, again)
-    assert again.calls == [Part(Source.GFS_ARCHIVE, s, 2026) for s in SITES]
+    assert again.calls == [
+        *(Part(CamsSource.HISTORY, s, 2026) for s in SITES),
+        *(Part(Source.GFS_ARCHIVE, s, 2026) for s in SITES),
+    ]
     assert set(s3_store.list_keys("raw/weather/")) == {p.key for p in all_parts()} | {MANIFEST_KEY}
 
 
@@ -198,11 +216,14 @@ def test_each_part_is_parquet_with_its_rows_and_counts(store: MemoryStore) -> No
     assert entry["fetched_at_utc"] == NOW.isoformat()
 
 
-def test_a_rerun_the_same_day_only_refreshes_this_years_archive(store: MemoryStore) -> None:
+def test_a_rerun_the_same_day_only_refreshes_this_years_parts(store: MemoryStore) -> None:
     run(store, FakeOpenMeteo())
     again = FakeOpenMeteo()
     run(store, again)
-    assert again.calls == [Part(Source.GFS_ARCHIVE, s, 2026) for s in SITES]
+    assert again.calls == [
+        *(Part(CamsSource.HISTORY, s, 2026) for s in SITES),
+        *(Part(Source.GFS_ARCHIVE, s, 2026) for s in SITES),
+    ]
 
 
 def test_an_interrupted_run_resumes_without_refetching_what_is_done(store: MemoryStore) -> None:
@@ -273,8 +294,25 @@ def test_every_fetch_is_paced_by_its_weight_first(store: MemoryStore) -> None:
     pace = RecordingPace()
     fake = FakeOpenMeteo()
     run(store, fake, pace=pace)
-    expected = [call_weight((p.days(TODAY)[1] - p.days(TODAY)[0]).days + 1) for p in fake.calls]
+    expected = [
+        call_weight((p.days(TODAY)[1] - p.days(TODAY)[0]).days + 1, len(p.variables))
+        for p in fake.calls
+    ]
     assert pace.weights == pytest.approx(expected)
+    cams_year = Part(CamsSource.HISTORY, SITES[0], 2025)
+    assert cams_year.variables == ("pm2_5",)
+    assert pace.weights[fake.calls.index(cams_year)] == pytest.approx(365 / 14)
+
+
+def test_a_cams_part_is_parquet_with_its_own_columns_and_missing_count(store: MemoryStore) -> None:
+    run(store, FakeOpenMeteo())
+    part = Part(CamsSource.HISTORY, SITES[0], 2023)
+    raw = store.get(part.key)
+    assert raw is not None
+    assert tuple(pd.read_parquet(io.BytesIO(raw)).columns) == cams.COLUMNS
+    assert part.key == "raw/weather/source=cams_history/site=040130019/year=2023.parquet"
+    entry = manifest(store)["parts"][part.key]
+    assert (entry["source"], entry["rows"], entry["missing_values"]) == ("cams_history", 2, 1)
 
 
 def test_logs_hold_counts_never_values(
@@ -297,6 +335,7 @@ def test_the_plan_lists_only_missing_or_unfinished_parts() -> None:
     }
     parts = plan_parts(("040130019",), today=TODAY, manifest_parts=done, era5_years=SMALL_ERA5)
     assert parts == [
+        *(Part(CamsSource.HISTORY, "040130019", y) for y in range(2022, 2027)),
         Part(Source.ERA5, "040130019", 2024),
         Part(Source.GFS_ARCHIVE, "040130019", 2024),
         Part(Source.GFS_ARCHIVE, "040130019", 2026),

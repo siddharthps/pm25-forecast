@@ -1,15 +1,16 @@
-"""Weather bulk history (#19, T14; D-051): one Parquet file per source, site and year, in S3.
+"""Weather bulk history (#19, T14; D-051, D-052): one Parquet file per source, site and year, in S3.
 
-ERA5 for 2009-2024 (the training weather) and the GFS archive from its first day (2024-01-20)
-to yesterday (the test year and the forecasts-only variant), each at every monitor. The same
-rules as the AQS download (`airwatch.observations.aqs_bulk`):
+ERA5 for 2009-2024 (the training weather), the GFS archive from its first day (2024-01-20) to
+yesterday (the test year and the forecasts-only variant), and CAMS's stitched PM2.5 history from
+its first day (2022-08-04) to yesterday (the test's CAMS baseline), each at every monitor. The
+same rules as the AQS download (`airwatch.observations.aqs_bulk`):
 
 - **Durable record:** a manifest in S3 (`MANIFEST_KEY`) lists every finished part, with its rows,
   missing values, sha256 and fetch time. "Done" comes from the manifest, never local files.
 - **Order of writes:** the data file first, then its manifest entry. A crash in between leaves an
   unrecorded file, which the next run fetches again and overwrites (same key, no duplicates).
 - **Resumable and idempotent:** a rerun fetches only parts missing from the manifest, plus the
-  current year's archive, which isn't final until the year has ended.
+  current year's archive and CAMS history, which aren't final until the year has ended.
 - **Quiet:** logs name the part and count rows, never a value.
 - **Paced:** Open-Meteo counts a request over 10 variables or 2 weeks as several calls
   (open-meteo.com/en/pricing, read 2026-11-23: "2 weeks of data with 15 weather variables will be
@@ -35,6 +36,8 @@ from typing import Any
 import pandas as pd
 
 from airwatch.forecast.record import Store
+from airwatch.weather import cams
+from airwatch.weather.cams import CamsSource
 from airwatch.weather.openmeteo import VARIABLES, Source
 
 __all__ = [
@@ -61,13 +64,17 @@ ERA5_YEARS = range(2009, 2025)
 ARCHIVE_START = date(2024, 1, 20)
 FREE_LIMITS = {60.0: 600, 3600.0: 5000, 86400.0: 10000}
 BUDGET = {window: limit / 2 for window, limit in FREE_LIMITS.items()}
+_FIRST_DAY: dict[Source | CamsSource, date] = {
+    Source.GFS_ARCHIVE: ARCHIVE_START,
+    CamsSource.HISTORY: cams.HISTORY_START,
+}
 
 
 @dataclass(frozen=True, order=True)
 class Part:
-    """One source, site and calendar year (UTC days) of hourly weather."""
+    """One source, site and calendar year (UTC days) of hourly weather or CAMS PM2.5."""
 
-    source: Source
+    source: Source | CamsSource
     site_id: str
     year: int
 
@@ -78,10 +85,15 @@ class Part:
     def days(self, today: date) -> tuple[date, date]:
         """The UTC days this part asks for: its year, cut to the archive's start and yesterday."""
         start, end = date(self.year, 1, 1), date(self.year, 12, 31)
-        if self.source is Source.GFS_ARCHIVE:
-            start = max(start, ARCHIVE_START)
+        first = _FIRST_DAY.get(self.source)
+        if first is not None:
+            start = max(start, first)
             end = min(end, today - timedelta(days=1))
         return start, end
+
+    @property
+    def variables(self) -> tuple[str, ...]:
+        return (cams.VARIABLE,) if self.source is CamsSource.HISTORY else VARIABLES
 
     def is_final(self, today: date) -> bool:
         return self.year < today.year
@@ -153,9 +165,10 @@ def plan_parts(
     wanted = tuple(sites)
     todo = [Part(Source.ERA5, s, y) for s in wanted for y in era5_years]
     todo += [
-        Part(Source.GFS_ARCHIVE, s, y)
+        Part(source, s, y)
+        for source, first in _FIRST_DAY.items()
         for s in wanted
-        for y in range(ARCHIVE_START.year, today.year + 1)
+        for y in range(first.year, today.year + 1)
     ]
     return sorted(p for p in todo if not manifest_parts.get(p.key, {}).get("final", False))
 
@@ -191,9 +204,9 @@ def run_download(  # noqa: PLR0913  (each argument is an injected edge: store, f
     total_rows = 0
     for i, part in enumerate(parts, start=1):
         start, end = part.days(today)
-        pace(call_weight((end - start).days + 1))
+        pace(call_weight((end - start).days + 1, len(part.variables)))
         df = fetch(part)
-        missing = int(df[list(VARIABLES)].isna().sum().sum())
+        missing = int(df[list(part.variables)].isna().sum().sum())
         data = _parquet_bytes(df)
         store.put(part.key, data)
         manifest["parts"][part.key] = {

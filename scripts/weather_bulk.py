@@ -1,4 +1,4 @@
-"""Weather bulk history (T14, #19; D-051): ERA5 and the GFS archive at every monitor, into S3.
+"""Weather bulk history (T14, #19; D-051, D-052): ERA5, GFS archive, CAMS history, into S3.
 
     cd ~/code/pm25-forecast                          # always run from the project folder
     uv run python scripts/weather_bulk.py            # dry run: shows the plan, writes nothing
@@ -25,6 +25,7 @@ from airwatch.config import get_settings
 from airwatch.logutil import configure
 from airwatch.observations.sites import TRAINING_SITES
 from airwatch.storage import S3Store
+from airwatch.weather import cams
 from airwatch.weather.bulk import (
     BUDGET,
     CallBudget,
@@ -34,6 +35,7 @@ from airwatch.weather.bulk import (
     plan_parts,
     run_download,
 )
+from airwatch.weather.cams import CamsQuery, CamsSource
 from airwatch.weather.openmeteo import Query, fetch_hourly
 
 log = logging.getLogger("weather_bulk")
@@ -51,7 +53,9 @@ def main() -> int:
     today = datetime.now(UTC).date()
 
     parts = plan_parts(TRAINING_SITES, today=today, manifest_parts=load_manifest(store)["parts"])
-    weight = sum(call_weight((p.days(today)[1] - p.days(today)[0]).days + 1) for p in parts)
+    weight = sum(
+        call_weight((p.days(today)[1] - p.days(today)[0]).days + 1, len(p.variables)) for p in parts
+    )
     hours = max(weight / BUDGET[3600.0], 24 * (weight // BUDGET[86400.0]))
     log.info(
         "bucket %s: %d part(s), about %.0f weighted Open-Meteo calls, about %.1f h at the budget",
@@ -67,6 +71,8 @@ def main() -> int:
     with httpx.Client(timeout=httpx.Timeout(300.0, connect=20.0)) as client:
 
         def fetch(part: Part) -> pd.DataFrame:
+            if isinstance(part.source, CamsSource):
+                return cams.fetch(client, CamsQuery.history(part.site_id, *part.days(today)))
             query = Query.for_site(part.source, part.site_id, *part.days(today))
             return fetch_hourly(client, query, now=lambda: datetime.now(UTC))
 

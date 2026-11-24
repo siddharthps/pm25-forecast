@@ -927,3 +927,41 @@ def test_every_drill_lock_email_says_drill(aws: Aws, case: str) -> None:
     lock = [e for e in aws.emails() if "lock run" in e["subject"]]
     assert len(lock) == 1
     assert lock[0]["subject"].startswith("[pm25-forecast] DRILL ")
+
+
+def test_a_drill_retry_on_the_real_clock_compares_aware_times(aws: Aws) -> None:
+    """The Lambda passes no `now`: the drill guard must read an aware UTC clock (#113 survivor)."""
+    clients = wd.Clients(s3=aws.s3, ssm=aws.ssm, sns=aws.sns, post=FakePrefect(), get=_no_get)
+    event = {"mode": "retry", "scheduled_time": "2099-01-06T14:00:00Z", "drill": True}
+    assert wd.handle(event, config=_config(aws), aws=clients)["retry"] == "started"
+
+
+def test_each_check_logs_one_watchdog_line(aws: Aws, caplog: pytest.LogCaptureFixture) -> None:
+    """The T9 guide's drill reads this line: `watchdog {...}` with the merged result."""
+    _put_record(aws)
+    with caplog.at_level(logging.INFO, logger=wd.__name__):
+        _handle(aws, VERIFY)
+    lines = [r.getMessage() for r in caplog.records if r.name == wd.__name__]
+    assert lines == [
+        'watchdog {"mode": "verify", "target_day": "2026-11-22", "record": "present", '
+        '"lock": "not due"}'
+    ]
+
+
+def test_a_drill_verify_marks_every_email_drill(aws: Aws) -> None:
+    _drill_run(aws)
+    with pytest.raises(wd.WatchdogError):
+        _monday(aws, {**MON_VERIFY, "drill": True}, FakeWeb(run_status=500), now=DRILL_NOW_MON)
+    subjects = [e["subject"] for e in aws.emails()]
+    assert len(subjects) == 3, subjects
+    assert all(s.startswith("[pm25-forecast] DRILL ") for s in subjects)
+    assert sum(s.endswith("watchdog error") for s in subjects) == 1
+
+
+def test_an_unknown_mode_names_itself(aws: Aws) -> None:
+    with pytest.raises(
+        wd.WatchdogError, match=r"^unknown mode 'weekly': expected 'retry' or 'verify'$"
+    ):
+        _handle(aws, {"mode": "weekly", "scheduled_time": AT_0800})
+    [email] = aws.emails()
+    assert email["subject"] == "[pm25-forecast] watchdog error"

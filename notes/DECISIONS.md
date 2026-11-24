@@ -1666,7 +1666,9 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
   - Open-Meteo docs: `_previous_day1` is "the value predicted 24 hours before valid time",
     `_previous_day2` 48 hours. "Most models are archived from January 2024." There is no
     previous-runs archive for the Air Quality API (CAMS).
-  - **Real archive starts:** GFS Global, all 8 variables, 2024-01-20 12:00 UTC; ECMWF IFS 0.25°
+  - **Real archive starts:** GFS Global, all 8 variables, 2024-01-20 12:00 UTC at
+    `_previous_day2`, and 2024-01-21 12:00 UTC at `_previous_day3` (the bulk download,
+    2026-11-24: the first 36 hours from 2024-01-20 are empty at every site); ECMWF IFS 0.25°
     2024-02-05, and its `shortwave_radiation` only from 2024-03-07. No gaps after the start,
     through 2025-12-31. The `gfs025` model name returns nothing; `gfs_global` is the name.
   - **The offset rounds down:** matching `_previous_day2` for 2026-11-22 against named runs

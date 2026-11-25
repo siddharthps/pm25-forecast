@@ -240,16 +240,30 @@ def test_missing_drop_counts_are_zero() -> None:
 
 
 EAST = "Pacific/Kiritimati"
+WEST = "Pacific/Pago_Pago"
+"""UTC-11, west of Phoenix: a local month's first hour is still the month before there (#140)."""
 
 
 @zone_moves
 def test_months_are_named_in_the_city_zone() -> None:
-    """00:00 Phoenix on 1 March is 21:00 on 1 March in Kiritimati: a February row stays February."""
+    """00:00 Phoenix on 1 March is 20:00 on 29 February in Pago Pago: March stays March.
+
+    A zone east of Phoenix can't catch this: there the same instant is still 1 March (#140).
+    """
     feb = frame(varying(5), start=datetime(2024, 2, 29, 23, tzinfo=PHOENIX).astimezone(UTC))
     window = Window(datetime(2024, 2, 1, 7, tzinfo=UTC), START + timedelta(days=1))
-    with process_zone(EAST):
+    with process_zone(WEST):
         months = {i["month"] for i in check(feb, window=window).finding("coverage_gap").items}
     assert months == {"2024-02", "2024-03"}
+
+
+@zone_moves
+def test_the_first_month_is_the_city_zones() -> None:
+    """23:00 Phoenix on 29 February is 20:00 on 1 March in Kiritimati: February's hour is judged."""
+    window = Window(datetime(2024, 2, 29, 23, tzinfo=PHOENIX).astimezone(UTC), DAY.end)
+    with process_zone(EAST):
+        gaps = check(frame(varying(24)), window=window).finding("coverage_gap").items
+    assert gaps == ({"site_id": SITE_A, "month": "2024-02", "hours": 0, "expected": 1},)
 
 
 @zone_moves

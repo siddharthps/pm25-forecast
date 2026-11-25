@@ -186,6 +186,7 @@ only_mutate = [
     "src/airwatch/watchdog/handler.py",
     "src/airwatch/weather/cams.py",
     "src/airwatch/weather/cams_save.py",
+    "src/airwatch/features/build.py",
 ]
 also_copy = [
     ".claude/",

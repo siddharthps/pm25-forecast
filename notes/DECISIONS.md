@@ -1887,7 +1887,8 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
   too; looking the AirNow instrument up in AQS on every run (an AQS call and key in the daily
   run, and AQS lags months); keeping the widest AirNow range.
 - **Status:** Active. Owner's choices, 2026-11-24. Refines D-021 (T12b done) and D-033 (AirNow
-  ranges per site).
+  ranges per site). *Refined 2026-11-25 (D-062):* the features clip the −1 and 101 % cloud
+  cover to 0 and 100; the report keeps counting them.
 
 ---
 
@@ -2076,6 +2077,58 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
   keeping them until T30.
 - **Read back:** only the three `pm25-forecast-*` buckets remain, their objects intact.
 - **Status:** Active. 2026-11-25. Refines T30's plan ("decided in T30").
+
+---
+
+## D-062 · 2026-11-25 · The V1 feature set: 21 features per monitor and issue day (#21, T15)
+
+- **Decision (owner's choice, 2026-11-25):** `features/build.py` builds one row per (monitor,
+  issue day D) for target day D+1, with these 21 features:
+  - **PM2.5 history (6),** from the hourly observations (AQS in training, AirNow live),
+    co-located instruments averaged per hour first: the daily means of D−1, D−2 and D−3; the
+    mean of the valid daily means of D−7 to D−1 (needs at least 4 of them); the highest hourly
+    value on D−1; and D−1's hour count. A daily mean is valid with at least 18 hours, the rule
+    the target and persistence use (D-034); the D−1 maximum needs a valid D−1.
+  - **Weather over the city's local day D+1 (10):** temperature mean and maximum; relative
+    humidity mean; wind speed mean, and the means of its east-west and north-south parts (u, v,
+    from the direction the wind blows from), never the angle itself; precipitation total;
+    surface pressure mean; cloud cover mean; shortwave radiation mean. Instant values use the
+    stamps from local midnight up to (not including) the next one; precipitation and radiation
+    are stamped at the end of their hour, so they use the stamps after midnight up to and
+    including the next one (`airwatch.weather.leads`). A mean needs at least 18 hours; the
+    precipitation total needs every hour, since a total with hours missing is understated.
+  - **Calendar of D+1 (4):** day of year as sine and cosine, day of week, and a fireworks-day
+    flag (4 July or 1 January).
+  - **Monitor (1):** the AQS site ID, as a category.
+- **Cloud cover outside 0 to 100 % (owner's choice):** the features clip it to 0 and 100. The
+  81 GFS-archive values D-054 found are only ever −1 or 101, all at 00, 06, 12 or 18 UTC (where
+  one GFS run hands over to the next), on whole-number data: rounding at the seams, not
+  readings. The raw files stay as received, and the validation report keeps counting them.
+  Training and serving read cloud cover through the same clip.
+- **Blanks:** a feature without enough data is left blank (NaN) and its row is kept; the gaps
+  are counted. Each model decides how to handle blanks (T16 onward). The label for D+1 lives in
+  its own module, so the leakage tests never see it as a feature.
+- **What "as known at issue time" covers, by source:** the rule follows each row's `source`, so
+  training and serving run the same code on different inputs.
+  - **As published** (`airnow`, `gfs_archive`, `gfs_live`): a row counts only if its
+    `available_at_utc` is before the issue time. Per weather hour, the newest run left is used.
+  - **Stand-ins** (`aqs`, `era5`): AQS's `available_at_utc` is when AQS last changed the record,
+    months after any historical issue time, and ERA5's is when it was fetched; filtering on
+    either would leave no history at all. So they count by measurement time only: PM2.5 hours
+    up to the end of D−1, weather hours inside D+1's window. AQS standing in for AirNow and
+    ERA5 for a forecast are the declared skews (D-004, D-007), measured in T22 (the AirNow-vs-AQS
+    gap and the forecasts-only variant).
+  - In every mode, PM2.5 hours from day D onward and weather hours outside D+1 are never used.
+- **Why:** these cover what drives a Phoenix day's PM2.5: the recent level, wind and stagnation
+  (speed, u and v, pressure), rain, season, and the fireworks nights. The u and v parts replace
+  the angle, whose 359° and 1° look far apart to a model. Radiation is kept as a mean rather
+  than a total: the total is the mean times the day's hour count, so it carries the same
+  information.
+- **Alternatives (offered, not chosen):** a lean 11-feature set; the 21 plus CAMS's own D+1
+  forecast (CAMS is a baseline, its history starts in 2022-08, and it is stitched from each
+  run's first 12 hours, D-052). For cloud cover: treating the values as missing, or keeping
+  them.
+- **Status:** Active. 2026-11-25. Refines D-054 (the cloud-cover values it found).
 
 ---
 

@@ -417,6 +417,15 @@ def test_a_history_parse_ignores_a_live_run_handed_to_it() -> None:
     assert (df["source"] == "cams_history").all()
 
 
+@pytest.mark.parametrize("source", [CamsSource.HISTORY, CamsSource.RUN])
+def test_a_live_run_changes_nothing_in_a_non_live_parse(source: CamsSource) -> None:
+    """Both run columns too, not only their difference (#140: `and` → `or` survived)."""
+    query, payload = QUERIES[source], PAYLOADS[source]
+    with_run = parse(query, payload, live_run=LIVE_RUN)
+    pd.testing.assert_frame_equal(with_run, parse(query, payload))
+    assert (with_run["run_start_utc"] != LIVE_RUN.started_utc).all()
+
+
 def test_values_before_the_run_are_counted_in_the_refusal() -> None:
     late_run = CamsQuery.run_at(SITE, RUN + timedelta(hours=12))
     with pytest.raises(WeatherResponseError, match=r"^before_run_start: 12 value\(s\)"):

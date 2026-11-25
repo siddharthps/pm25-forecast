@@ -79,10 +79,23 @@ def test_a_409_conflict_is_retried(s3: Any) -> None:
     assert flaky.calls == 3
 
 
-def test_repeated_409s_give_up_with_an_error(s3: Any) -> None:
-    store = S3Store(cast(Any, Flaky(s3, conflicts=10)), BUCKET, retry_pause_s=0)
-    with pytest.raises(WriteConflictError, match="409"):
+def test_repeated_409s_give_up_with_an_error_after_three_tries(s3: Any) -> None:
+    flaky = Flaky(s3, conflicts=10)
+    store = S3Store(cast(Any, flaky), BUCKET, retry_pause_s=0)
+    with pytest.raises(WriteConflictError, match=r"\(409\) after 3 attempts$"):
         store.create_if_absent("records/z.json", b"data")
+    assert flaky.calls == 3
+
+
+def test_409_retries_pause_one_second_then_two_by_default(
+    s3: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The default pause, growing with each try (#140: neither was pinned)."""
+    pauses: list[float] = []
+    monkeypatch.setattr("airwatch.storage.time.sleep", pauses.append)
+    with pytest.raises(WriteConflictError):
+        S3Store(cast(Any, Flaky(s3, conflicts=10)), BUCKET).create_if_absent("records/p", b"d")
+    assert pauses == [1.0, 2.0]
 
 
 def test_other_errors_are_not_mistaken_for_an_existing_record(s3: Any) -> None:

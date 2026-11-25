@@ -2126,3 +2126,47 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - **2026-11-30 (Mon) after 09:00 Chicago:** the first watchdog-started lock run; close #113, #43.
 - #112: its PR (Refs #112) through CI and the owner's merge; the follow-ups above are #140.
 - T15 (#21).
+
+## 2026-11-24: #140, #112's last survivors, branch `140-mutmut-survivors` (CST, 20:20 to 21:20)
+
+- **#141 merged** (Refs #112, 2026-11-25 02:21 UTC). Its body said "which closes #112", a GitHub
+  closing keyword, so the merge closed #112; reopened with a comment, the body reworded.
+- **Runs (WSL, 12 CPUs, only `checks`, `storage` and `cams`, a clone-only list):** `main`
+  132 survived, 1 timeout (950 s); the branch 130 (883 s).
+- **Killed with new tests** (each also proved by a planted mistake: the new test fails, `main`'s
+  passes):
+  - `checks`: the month label's `astimezone(None)`. The old test ran in Kiritimati, east of
+    Phoenix, where a Phoenix month's first hour is still the same date, so it passed with its
+    rule removed; it now runs in Pago Pago (UTC-11). The first month's `astimezone(None)`: a
+    window from 23:00 Phoenix on 29 February, in Kiritimati, must judge February's hour;
+  - `storage.create_if_absent`: three tries, then the error naming them; pauses of 1 s then 2 s
+    by default;
+  - `cams.parse`: a live run handed to a history or single-run parse changes nothing, both run
+    columns compared. The survivor was the first `live_run is not None and` (line 233); the
+    2026-11-24 entry named the second, which the old tests already caught.
+- **Explained (equivalent):** `daily_means`'s `dropna(subset=None)` (its callers pass `parse`'s
+  rows, where only `pm2_5` can be missing); `groupby` without `sort=True` (the default); `//` as
+  `/` (24.0 equals 24); `range(…+2)` in `create_if_absent` (the third try raises first);
+  `first > end`, `start > window.end`, `expected < 0` and `break` in the coverage code (each
+  only adds a zero-hour segment, which is skipped, or stops after the last one).
+- **#112's "Done when" is met:** every survivor in its modules is killed or explained.
+
+### Traps found
+
+- **A closing keyword anywhere in a "Refs" PR's body closes the issue:** "which closes #112"
+  did. Check the body for close, fix or resolve before a number, and the issue after a merge.
+- **mutmut's kill counts flake:** four mutants that can't change a result (two message texts,
+  `default=1.0` at the exactly-1.0-km boundary, `poc[i - 1]`) were killed on `main` and survived
+  on the branch, and `kind="XXstableXX"` (ignored by pandas for a multi-column sort) the other
+  way round, with no change to their code or tests. A test fails at random inside mutmut's copy;
+  survivors aren't hidden, but kills can be counted that didn't happen. Not yet an issue.
+- **An east-only zone test can't catch a month-start bug:** a local midnight seen from further
+  east is still the same date. Test a zone on each side of the city.
+
+### Next
+
+- **2026-11-25 after 12:00 UTC:** the first real `cams.json` (#78), then close #78 and #19; #3's
+  old key and user (owner confirms); milestone B closes.
+- **2026-11-30 (Mon) after 09:00 Chicago:** the first watchdog-started lock run; close #113, #43.
+- #140's PR (closes #140 and #112); an issue for the mutmut kill flake (owner's call).
+- T15 (#21).

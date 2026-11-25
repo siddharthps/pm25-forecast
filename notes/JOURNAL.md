@@ -2124,5 +2124,5 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - **2026-11-25 after 12:00 UTC:** the first real `cams.json` (#78), then close #78 and #19; #3's
   old key and user (owner confirms); milestone B closes.
 - **2026-11-30 (Mon) after 09:00 Chicago:** the first watchdog-started lock run; close #113, #43.
-- #112: the owner reviews `112-mutation-tests` and decides on its PR; the follow-ups above.
+- #112: its PR (Refs #112) through CI and the owner's merge; the follow-ups above are #140.
 - T15 (#21).

@@ -69,7 +69,7 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
   the repo and live check follow in T1/T5)
 - [x] T0b: Prefect Cloud Hobby account + workspace · *owner* (2026-11-18; CLI login check in T8)
 - [x] T0c: AWS hygiene: SSO login, $5 alarm, v1 key deactivated, Terraform 1.17.2, state bucket
-  · *owner, agent guides* (2026-11-18; delete the old key on 11-25)
+  · *owner, agent guides* (2026-11-18; old key, user and policy deleted 2026-11-25)
 - [x] T0d: Create `siddharthps/pm25-forecast` (D-017) · *owner approves, agent runs* (2026-11-18)
 
 ### Phase 1: Foundation (week 1)
@@ -234,6 +234,6 @@ owner asks.
   D-026 (Python 3.12, T1), OQ-6 → D-019 (06:00, D+1), OQ-7 → D-020 (skills in the repo).
 - OQ-5 (city thresholds) → D-006, frozen in T4. OQ-8 (AQS daily rules) → D-032, in T5.
 - Still open, each with a home: **OQ-2** (MLflow backend) → T17 · the v1 S3 buckets → listed in
-  T0c, decided in T30.
+  T0c, deleted early on 2026-11-25 (D-061).
 - The skill's shared `references/definition-of-done.md` wasn't installed with the skills; ours is
   above. Worth noting for the skills trial (D-001).

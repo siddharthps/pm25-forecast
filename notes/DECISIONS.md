@@ -2063,6 +2063,22 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
 
 ---
 
+## D-061 · 2026-11-25 · The v1 buckets and the 2023 SageMaker buckets deleted, no copy (#36)
+
+- **Decision (owner's choice, 2026-11-25):** the owner deleted v1's two S3 buckets
+  (`air-quality-mlops-data-chicago-2025`: 13 objects, about 31 MB; `mlflow-artifacts-chicago-2025`:
+  60 objects, about 890 MB) and the four empty 2023 `sagemaker-*` buckets, in the console,
+  without keeping a copy. This settles T30's bucket box early; T30's other boxes are unchanged.
+- **Why:** nothing in v2 reads them (no code, infra or notes refer to them), the write-up covers
+  v1 in prose only with no links (D-002), and the old repo keeps v1's code. Their contents were
+  listed before the owner confirmed, as T30 asks.
+- **Alternatives (offered, not chosen):** a local copy first (recommended, as cheap insurance);
+  keeping them until T30.
+- **Read back:** only the three `pm25-forecast-*` buckets remain, their objects intact.
+- **Status:** Active. 2026-11-25. Refines T30's plan ("decided in T30").
+
+---
+
 ## Open questions (to settle, then move into a D-entry)
 
 - Further open items are listed in [SPEC.md](SPEC.md) § Open Questions.

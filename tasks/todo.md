@@ -13,7 +13,7 @@ line** (2026-12-16) · **D: Complete**.
 | --- | --- | --- | --- | --- |
 | T0a | [#1](https://github.com/siddharthps/pm25-forecast/issues/1) | AirNow API account + read the gated docs | A | closed |
 | T0b | [#2](https://github.com/siddharthps/pm25-forecast/issues/2) | Prefect Cloud Hobby account + workspace | A | closed |
-| T0c | [#3](https://github.com/siddharthps/pm25-forecast/issues/3) | AWS hygiene and project identity | A | open until 11-25 (delete the old key); register completed (#96) |
+| T0c | [#3](https://github.com/siddharthps/pm25-forecast/issues/3) | AWS hygiene and project identity | A | closed 2026-11-25 (old key, user and policy deleted); register completed (#96) |
 | T0d | [#4](https://github.com/siddharthps/pm25-forecast/issues/4) | Create the new public GitHub repo | A | closed |
 | T1 | [#5](https://github.com/siddharthps/pm25-forecast/issues/5) | Day-zero scaffold and quality gates | A | closed |
 | T2 | [#6](https://github.com/siddharthps/pm25-forecast/issues/6) | CI on GitHub Actions | A | open: merged (#39); closes after the 11-23 lock-job PR passes CI |
@@ -46,7 +46,7 @@ line** (2026-12-16) · **D: Complete**.
 | T27 | [#33](https://github.com/siddharthps/pm25-forecast/issues/33) | Final test, read once | D | open |
 | T28 | [#34](https://github.com/siddharthps/pm25-forecast/issues/34) | Write-up | D | open |
 | T29 | [#35](https://github.com/siddharthps/pm25-forecast/issues/35) | Live acceptance | D | open |
-| T30 | [#36](https://github.com/siddharthps/pm25-forecast/issues/36) | Retire v1 | D | open |
+| T30 | [#36](https://github.com/siddharthps/pm25-forecast/issues/36) | Retire v1 | D | open: v1 buckets deleted early, 2026-11-25 (D-061) |
 
 ## Added along the way (no T-number; plan.md rule 6)
 

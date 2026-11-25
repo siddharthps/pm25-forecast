@@ -2216,15 +2216,32 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - **#78 and #19 closed** (owner's OK), their boxes ticked. #19's "responses cached" means the
   history in S3 with reruns fetching only missing parts; the CAMS bias is in D-052, and #79
   carries it into the write-up.
+- **#3 closed:** a read-only check first (the key …XZ53 still last used 2025-08-04, the user's
+  only credential; its policy attached to nothing else). The owner then deleted the key, the
+  user `air-quality-mlops-user` and `MLOpsProjectS3AndBasicAccessPolicy` in the console, from
+  the agent's step-by-step guide. Read back: both NoSuchEntity, no IAM users left.
+  `notes/TOKENS.md` updated. The #3 body's garbled `…` and `·` repaired in the same edit.
+- **The v1 and 2023 SageMaker buckets deleted early** (owner's request, D-061; #36's bucket box
+  ticked, #36 stays open): the contents listed first, no copy kept (owner's choice, against the
+  recommended local copy). Read back: only the three `pm25-forecast-*` buckets remain, with
+  their objects.
 
 ### Traps found
 
 - **The SSO session had expired overnight** (8 hours): the check waited on the owner's
   `aws sso login`.
 - **`aws s3 cp` has no `-q`;** it's `--only-show-errors`.
+- **#3 is in milestone A, not B:** the earlier "Next" lines said closing it closes milestone B.
+  B had 0 open issues already; #3 was A's last.
+- **AWS CLI text output on Windows ends in `\r`:** a domain ID read into a shell variable failed
+  validation until piped through `tr -d '\r'`.
+- **`list-objects-v2 --query KeyCount` printed `None`** under the CLI's paging; `aws s3 ls
+  --recursive --summarize` gives the real count.
 
 ### Next
 
-- #3: the old key and IAM user (owner confirms); milestone B closes.
+- Milestones A and B: both have no open issues; closing them is the owner's call.
+- A 2023 SageMaker Studio domain (`QuickSetupDomain-20231013T112938`) is still InService: no
+  user profiles, apps or spaces, 6 KB of EFS. Delete it or keep it (owner's call).
 - **2026-11-30 (Mon) after 09:00 Chicago:** the first watchdog-started lock run; close #113, #43.
 - T15 (#21).

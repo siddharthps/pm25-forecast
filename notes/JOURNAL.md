@@ -2050,3 +2050,79 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - **2026-11-30 (Mon) after 09:00 Chicago:** the first watchdog-started lock run succeeded and its
   PR's CI ran; then close #113 and #43.
 - #112's full run and survivors; then T15 (#21).
+
+## 2026-11-24: #112 mutation testing, branch `112-mutation-tests` (CST, 15:05 to 17:35, owner away)
+
+- **The mutation list:** `only_mutate` now holds #112's twelve modules beside the first three
+  (15 in all). **Found first:** mutmut's test selection left out `tests/integration`, so every
+  mutant only those tests catch was a false survivor (88 in `run_daily`, all of `_encode` and
+  `_publish_all` "no tests"). Added, with a test that every offline test folder is selected.
+- **Runs (WSL, 12 CPUs):** without integration 623 survived (26.5 min); with it 509 (35.7 min);
+  after the first new tests 348 (23.9 min); after all of them **260** (22.5 min), 141 "no tests"
+  (the CLI `main`, `lambda_handler`, `_urllib_get`: real edges, `pragma: no cover`), 2 timeouts.
+- **Killed with new tests** (each also proved by hand-planted mutants; every one caught except
+  the equivalents below):
+  - forecast: dates from the issue zone under a moved process zone (Kiritimati, a day ahead at
+    the issue time); the next day's first hour never in a site's hour count; byte-stable files;
+    `published` a real bool on every path; the saved report's source and Phoenix-day window;
+  - storage: an AWS error without metadata;
+  - CAMS save: Phoenix's day mean (values rising by the hour, so windows differ); a run published
+    exactly at the issue time; NaN refused; every outcome's day and save; a lost race with
+    nothing readable;
+  - minutes ledger: a retry keeps the first minutes; exactly 300 is not over the line; a zone
+    whose offset is `None`; the file format;
+  - publish: a same-day update replaces `latest.json`, an older day never does; where a schema
+    failed;
+  - scoring: the stored score on reuse; no-record outcomes' day; a lost race; zero hours by
+    default; the file format;
+  - validation: every rule's class and severity pinned, clean and firing; 12 identical hours;
+    readings of exactly 0; a one-hour window; a monitor closing today; exactly 1.0 km; two-place
+    rounding; comparisons within one source, site and instrument; a reopened monitor; every
+    site judged; months and "today" in the city zone; missing drop counts;
+  - reference: the distance's longitude term against the spherical law of cosines; blank codes
+    as `None`; the site ID's state and county; retries; no header or data; a no-data site that
+    never stops the loop; schema: a fresh index after stacking;
+  - CAMS client: query builders called inside tests (module-level ones map to no test); the
+    history start and one-day boundaries; a live query on UTC; a run's whole days; a grid point
+    exactly 0.4° away; a live run ignored by a history parse; the early-value count; retries; a
+    run published exactly at the fetch; daily means sorted by site;
+  - watchdog: every setting read, the API URL trimmed; the target day under a moved process
+    zone; AWS errors without an Error block; a nameless Prefect reply; DRILL on a failed drill
+    retry; the monthly alert's marker and plain subject.
+- **Explained (the 260 left):** 133 change only message or log text (an `XX` wrap, a case change,
+  `None` for a message); 36 pass `strict=`, `index=`, `utc=` (on aware times), `kind=`,
+  `dtype=`, `sort=` or `ignore_index=` where the result is the same; 15 change a retry count,
+  backoff or timeout default, which no test times; `"UTF-8"` for `"utf-8"`; equivalents by
+  construction: `keep=`, `reset_index(name=None)` then read by position, `astype(None)`,
+  `MaxKeys`, `method=None` with data (urllib posts), a subject slice the subject never reaches,
+  `emailed=None` (falsy), method-change items from `i-1` (always the same site and instrument),
+  `columns=None` (the dict is in `COLUMNS` order), `hours_ok`'s `>` and `count - 2` (equality
+  needs `count - 1 = 120 + offset` with `count % 24 == 0`: unreachable), the zone and drop counts
+  passed to validation in scoring and the forecast (they feed only coverage warnings and info
+  counts); `cams_save`'s `if len(mean) else nan` is dead code (`daily_means` always returns a
+  row).
+- **Follow-up, not ruled on (about 8):** two `checks` month-label and coverage mutants with
+  `astimezone(None)` survive the Kiritimati tests (why isn't yet known);
+  `S3Store.create_if_absent`'s retry count and pause (3) aren't pinned; the second
+  `live_run is not None or` in `cams.parse`; `dropna(subset=None)` in `cams.daily_means`.
+- Core suite after: 1,048 passed and 16 skipped (the zone tests, POSIX only), 26.7 s.
+- **Records:** D-059 records the new scope and test selection (refines D-048); SPEC's
+  mutation line and the todo row follow it.
+
+### Traps found
+
+- **A test selection that skips a folder makes false survivors:** check that
+  `pytest_add_cli_args_test_selection` covers every test folder before trusting a survivor
+  (now a test).
+- **Module-level test data maps to no test:** mutmut attributes calls during collection to none,
+  so a builder used only there shows as a survivor although its output is asserted.
+- **`git checkout -- <file>` to undo a planted edit also undoes uncommitted work on that file:**
+  the mutation-list edit had to be redone; commit before planting by sed.
+
+### Next
+
+- **2026-11-25 after 12:00 UTC:** the first real `cams.json` (#78), then close #78 and #19; #3's
+  old key and user (owner confirms); milestone B closes.
+- **2026-11-30 (Mon) after 09:00 Chicago:** the first watchdog-started lock run; close #113, #43.
+- #112: its PR (Refs #112) through CI and the owner's merge; the follow-ups above are #140.
+- T15 (#21).

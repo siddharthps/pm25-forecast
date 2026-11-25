@@ -309,3 +309,24 @@ def test_the_next_days_forecast_replaces_the_public_file(s3: Any) -> None:
     assert latest is not None
     assert latest["forecast_date"] == newer.isoformat()
     assert object_versions(s3, PUBLIC, LATEST_KEY) == 2
+
+
+def test_the_published_flag_is_a_real_bool_on_every_path(s3: Any) -> None:
+    """Killed mutmut survivors (#112): a dry run never claims it published; a reuse says so."""
+    dry = run(s3, publish=False)
+    assert dry.published is False
+    first = run(s3)
+    assert first.published is True
+    again = run(s3, now=NOW + timedelta(hours=1))
+    assert (again.status, again.published) == ("already_recorded", False)
+
+
+def test_the_saved_report_is_airnows_for_the_observed_phoenix_day(s3: Any) -> None:
+    run(s3)
+    report = stored(s3, PRIVATE, REPORT)
+    assert report is not None
+    assert report["source"] == "airnow"
+    assert report["window_utc"] == {
+        "start": "2026-11-19T07:00:00+00:00",
+        "end": "2026-11-20T07:00:00+00:00",
+    }

@@ -22,6 +22,7 @@ from airwatch.weather.cams import CamsSource, issued_run_start
 from airwatch.weather.cams_save import (
     SAVE_VERSION,
     CamsSaveError,
+    _encode,
     build_save,
     cams_key,
     save_cams,
@@ -235,3 +236,60 @@ def test_a_monitor_without_rows_is_refused() -> None:
 
 def test_refusals_are_reportable() -> None:
     assert issubclass(CamsSaveError, ReportableError)
+
+
+def _rising(site: str) -> pd.DataFrame:
+    """48 hours whose value is the hour's index, so every day window has its own mean."""
+    rows = live_rows(site)
+    rows[cams.VARIABLE] = [float(h) for h in range(48)]
+    return rows
+
+
+def test_the_mean_is_over_phoenixs_day() -> None:
+    """Killed mutmut survivor (#112): 07:00 to 07:00 UTC is indexes 7 to 30, mean 18.5."""
+    body = build_save(
+        TARGET, pd.concat([_rising(A), _rising(B)]), tz=PHOENIX, sites=SITES, fetched_utc=FETCHED
+    )
+    assert body["monitors"][A]["mean_ug_m3"] == 18.5
+
+
+def test_a_run_published_exactly_at_the_issue_time_was_before_it() -> None:
+    store = MemoryStore()
+    save(store, FakeLive(published=issue_time_utc(TARGET)))
+    assert saved(store)["published_before_issue"] is True
+
+
+def test_the_file_is_byte_stable_and_refuses_nan() -> None:
+    assert _encode({"b": 1, "a": [2]}) == b'{\n "a": [\n  2\n ],\n "b": 1\n}'
+    with pytest.raises(ValueError, match="JSON compliant"):
+        _encode({"mean_ug_m3": math.nan})
+
+
+def test_every_outcome_names_its_day_and_its_save() -> None:
+    store = MemoryStore()
+    dry = save(store, FakeLive(), write=False)
+    first = save(store, FakeLive())
+    again = save(store, FakeLive())
+    for outcome in (dry, first, again):
+        assert outcome.target == TARGET
+        assert outcome.save is not None
+    assert first.save == again.save
+
+
+def test_a_lost_race_with_nothing_readable_keeps_its_own_save() -> None:
+    class Refusing(MemoryStore):
+        def create_if_absent(self, _key: str, _data: bytes) -> bool:
+            return False
+
+    outcome = save(Refusing(), FakeLive())
+    assert (outcome.target, outcome.status) == (TARGET, "already_saved")
+    assert outcome.save is not None
+    assert outcome.save["monitors"][A]["hours"] == 24
+
+
+def test_a_monitor_with_no_hours_in_the_day_has_no_mean() -> None:
+    rows = pd.concat(
+        [live_rows(A), live_rows(B).assign(valid_utc=lambda d: d["valid_utc"] + timedelta(days=5))]
+    )
+    body = build_save(TARGET, rows, tz=PHOENIX, sites=SITES, fetched_utc=FETCHED)
+    assert body["monitors"][B] == {"hourly": [], "hours": 0, "mean_ug_m3": None}

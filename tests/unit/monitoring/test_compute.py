@@ -2,7 +2,7 @@
 
 import json
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, tzinfo
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -104,3 +104,55 @@ def test_running_the_ledger_again_never_counts_a_run_twice(runs: list[int], repe
             usage = record_run(store, run_id, START, START + timedelta(minutes=minutes))
     assert usage.month_total == sum(m + TEARDOWN_PAD_MIN for m in runs)
     assert len(store.list_keys(PREFIX)) == len(runs)
+
+
+def test_a_retry_keeps_the_first_entrys_minutes() -> None:
+    """Killed mutmut survivors (#112): a second filing of one run never replaces the first."""
+    store = MemoryStore()
+    first = record_run(store, RUN, START, START + timedelta(minutes=2))
+    later = record_run(store, RUN, START, START + timedelta(minutes=9))
+    assert later.minutes == first.minutes == 2 + TEARDOWN_PAD_MIN
+    assert later.month_total == first.minutes
+
+
+def test_a_lost_race_with_nothing_readable_keeps_its_own_minutes() -> None:
+    class Refusing(MemoryStore):
+        def create_if_absent(self, _key: str, _data: bytes) -> bool:
+            return False
+
+    usage = record_run(Refusing(), RUN, START, START + timedelta(minutes=4))
+    assert usage.minutes == 4 + TEARDOWN_PAD_MIN
+
+
+def test_exactly_the_alert_line_is_not_over_it() -> None:
+    store = MemoryStore()
+    usage = record_run(
+        store, RUN, START, START + timedelta(minutes=MONTHLY_ALERT_MIN - TEARDOWN_PAD_MIN)
+    )
+    assert (usage.month_total, usage.over_alert) == (MONTHLY_ALERT_MIN, False)
+
+
+def test_the_ledger_file_is_indented_json() -> None:
+    store = MemoryStore()
+    record_run(store, RUN, START, START + timedelta(minutes=1))
+    raw = store.get(entry_key(RUN, START + timedelta(minutes=1)))
+    assert raw is not None
+    assert raw.startswith(b'{\n  "run_id": ') and raw.endswith(b"\n}\n")
+
+
+class _NoOffset(tzinfo):
+    """A zone whose offset is None: as unusable as no zone at all."""
+
+    def utcoffset(self, _dt: datetime | None) -> None:
+        return None
+
+    def dst(self, _dt: datetime | None) -> None:
+        return None
+
+    def tzname(self, _dt: datetime | None) -> str:
+        return "none"
+
+
+def test_a_zone_without_an_offset_is_refused() -> None:
+    with pytest.raises(ValueError, match="naive"):
+        record_run(MemoryStore(), RUN, START.replace(tzinfo=_NoOffset()), START)

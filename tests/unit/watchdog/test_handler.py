@@ -33,6 +33,7 @@ from airwatch.forecast.record import record_key
 from airwatch.monitoring import compute
 from airwatch.storage import S3Store
 from airwatch.watchdog import handler as wd
+from tests.process_zone import CAN_MOVE_ZONE, SKIP_REASON, process_zone
 from tests.project_files import import_roots
 
 REGION = "us-east-1"
@@ -965,3 +966,77 @@ def test_an_unknown_mode_names_itself(aws: Aws) -> None:
         _handle(aws, {"mode": "weekly", "scheduled_time": AT_0800})
     [email] = aws.emails()
     assert email["subject"] == "[pm25-forecast] watchdog error"
+
+
+def test_config_reads_every_setting_and_trims_the_api_url() -> None:
+    env = {
+        "DATA_BUCKET": BUCKET,
+        "ALERT_TOPIC_ARN": "arn:aws:sns:us-east-1:123456789012:pm25-forecast-alerts",
+        "PREFECT_KEY_PARAMETER": PARAM,
+        "PREFECT_API_URL": API + "/",
+        "PREFECT_DEPLOYMENT_ID": DEPLOYMENT,
+        "GITHUB_TOKEN_PARAMETER": GH_PARAM,
+        "GITHUB_REPO": REPO,
+        "LOCK_WORKFLOW": WORKFLOW,
+    }
+    config = wd.Config.from_env(env)
+    assert config == wd.Config(
+        data_bucket=BUCKET,
+        topic_arn=env["ALERT_TOPIC_ARN"],
+        prefect_key_parameter=PARAM,
+        prefect_api_url=API,
+        deployment_id=DEPLOYMENT,
+        github_token_parameter=GH_PARAM,
+        github_repo=REPO,
+        lock_workflow=WORKFLOW,
+    )
+
+
+@pytest.mark.skipif(not CAN_MOVE_ZONE, reason=SKIP_REASON)
+def test_the_target_day_is_chicagos_whatever_the_process_zone() -> None:
+    """08:00 Chicago on 11-21 is 04:00 on 11-22 in Kiritimati."""
+    with process_zone("Pacific/Kiritimati"):
+        assert wd.target_day(datetime(2026, 11, 21, 14, tzinfo=UTC)) == date(2026, 11, 22)
+
+
+def test_an_aws_error_without_an_error_block_is_reraised_by_its_type() -> None:
+    bare = ClientError({}, "PutObject")
+    assert wd._kind(bare) == "ClientError"
+
+    class Refusing:
+        def put_object(self, **_: Any) -> None:
+            raise bare
+
+    with pytest.raises(ClientError):
+        wd._created_once(Refusing(), BUCKET, "k", b"{}")
+
+
+def test_a_prefect_reply_without_a_name_reads_as_a_question_mark(aws: Aws) -> None:
+    class NoName(FakePrefect):
+        def __call__(self, url: str, body: bytes, headers: Mapping[str, str]) -> tuple[int, bytes]:
+            super().__call__(url, body, headers)
+            return 201, b"{}"
+
+    _handle(aws, RETRY, NoName())
+    [email] = aws.emails()
+    assert "(?)" in email["message"]
+
+
+def test_a_failed_drill_retry_says_drill(aws: Aws) -> None:
+    with pytest.raises(wd.WatchdogError):
+        _handle(aws, DRILL, FakePrefect(status=500), now=DRILL_NOW)
+    [email] = aws.emails()
+    assert email["subject"].startswith("[pm25-forecast] DRILL ")
+    assert "retry FAILED" in email["subject"]
+
+
+def test_the_monthly_alert_writes_its_marker_and_a_plain_email(aws: Aws) -> None:
+    _put_record(aws)
+    at = datetime(2026, 11, 21, 12, 30, tzinfo=UTC)
+    _put_minutes(aws, [301], at)
+    _handle(aws, RETRY)
+    [email] = aws.emails()
+    assert email["subject"] == f"[pm25-forecast] Prefect minutes over {wd.ALERT_MINUTES}"
+    marker = f"{wd.ALERT_PREFIX}month=2026-11/over-{wd.ALERT_MINUTES}.json"
+    note = json.loads(aws.s3.get_object(Bucket=BUCKET, Key=marker)["Body"].read())
+    assert note == {"month_minutes": 301, "noted_utc": "2026-11-21T14:00:00+00:00"}

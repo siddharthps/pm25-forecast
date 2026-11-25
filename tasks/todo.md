@@ -75,7 +75,8 @@ line** (2026-12-16) · **D: Complete**.
 | [#101](https://github.com/siddharthps/pm25-forecast/issues/101) | Remove the unreachable last line of _retryable (metadata.py) (merged #107, 2026-11-23 UTC) | #99 (the 2026-11-22 test-suite audit) | C |
 | [#102](https://github.com/siddharthps/pm25-forecast/issues/102) | Test suite: parametrize four sets of look-alike tests (audit group 4; merged #108, 2026-11-23 UTC) | the 2026-11-22 test-suite audit | C |
 | [#103](https://github.com/siddharthps/pm25-forecast/issues/103) | Test suite: one home for repeated test setup code (audit group 5; merged #109, 2026-11-23 UTC) | the 2026-11-22 test-suite audit | C |
-| [#112](https://github.com/siddharthps/pm25-forecast/issues/112) | Mutation-test the modules that hold the must-never rules (timed 2026-11-24: about 1 h a run) | the 2026-11-22 test-suite audit | C |
+| [#112](https://github.com/siddharthps/pm25-forecast/issues/112) | Mutation-test the modules that hold the must-never rules (a full run 22 to 36 min; D-059; PR open, about 8 survivors left in #140) | the 2026-11-22 test-suite audit | C |
+| [#140](https://github.com/siddharthps/pm25-forecast/issues/140) | Rule on #112's last mutmut survivors (about 8) | #112's full run, 2026-11-24 | C |
 | [#113](https://github.com/siddharthps/pm25-forecast/issues/113) | Watchdog starts the weekly uv-lock run; drop the GitHub cron (merged #136, D-058; applied and drilled 2026-11-24; closes after the 2026-11-30 run) | the 2026-11-23 dropped lock run | C |
 | [#115](https://github.com/siddharthps/pm25-forecast/issues/115) | Lock PR: open it with a GitHub App token so its own CI counts (merged #116, 2026-11-23 UTC) | #43 (#114's blocked merge, 2026-11-23) | B |
 | [#120](https://github.com/siddharthps/pm25-forecast/issues/120) | D-014 timeline review, Checkpoint B (merged #121, 2026-11-24 UTC, D-050) | Checkpoint B's last box | B |

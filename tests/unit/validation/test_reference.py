@@ -8,6 +8,7 @@ site list. Each rule catches a planted bad record; without a reference none of t
 - **dates:** an AQS hour outside its instrument's open period -> warn, excluded.
 """
 
+import math
 from datetime import date, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -296,5 +297,72 @@ def test_fetch_reference_refuses_an_aqs_error_status() -> None:
     with (
         httpx.Client(transport=httpx.MockTransport(handler)) as client,
         pytest.raises(RuntimeError, match="monitors"),
+    ):
+        fetch_reference(client, {}, (SITE_A,), city_cbsa=CBSA, backoff_s=0)
+
+
+def test_distance_counts_longitude_at_the_cosine_of_latitude() -> None:
+    """Killed mutmut survivors (#112): one degree of longitude at 33° N is about 93.3 km."""
+    assert distance_km((33.0, -112.0), (33.0, -111.0)) == pytest.approx(93.26, abs=0.01)
+    a, b = (10.0, -112.0), (33.0, -111.0)
+    lat1, lon1, lat2, lon2 = map(math.radians, (*a, *b))
+    cosines = math.acos(
+        math.sin(lat1) * math.sin(lat2) + math.cos(lat1) * math.cos(lat2) * math.cos(lon2 - lon1)
+    )
+    assert distance_km(a, b) == pytest.approx(6371.0 * cosines, rel=1e-9)
+
+
+def test_blank_codes_parse_as_none() -> None:
+    [m] = parse_monitors([{**AQS_ROW, "cbsa_code": "", "last_method_code": ""}])
+    assert (m.cbsa_code, m.last_method_code) == (None, None)
+
+
+def _aqs_reply(rows: list[dict[str, object]] | None, status: str = "Success") -> httpx.Response:
+    body: dict[str, object] = {"Header": [{"status": status}]}
+    if rows is not None:
+        body["Data"] = rows
+    return httpx.Response(200, json=body)
+
+
+def test_fetch_reference_splits_the_site_id_and_survives_retries_and_gaps() -> None:
+    asked: list[dict[str, str]] = []
+    failed: set[str] = set()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "aqs.epa.gov":
+            params = dict(request.url.params)
+            asked.append(params)
+            if params["site"] not in failed:
+                failed.add(params["site"])
+                return httpx.Response(503)
+            if params["site"] == "0019":
+                return _aqs_reply([], status="No data matched your selection")
+            if params["site"] == "1003":
+                return _aqs_reply(None)
+            return _aqs_reply([{**AQS_ROW, "county_code": "013", "site_number": "1004"}])
+        if request.url.path.endswith(".dat") and "airnow" not in failed:
+            failed.add("airnow")
+            return httpx.Response(503)
+        return httpx.Response(200, text=AIRNOW_TEXT)
+
+    sites = ("040130019", "040131003", "040131004")
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        reference = fetch_reference(client, {}, sites, city_cbsa=CBSA, backoff_s=0)
+    assert {(a["state"], a["county"], a["site"]) for a in asked} == {
+        ("04", "013", "0019"),
+        ("04", "013", "1003"),
+        ("04", "013", "1004"),
+    }
+    assert [m.site_id for m in reference.monitors] == ["040131004"]
+    assert reference.airnow_coords
+
+
+def test_a_reply_without_a_header_is_refused() -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"Data": []})
+
+    with (
+        httpx.Client(transport=httpx.MockTransport(handler)) as client,
+        pytest.raises(RuntimeError, match="monitors: status ''"),
     ):
         fetch_reference(client, {}, (SITE_A,), city_cbsa=CBSA, backoff_s=0)

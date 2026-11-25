@@ -36,3 +36,20 @@ def test_it_mutates_only_listed_source_files() -> None:
     assert config["source_paths"] == ["src/"]
     for path in config["only_mutate"]:
         assert (ROOT / path).is_file(), path
+
+
+OPT_IN = {"live"}
+"""Test folders mutmut may skip: they call real external APIs (`-m live`, never in CI)."""
+
+
+def test_mutmut_runs_every_offline_test_folder() -> None:
+    """#112: with `tests/integration` left out, every mutant only the integration tests catch
+    (the forecast's publish path, the job) was reported as a survivor: 88 in `run_daily` alone."""
+    folders = {
+        p.name
+        for p in (ROOT / "tests").iterdir()
+        if p.is_dir() and any(p.rglob("test_*.py")) and p.name not in OPT_IN
+    }
+    assert folders == {"unit", "property", "integration"}, "a new test folder: add it here"
+    selection = set(_mutmut()["pytest_add_cli_args_test_selection"])
+    assert {f"tests/{f}" for f in folders} <= selection

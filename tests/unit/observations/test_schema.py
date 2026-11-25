@@ -9,7 +9,7 @@ from collections.abc import Callable
 import pandas as pd
 import pytest
 
-from airwatch.observations.schema import validate_hourly
+from airwatch.observations.schema import concat_hourly, validate_hourly
 from tests.unit.validation.helpers import frame
 
 
@@ -53,3 +53,9 @@ def test_a_row_off_the_schema_is_refused(
     validate_hourly(good)
     with pytest.raises(ValueError, match=message):
         validate_hourly(change(good))
+
+
+def test_stacked_frames_get_a_fresh_index() -> None:
+    """Killed mutmut survivors (#112): index-based masks must never meet a repeated label."""
+    stacked = concat_hourly([frame([1.0, 2.0]), frame([3.0])])
+    assert list(stacked.index) == [0, 1, 2]

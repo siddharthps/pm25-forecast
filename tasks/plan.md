@@ -122,8 +122,8 @@ T14 weather → T12b validation (rest) → T15 features → T16 CV harness + bas
 
 ### Phase 3: Deepen (weeks 2–5)
 
-- [ ] T14: Weather ingestion: ERA5 history, Previous Runs archive, live forecast, CAMS
-- [ ] #78: Save CAMS's D+1 forecast each morning, as issued (D-044). **With T14**, which builds
+- [x] T14: Weather ingestion: ERA5 history, Previous Runs archive, live forecast, CAMS
+- [x] #78: Save CAMS's D+1 forecast each morning, as issued (D-044). **With T14**, which builds
   the CAMS download; running and verified about a week **before T23**, since the live record
   scores the model only on days it issued itself
 - [ ] The write-up's build work (D-044, D-045): #79 the pipeline writes `results.json` and the

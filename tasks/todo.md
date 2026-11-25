@@ -29,7 +29,7 @@ line** (2026-12-16) · **D: Complete**.
 | T9 | [#16](https://github.com/siddharthps/pm25-forecast/issues/16) | Watchdog (EventBridge → Lambda → Prefect / SNS) | B | closed (applied and drilled 2026-11-20, D-041) |
 | T10 | [#17](https://github.com/siddharthps/pm25-forecast/issues/17) | Daily scoring | B | closed (merged #74, 2026-11-21, D-042) |
 | T11 | [#18](https://github.com/siddharthps/pm25-forecast/issues/18) | Docs stub, number check and README skeleton | B | closed (merged #84, 2026-11-22 UTC, D-043) |
-| T14 | [#19](https://github.com/siddharthps/pm25-forecast/issues/19) | Weather ingestion | C | open: parts 1 and 2 merged (#125, #127; D-051, D-052); closes with #78 |
+| T14 | [#19](https://github.com/siddharthps/pm25-forecast/issues/19) | Weather ingestion | C | closed 2026-11-25 (#125, #127, #128; D-051, D-052, D-053) |
 | T12b | [#20](https://github.com/siddharthps/pm25-forecast/issues/20) | Validation, remaining problem classes and weather sources | C | closed (#129, D-054, 2026-11-24) |
 | T15 | [#21](https://github.com/siddharthps/pm25-forecast/issues/21) | Leakage-safe features | C | open |
 | T16 | [#22](https://github.com/siddharthps/pm25-forecast/issues/22) | CV harness and baselines | C | open |
@@ -60,7 +60,7 @@ line** (2026-12-16) · **D: Complete**.
 | [#58](https://github.com/siddharthps/pm25-forecast/issues/58) | test_publish: pytest ids instead of a dummy 'assert why' (merged #89, 2026-11-22 UTC) | comment audit (#55) | B |
 | [#59](https://github.com/siddharthps/pm25-forecast/issues/59) | Leakage property test: assume() instead of an early return (merged #90, 2026-11-22 UTC) | comment audit (#55) | B |
 | [#75](https://github.com/siddharthps/pm25-forecast/issues/75) | Watchdog schedules send the time placeholder escaped (fixed in #76; closed 2026-11-22 after a silent morning) | the first real watchdog checks (T9) | B |
-| [#78](https://github.com/siddharthps/pm25-forecast/issues/78) | Save CAMS's D+1 forecast each morning, as issued (with T14; running before T23; D-053, merged #128 2026-11-24; closes once the first real file is seen) | the write-up plan (T11, D-044) | C |
+| [#78](https://github.com/siddharthps/pm25-forecast/issues/78) | Save CAMS's D+1 forecast each morning, as issued (with T14; running before T23; D-053, merged #128 2026-11-24; closed 2026-11-25 after the first real file was checked) | the write-up plan (T11, D-044) | C |
 | [#79](https://github.com/siddharthps/pm25-forecast/issues/79) | The pipeline writes results.json and the chart data | T11 (D-043, D-044) | C |
 | [#80](https://github.com/siddharthps/pm25-forecast/issues/80) | Draw the write-up's four charts at build time | the write-up plan (T11, D-044) | C |
 | [#81](https://github.com/siddharthps/pm25-forecast/issues/81) | Block-bootstrap intervals and verdicts (D-045) | the write-up plan (T11, D-045) | C |
@@ -77,7 +77,7 @@ line** (2026-12-16) · **D: Complete**.
 | [#103](https://github.com/siddharthps/pm25-forecast/issues/103) | Test suite: one home for repeated test setup code (audit group 5; merged #109, 2026-11-23 UTC) | the 2026-11-22 test-suite audit | C |
 | [#112](https://github.com/siddharthps/pm25-forecast/issues/112) | Mutation-test the modules that hold the must-never rules (a full run 22 to 36 min; D-059; merged #141 and #142, 2026-11-25 UTC) | the 2026-11-22 test-suite audit | C |
 | [#140](https://github.com/siddharthps/pm25-forecast/issues/140) | Rule on #112's last mutmut survivors (merged #142, 2026-11-25 UTC) | #112's full run, 2026-11-24 | C |
-| [#143](https://github.com/siddharthps/pm25-forecast/issues/143) | mutmut verdicts flake: a Hypothesis deadline under load counted as a kill (D-060; PR open) | #140's two runs, 2026-11-25 UTC | C |
+| [#143](https://github.com/siddharthps/pm25-forecast/issues/143) | mutmut verdicts flake: a Hypothesis deadline under load counted as a kill (D-060; merged #144, 2026-11-25) | #140's two runs, 2026-11-25 UTC | C |
 | [#113](https://github.com/siddharthps/pm25-forecast/issues/113) | Watchdog starts the weekly uv-lock run; drop the GitHub cron (merged #136, D-058; applied and drilled 2026-11-24; closes after the 2026-11-30 run) | the 2026-11-23 dropped lock run | C |
 | [#115](https://github.com/siddharthps/pm25-forecast/issues/115) | Lock PR: open it with a GitHub App token so its own CI counts (merged #116, 2026-11-23 UTC) | #43 (#114's blocked merge, 2026-11-23) | B |
 | [#120](https://github.com/siddharthps/pm25-forecast/issues/120) | D-014 timeline review, Checkpoint B (merged #121, 2026-11-24 UTC, D-050) | Checkpoint B's last box | B |

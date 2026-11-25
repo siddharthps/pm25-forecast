@@ -1823,7 +1823,8 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
   - Saving the hourly values only, or the mean only: the hours keep the rule recomputable, the
     mean keeps the record readable; both are small.
   - Saving under `raw/`: old versions expire there.
-- **Status:** Active. 2026-11-24.
+- **Status:** Active. 2026-11-24. The first real file (`forecast_date=2026-11-26`) was
+  checked on 2026-11-25; #78 is closed.
 
 ---
 

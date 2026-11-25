@@ -2204,3 +2204,27 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - **2026-11-30 (Mon) after 09:00 Chicago:** the first watchdog-started lock run; close #113, #43.
 - #143's PR (the owner decides when to open it).
 - T15 (#21).
+
+## 2026-11-25: #143 merged, #78 and #19 closed, branch `session-records-1125` (CST, from 06:10)
+
+- **#144 merged** (2026-11-25 12:13 UTC, all four CI checks green); it closed #143.
+- **The first real `cams.json` checked** (#78's last box): `records/forecast_date=2026-11-26/`
+  in the private bucket. Written 12:01:47 UTC, 11 s after `forecast.json`; `fetched_at_utc`
+  carries its zone; the 00 UTC run was published 10:08:50 UTC, before the 12:00 UTC issue
+  (`published_before_issue` true); 10 monitors, each a daily mean of 24 of 24 hours, the same
+  site set as `forecast.json`.
+- **#78 and #19 closed** (owner's OK), their boxes ticked. #19's "responses cached" means the
+  history in S3 with reruns fetching only missing parts; the CAMS bias is in D-052, and #79
+  carries it into the write-up.
+
+### Traps found
+
+- **The SSO session had expired overnight** (8 hours): the check waited on the owner's
+  `aws sso login`.
+- **`aws s3 cp` has no `-q`;** it's `--only-show-errors`.
+
+### Next
+
+- #3: the old key and IAM user (owner confirms); milestone B closes.
+- **2026-11-30 (Mon) after 09:00 Chicago:** the first watchdog-started lock run; close #113, #43.
+- T15 (#21).

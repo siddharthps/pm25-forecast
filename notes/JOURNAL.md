@@ -2264,6 +2264,18 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 
 ### Next
 
-- `session-records-1125`'s PR (the owner decides when to open it).
-- **2026-11-30 (Mon) after 09:00 Chicago:** the first watchdog-started lock run; close #113, #43.
-- T15 (#21).
+- `session-records-1125` merged as #145 (2026-11-25 15:48 UTC, via the REST API after
+  repeated GraphQL errors).
+- **The owner is away until Tue 2026-12-01** (owner, 2026-11-25). The daily runs and the
+  watchdog carry on; nothing needs the owner before then. That session, in order:
+  1. `aws sso login --profile pm25`.
+  2. **Health check:** a `forecast.json` and a `cams.json` under every
+     `records/forecast_date=` from 2026-11-27 to 2026-12-02, and no watchdog or alarm email
+     in the meantime.
+  3. **#113:** read back the first watchdog-started lock run (Mon 2026-11-30 after 09:00
+     Chicago): the run, its PR and that PR's CI; close #113 if all three hold. #43 is
+     already closed.
+  4. **T15 (#21):** leakage-safe features. First decision: the −1 and 101 % cloud-cover values
+     (D-054), shown with real examples before asking.
+- Waypoints (D-050): 12-05 T15–T17 · 12-12 check-in · 12-16 cut line · 12-23 freeze. The
+  12-05 waypoint is a signal, not a deadline; the away week is the owner's choice.

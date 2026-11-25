@@ -2279,3 +2279,65 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
      (D-054), shown with real examples before asking.
 - Waypoints (D-050): 12-05 T15–T17 · 12-12 check-in · 12-16 cut line · 12-23 freeze. The
   12-05 waypoint is a signal, not a deadline; the away week is the owner's choice.
+
+## 2026-11-25: T15 (#21) first slice, branch `21-features` (CST, 12:25 to 13:50)
+
+- The owner had a couple of hours before the away week, so T15 started early; the 12-01 plan
+  (health check, #113) is unchanged. Today's run checked first: `forecast.json` and `cams.json`
+  for 2026-11-26 written 12:01 UTC.
+- **Cloud cover (D-062, refines D-054; owner's choice):** read from S3 first. 81 of 248,710
+  GFS-archive hours, only ever −1 or 101, all whole numbers, all at 00, 06, 12 or 18 UTC (one
+  GFS run handing over to the next); e.g. 5, 5, −1, 0, 0 where ERA5 reads 0. The features clip
+  to 0 and 100; the raw files and the report are unchanged.
+- **The feature set (D-062; owner's choice, the recommended one):** 21 features: 6 PM2.5, 10
+  weather over D+1, 4 calendar, the monitor. The prompt's preview mislabelled the total as 20;
+  corrected to the owner in the same turn.
+- **"Known at issue time" goes by source (D-062):** AQS's `available_at_utc` is its last-change
+  day, months after any historical issue time, so a literal filter would leave training no PM2.5
+  history. AirNow and GFS count only if published before the issue time; AQS and ERA5 count by
+  measurement time, the declared skews T22 measures. Training and serving share all the code.
+- **The issue-instant edge (owner's choice, strictly before):** the spec's `known_at` and
+  leakage rule treat a row stamped exactly at the issue time as future; D-034's wording, the
+  live run (`forecast/run.py` drops with `>`, a test asserts the row is kept) and `cams_save.py`
+  (`<=`) treat it as known. The features follow the spec; aligning the live code is a new issue
+  (drafted; created on the owner's OK).
+- **Built check-first** (`2c6105b`, `491f98f`): unit tests with hand-worked values for each
+  feature, the duplicate/rescaled ban, five Hypothesis properties (as-published and stand-in
+  leakage for PM2.5 and weather; another monitor, or row order, never changes a row).
+- **Planted mistakes:** 7, 6 caught. The survivor (the PM2.5 window taking in day D) is
+  harmless: features look days up by date, so day D's hours are never read. The real version
+  (reading D as yesterday) is caught by four tests.
+- **mutmut on `features/build.py`** (WSL, clone-only list): 458 mutants, 33 survived. 9 were real
+  and are killed by four new tests (the naive-time message in full, D−7's first hour, the
+  temperature maximum's 18 hours, no target days). Rerun: 453 mutants, 20 survived, all
+  explained as equivalent:
+  - `observed=` in the `groupby`s (10): only matters for categorical keys; `site_id` is a string;
+  - the PM2.5 and weather window trims (`|` for `&`, `<=` at the end, no zone at the start; 4)
+    and the 8-day `range` (1): features look rows up by local date, so extra rows land on days
+    never read;
+  - `//` as `/` (24.0 equals 24); `np.nan` as `None` in a float column; the `getattr` default
+    (`.dt.tz` exists on every datetime column);
+  - the empty default `iloc[0:0]` as `iloc[1:0]` (also empty) or `iloc[0:1]` (one hour is
+    never enough for any weather feature).
+  - `kind="stable"` (4 more in the first run) was deleted: pandas ignores it for a
+    multi-column sort.
+- **Suite time:** about 29 s without the new tests and 33 s with them, on a busy PC (D-057 counts
+  only quiet runs). Profiling: no hot spot, pandas' per-call overhead on small frames, as
+  D-057 found for validation; a vectorized rewrite saved 1 ms a call and was reverted. Four of
+  the five properties now compute their fixed baseline once.
+
+### Traps found
+
+- **A profiler's `out.prof` lands in the working folder** and `git add -A` committed it;
+  removed in a follow-up commit (`dd28068`), not by rewriting history.
+- **The suite's `.hypothesis/patches/`** gets a patch file per failing property run; it's
+  gitignored, but delete it once the failure is fixed.
+
+### Next
+
+- **#21 is not done:** its row-per-(monitor, issue day) box needs the build run once on the real
+  S3 history (time a small run first: about 20 ms per target day on fixtures, so roughly 2 min
+  for 2009 to 2024 at 10 monitors), then the PR. The mutmut box is met.
+- A quiet three-run timing of the suite with the branch (D-057), before the PR.
+- The issue for the live run's issue-instant edge, once the owner OKs it.
+- The 12-01 session as planned above: health check, #113, then #21's real-data run and PR.

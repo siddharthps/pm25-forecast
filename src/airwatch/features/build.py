@@ -133,7 +133,7 @@ def _pm_features(days: pd.DataFrame, site: str, issue_day: date) -> dict[str, fl
 
 
 def _newest_run(weather: pd.DataFrame) -> pd.DataFrame:
-    ordered = weather.sort_values(["site_id", "valid_utc", "run_start_utc"], kind="stable")
+    ordered = weather.sort_values(["site_id", "valid_utc", "run_start_utc"])
     return ordered.drop_duplicates(["site_id", "valid_utc"], keep="last")
 
 

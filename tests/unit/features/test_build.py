@@ -335,5 +335,27 @@ def test_an_input_mixing_sources_is_refused() -> None:
 def test_known_at_refuses_naive_times() -> None:
     naive = pm_day(day(1), 10.0)
     naive["available_at_utc"] = naive["available_at_utc"].dt.tz_localize(None)
-    with pytest.raises(ValueError, match="timezone-aware"):
+    with pytest.raises(ValueError, match=r"^available_at_utc must be timezone-aware UTC$"):
         known_at(naive, ISSUE_AT, frozenset({"aqs"}))
+
+
+def test_the_first_hour_of_d7_counts() -> None:
+    frames = [pm_day(day(k), 8.0) for k in range(1, 4)]
+    frames.append(pm_day(day(7), 20.0, hours=18))
+    assert row(concat_hourly(frames))["pm_mean_7d"] == pytest.approx((3 * 8.0 + 20.0) / 4)
+
+
+@pytest.mark.parametrize(("hours", "valid"), [(17, False), (18, True)])
+def test_the_temperature_maximum_needs_eighteen_hours(hours: int, valid: bool) -> None:
+    temps = [10.0] * 25
+    temps[0] = 30.0
+    weather = weather_day(TARGET, values={"temperature_2m": temps}).iloc[[*range(hours), 24]]
+    r = row(pm_day(day(1), 10.0), weather)
+    assert (r["temp_max"] == 30.0) if valid else math.isnan(r["temp_max"])
+
+
+def test_no_target_days_still_gives_every_column_and_monitor() -> None:
+    out = build_features(empty_hourly(), no_weather(), [], sites=SITES, tz=PHOENIX)
+    assert len(out) == 0
+    assert list(out.columns) == [*KEY_COLUMNS, *FEATURE_COLUMNS]
+    assert list(out["monitor"].cat.categories) == sorted(SITES)

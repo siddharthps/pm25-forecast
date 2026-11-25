@@ -1541,6 +1541,8 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
   offered, not chosen.
 - **Status:** Active. Owner's choice, 2026-11-22. Scope refined by D-059 (2026-11-24): the
   must-never modules are mutated too, and the test selection includes `tests/integration`.
+  D-060 (2026-11-25): the validation properties have no deadline, so a timing failure under
+  mutmut is never counted as a kill.
 
 ---
 
@@ -2034,6 +2036,29 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
   integration tests already cover); keeping the integration tests out to save time (false
   survivors, which hide the real ones).
 - **Status:** Active. 2026-11-24. Refines D-048's scope.
+
+---
+
+## D-060 · 2026-11-25 · The validation property tests run with no deadline (#143)
+
+- **Decision (owner's choice, 2026-11-25 UTC):** the three Hypothesis properties in
+  `tests/property/test_validation.py` carry `@settings(deadline=None)`, as the two leakage
+  properties already did; a test there fails if one loses it.
+- **Why:** under mutmut (its trampoline on every call, 12 processes at once) one example took
+  252 to 304 ms against Hypothesis's default 200 ms. Hypothesis then fails the test ("Unreliable
+  test timings"), and mutmut counts that as a killed mutant, so a mutant no test catches could
+  be reported as caught. Reproduced in WSL: 6 of 12 parallel copies failed on
+  `test_row_order_never_changes_the_result` with an equivalent mutant active; 0 of 60 runs one
+  at a time did. Normally an example takes up to about 60 ms.
+- **Not a loosened check:** the deadline isn't part of what these properties prove (row order,
+  other sites' rows and exclusions never change a result). Speed is the suite budget's job
+  (75 s in CI, D-046).
+- **The other property tests keep the default:** their examples take under 1 ms (measured
+  2026-11-25), so the slowdown that broke these can't reach 200 ms there.
+- **Alternatives (offered, not chosen):** a Hypothesis profile with no deadline loaded only
+  inside mutmut's copy (leaves the same flake possible on a busy CI runner); no deadline in the
+  default profile for every property test (broader than the evidence).
+- **Status:** Active. 2026-11-25.
 
 ---
 

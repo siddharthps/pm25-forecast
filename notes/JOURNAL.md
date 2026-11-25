@@ -2170,3 +2170,37 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - **2026-11-30 (Mon) after 09:00 Chicago:** the first watchdog-started lock run; close #113, #43.
 - #140's PR (closes #140 and #112); an issue for the mutmut kill flake (owner's call).
 - T15 (#21).
+
+## 2026-11-24: #143, the mutmut verdict flake, branch `143-mutmut-flake` (CST, 21:45 to 23:20)
+
+- **#142 merged** (2026-11-25 03:39 UTC); it closed #140 and #112. #143 filed for the flake.
+- **Found:** a Hypothesis deadline, not a random test. With an equivalent mutant active, the
+  tests mutmut maps to it passed 60 of 60 times run one at a time, but 6 of 12 copies run at once
+  (mutmut's parallelism) failed `test_row_order_never_changes_the_result`: an example took 252
+  to 304 ms against the default 200 ms, faster on the rerun, so Hypothesis raised "Unreliable
+  test timings". mutmut counts any failure as a kill, so a mutant no test catches could be
+  reported as caught, not only harmless ones.
+- **Fixed (owner's choice, D-060):** `deadline=None` on the three validation properties, with a
+  test that fails if one loses it (red first). The other 18 property tests keep the default:
+  their examples take under 1 ms.
+- **Proof:** two mutmut runs of `checks.py` on `3a3dc3e`: 60 not killed each (59 survived, 1
+  timeout), the same list; the five mutants that flipped in #140 survive in both. No survivor
+  appeared that the earlier runs didn't list, so the false kills hid no real gap there.
+
+### Traps found
+
+- **A direct pytest in mutmut's `mutants/` folder imports the unmutated package:** the venv's
+  editable install wins. Set `PYTHONPATH=<clone>/mutants/src`, and prove the switch works with
+  a control mutant that must fail, before trusting a pass.
+- **`bash -c "…"` through `wsl.exe` expands variables on the Windows side** (`$PWD` became the
+  Windows checkout), as DEVELOPMENT.md warns: put such commands in a script.
+- **A flake that needs load won't show one test at a time:** reproduce at the parallelism the
+  tool really uses.
+
+### Next
+
+- **2026-11-25 after 12:00 UTC:** the first real `cams.json` (#78), then close #78 and #19; #3's
+  old key and user (owner confirms); milestone B closes.
+- **2026-11-30 (Mon) after 09:00 Chicago:** the first watchdog-started lock run; close #113, #43.
+- #143's PR (the owner decides when to open it).
+- T15 (#21).

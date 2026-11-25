@@ -14,7 +14,7 @@ from datetime import date, timedelta
 from zoneinfo import ZoneInfo
 
 import pandas as pd
-from hypothesis import given
+from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from airwatch.observations.sites import SITE_COORDS
@@ -69,6 +69,7 @@ def site_view(result: ValidationResult, site: str) -> tuple[object, ...]:
     return items, rows.to_json(date_format="iso")
 
 
+@settings(deadline=None)
 @given(
     a=values,
     b=values,
@@ -89,6 +90,7 @@ def test_another_sites_rows_never_change_this_sites_result(  # noqa: PLR0913
     assert site_view(alone, SITE_A) == site_view(together, SITE_A)
 
 
+@settings(deadline=None)
 @given(
     a=values,
     b=values,
@@ -112,6 +114,7 @@ def test_row_order_never_changes_the_result(  # noqa: PLR0913
     )
 
 
+@settings(deadline=None)
 @given(a=values, b=values, c=values, now_h=run_hours, opened_day=open_days)
 def test_exclusion_only_removes_rows_and_counts_each_one(
     *, a: list[float], b: list[float], c: list[float], now_h: int, opened_day: int
@@ -126,3 +129,18 @@ def test_exclusion_only_removes_rows_and_counts_each_one(
     assert len(result.clean) + excluded == len(df)
     merged = result.clean.merge(df, how="left", indicator=True)
     assert (merged["_merge"] == "both").all()
+
+
+def test_no_property_here_can_fail_on_time() -> None:
+    """Each runs with no per-example deadline (#143, D-060).
+
+    Under mutmut's 12 processes an example took up to 304 ms against the default 200 ms, so a
+    timing failure was counted as a killed mutant. Speed is the suite budget's job (D-046).
+    """
+    properties = (
+        test_another_sites_rows_never_change_this_sites_result,
+        test_row_order_never_changes_the_result,
+        test_exclusion_only_removes_rows_and_counts_each_one,
+    )
+    for prop in properties:
+        assert prop._hypothesis_internal_use_settings.deadline is None, prop.__name__  # type: ignore[attr-defined]

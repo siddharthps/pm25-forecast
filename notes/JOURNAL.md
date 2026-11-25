@@ -2230,8 +2230,20 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   deleted the domain, its EFS file system (6 mount targets), its two NFS security groups and its
   execution role and policy, from the agent's guide. Read back: no domains, no EFS file systems,
   no such security groups, role and policy NoSuchEntity; `pm25-forecast-prefect-run` and the
-  three project buckets untouched. About 15 other 2023 SageMaker roles and 5 policies remain
-  (outside the project; a cleanup only if the owner asks).
+  three project buckets untouched.
+- **The account swept and cleared of everything outside the project** (owner's request: "anything
+  that is not related to this project can go"). A read-only inventory of all 17 regions (EC2,
+  volumes, snapshots, RDS, Lambda, ECR, ECS, EKS, CloudFormation, logs, SNS, SQS, DynamoDB, KMS,
+  Secrets Manager, SSM, SageMaker, API Gateway, Step Functions, EventBridge, Glue, CodeCommit,
+  EFS and more) plus IAM, Route 53, CloudFront and costs (only S3, about $0.02 a month, since
+  August). The agent then deleted, by exact name (owner's choice of the CLI over a guide):
+  `try2role` (2023; IAM, S3 and SageMaker full access, a real risk), 15 unused 2023 SageMaker
+  roles, 5 orphan customer policies, the log group `/aws/sagemaker/NotebookInstances`, the 2023
+  CodeCommit repo `AmazonSageMaker-assignment1-mlops-final` (no copy, owner's choice against the
+  recommended clone), and the SageMaker Notebooks, Braket and EFS service-linked roles
+  (SUCCEEDED). Read back: the roles left are the project's three, the SSO role and five AWS
+  service roles; the one customer policy is `pm25-forecast-pipeline`; the watchdog is Active.
+  Nothing Terraform manages was touched.
 
 ### Traps found
 
@@ -2244,6 +2256,11 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   validation until piped through `tr -d '\r'`.
 - **`list-objects-v2 --query KeyCount` printed `None`** under the CLI's paging; `aws s3 ls
   --recursive --summarize` gives the real count.
+- **Policies made by AWS wizards live under `/service-role/`:** an ARN built as
+  `policy/<name>` isn't found. Read the ARN from `list-policies`. The script stopped there, as
+  `set -e` meant it to.
+- **Git Bash rewrites an argument starting with `/` into a Windows path** (`/aws/sagemaker/…`
+  as a log group name failed validation): set `MSYS_NO_PATHCONV=1`, as DEVELOPMENT.md does for WSL.
 
 ### Next
 

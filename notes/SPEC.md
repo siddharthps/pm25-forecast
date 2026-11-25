@@ -242,8 +242,9 @@ Every task states its check before its code. The checks:
 - **Outside world:** the clock, S3, the AirNow, AQS and Open-Meteo APIs, the Prefect API and SNS
   are all faked. Recorded API responses are fixtures, and each fake has a test that fails at
   every step in turn.
-- **Mutation testing** (mutmut) on `timeutil.py` and `config.py` from #42, then `features/`,
-  `forecast/record.py` and `training/split.py` as they land (D-048).
+- **Mutation testing** (mutmut) on `timeutil.py` and `config.py` from #42, every module that
+  holds a "must never" rule from #112 (D-059), then `features/` and `training/split.py` as they
+  land (D-048).
   Every surviving mutant is either killed by a new test or explained in the journal.
 - **Coverage:** ≥ 85% line coverage on `src/airwatch` (excluding `flows/`), enforced in CI as a
   floor. It is a floor, not the goal; placeholder tests like v1's `assert True` are banned.

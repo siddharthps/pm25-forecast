@@ -2106,6 +2106,8 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   `S3Store.create_if_absent`'s retry count and pause (3) aren't pinned; the second
   `live_run is not None or` in `cams.parse`; `dropna(subset=None)` in `cams.daily_means`.
 - Core suite after: 1,048 passed and 16 skipped (the zone tests, POSIX only), 26.7 s.
+- **Records:** D-059 records the new scope and test selection (refines D-048); SPEC's
+  mutation line and the todo row follow it.
 
 ### Traps found
 

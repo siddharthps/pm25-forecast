@@ -1539,7 +1539,8 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
 - **Alternatives:** a weekly scheduled run as well (a job to watch, and GitHub's cron can be
   late or dropped); WSL only (depends on remembering, and tests only Chicago time). Both
   offered, not chosen.
-- **Status:** Active. Owner's choice, 2026-11-22.
+- **Status:** Active. Owner's choice, 2026-11-22. Scope refined by D-059 (2026-11-24): the
+  must-never modules are mutated too, and the test selection includes `tests/integration`.
 
 ---
 
@@ -2006,6 +2007,33 @@ in `notes/OUTLINE.md`, the writing rules in `notes/STYLE.md`.
 - **Alternatives (rejected by the owner, 2026-11-23):** a Cloudflare Worker (a second scheduler
   to keep); keeping GitHub's cron as a backup (two triggers for one job).
 - **Status:** Active. 2026-11-24. Refines D-027 (the weekly lock job) and D-041 (the watchdog).
+
+---
+
+## D-059 · 2026-11-24 · mutmut: the must-never modules and the integration tests (#112)
+
+- **Scope:** `[tool.mutmut] only_mutate` holds D-048's `timeutil.py` and `config.py`, plus
+  `weather/leads.py`, plus each module that holds a "must never" rule (the list #112 gave):
+  - leakage: `observations/schema.py`, `forecast/run.py`;
+  - at most once: `forecast/record.py`, `storage.py`, `monitoring/compute.py`;
+  - validation: `validation/checks.py`, `validation/reference.py`;
+  - the CAMS record: `weather/cams.py`, `weather/cams_save.py`;
+  - scoring: `monitoring/score.py`; the public file: `forecast/publish.py`;
+  - the watchdog: `watchdog/handler.py`.
+
+  T15 still adds `features/` and `training/split.py` as they land (`forecast/record.py` is in
+  already).
+- **Test selection:** `pytest_add_cli_args_test_selection` includes `tests/integration` beside
+  `tests/unit` and `tests/property`. Without it, every mutant only the integration tests catch
+  was reported as a survivor. A test checks that every offline test folder is selected.
+- **Still on demand, never blocking** (D-048): a full run takes 22 to 36 min in WSL (12 CPUs);
+  times in DEVELOPMENT.md.
+- **Why:** the owner's phase-end rule that every module holding a "must never" rule is in the
+  mutation list; the 2026-11-22 audit found by hand the gaps mutmut finds on every run.
+- **Alternatives:** the whole of `src/` (slower, and most of the rest is I/O wiring the
+  integration tests already cover); keeping the integration tests out to save time (false
+  survivors, which hide the real ones).
+- **Status:** Active. 2026-11-24. Refines D-048's scope.
 
 ---
 

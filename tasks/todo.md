@@ -78,6 +78,7 @@ line** (2026-12-16) · **D: Complete**.
 | [#112](https://github.com/siddharthps/pm25-forecast/issues/112) | Mutation-test the modules that hold the must-never rules (a full run 22 to 36 min; D-059; merged #141 and #142, 2026-11-25 UTC) | the 2026-11-22 test-suite audit | C |
 | [#140](https://github.com/siddharthps/pm25-forecast/issues/140) | Rule on #112's last mutmut survivors (merged #142, 2026-11-25 UTC) | #112's full run, 2026-11-24 | C |
 | [#143](https://github.com/siddharthps/pm25-forecast/issues/143) | mutmut verdicts flake: a Hypothesis deadline under load counted as a kill (D-060; merged #144, 2026-11-25) | #140's two runs, 2026-11-25 UTC | C |
+| [#146](https://github.com/siddharthps/pm25-forecast/issues/146) | Issue-time edge: a row stamped exactly at the issue time is not yet known (live run and CAMS save) | T15 (#21), D-062 | C |
 | [#113](https://github.com/siddharthps/pm25-forecast/issues/113) | Watchdog starts the weekly uv-lock run; drop the GitHub cron (merged #136, D-058; applied and drilled 2026-11-24; closes after the 2026-11-30 run) | the 2026-11-23 dropped lock run | C |
 | [#115](https://github.com/siddharthps/pm25-forecast/issues/115) | Lock PR: open it with a GitHub App token so its own CI counts (merged #116, 2026-11-23 UTC) | #43 (#114's blocked merge, 2026-11-23) | B |
 | [#120](https://github.com/siddharthps/pm25-forecast/issues/120) | D-014 timeline review, Checkpoint B (merged #121, 2026-11-24 UTC, D-050) | Checkpoint B's last box | B |

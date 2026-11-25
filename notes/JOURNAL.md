@@ -2300,7 +2300,7 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   leakage rule treat a row stamped exactly at the issue time as future; D-034's wording, the
   live run (`forecast/run.py` drops with `>`, a test asserts the row is kept) and `cams_save.py`
   (`<=`) treat it as known. The features follow the spec; aligning the live code is a new issue
-  (drafted; created on the owner's OK).
+  (#146, created on the owner's OK).
 - **Built check-first** (`2c6105b`, `491f98f`): unit tests with hand-worked values for each
   feature, the duplicate/rescaled ban, five Hypothesis properties (as-published and stand-in
   leakage for PM2.5 and weather; another monitor, or row order, never changes a row).
@@ -2339,5 +2339,5 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   S3 history (time a small run first: about 20 ms per target day on fixtures, so roughly 2 min
   for 2009 to 2024 at 10 monitors), then the PR. The mutmut box is met.
 - A quiet three-run timing of the suite with the branch (D-057), before the PR.
-- The issue for the live run's issue-instant edge, once the owner OKs it.
+- **#146** (the live run's issue-instant edge, size S): fill-in work, before T23.
 - The 12-01 session as planned above: health check, #113, then #21's real-data run and PR.

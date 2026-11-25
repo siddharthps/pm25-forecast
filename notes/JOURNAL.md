@@ -2226,6 +2226,12 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
   recommended local copy). Read back: only the three `pm25-forecast-*` buckets remain, with
   their objects.
 - **Milestones A and B closed** (owner's OK); both had 0 open issues.
+- **The 2023 SageMaker Studio domain removed** (owner's choice; outside the project): the owner
+  deleted the domain, its EFS file system (6 mount targets), its two NFS security groups and its
+  execution role and policy, from the agent's guide. Read back: no domains, no EFS file systems,
+  no such security groups, role and policy NoSuchEntity; `pm25-forecast-prefect-run` and the
+  three project buckets untouched. About 15 other 2023 SageMaker roles and 5 policies remain
+  (outside the project; a cleanup only if the owner asks).
 
 ### Traps found
 
@@ -2241,7 +2247,6 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 
 ### Next
 
-- A 2023 SageMaker Studio domain (`QuickSetupDomain-20231013T112938`) is still InService: no
-  user profiles, apps or spaces, 6 KB of EFS. Delete it or keep it (owner's call).
+- `session-records-1125`'s PR (the owner decides when to open it).
 - **2026-11-30 (Mon) after 09:00 Chicago:** the first watchdog-started lock run; close #113, #43.
 - T15 (#21).

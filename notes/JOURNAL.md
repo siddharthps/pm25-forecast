@@ -2204,3 +2204,66 @@ Start: after #73 merged. The first scheduled run is due 2026-11-21 06:00.
 - **2026-11-30 (Mon) after 09:00 Chicago:** the first watchdog-started lock run; close #113, #43.
 - #143's PR (the owner decides when to open it).
 - T15 (#21).
+
+## 2026-11-25: #143 merged, #78 and #19 closed, branch `session-records-1125` (CST, from 06:10)
+
+- **#144 merged** (2026-11-25 12:13 UTC, all four CI checks green); it closed #143.
+- **The first real `cams.json` checked** (#78's last box): `records/forecast_date=2026-11-26/`
+  in the private bucket. Written 12:01:47 UTC, 11 s after `forecast.json`; `fetched_at_utc`
+  carries its zone; the 00 UTC run was published 10:08:50 UTC, before the 12:00 UTC issue
+  (`published_before_issue` true); 10 monitors, each a daily mean of 24 of 24 hours, the same
+  site set as `forecast.json`.
+- **#78 and #19 closed** (owner's OK), their boxes ticked. #19's "responses cached" means the
+  history in S3 with reruns fetching only missing parts; the CAMS bias is in D-052, and #79
+  carries it into the write-up.
+- **#3 closed:** a read-only check first (the key …XZ53 still last used 2025-08-04, the user's
+  only credential; its policy attached to nothing else). The owner then deleted the key, the
+  user `air-quality-mlops-user` and `MLOpsProjectS3AndBasicAccessPolicy` in the console, from
+  the agent's step-by-step guide. Read back: both NoSuchEntity, no IAM users left.
+  `notes/TOKENS.md` updated. The #3 body's garbled `…` and `·` repaired in the same edit.
+- **The v1 and 2023 SageMaker buckets deleted early** (owner's request, D-061; #36's bucket box
+  ticked, #36 stays open): the contents listed first, no copy kept (owner's choice, against the
+  recommended local copy). Read back: only the three `pm25-forecast-*` buckets remain, with
+  their objects.
+- **Milestones A and B closed** (owner's OK); both had 0 open issues.
+- **The 2023 SageMaker Studio domain removed** (owner's choice; outside the project): the owner
+  deleted the domain, its EFS file system (6 mount targets), its two NFS security groups and its
+  execution role and policy, from the agent's guide. Read back: no domains, no EFS file systems,
+  no such security groups, role and policy NoSuchEntity; `pm25-forecast-prefect-run` and the
+  three project buckets untouched.
+- **The account swept and cleared of everything outside the project** (owner's request: "anything
+  that is not related to this project can go"). A read-only inventory of all 17 regions (EC2,
+  volumes, snapshots, RDS, Lambda, ECR, ECS, EKS, CloudFormation, logs, SNS, SQS, DynamoDB, KMS,
+  Secrets Manager, SSM, SageMaker, API Gateway, Step Functions, EventBridge, Glue, CodeCommit,
+  EFS and more) plus IAM, Route 53, CloudFront and costs (only S3, about $0.02 a month, since
+  August). The agent then deleted, by exact name (owner's choice of the CLI over a guide):
+  `try2role` (2023; IAM, S3 and SageMaker full access, a real risk), 15 unused 2023 SageMaker
+  roles, 5 orphan customer policies, the log group `/aws/sagemaker/NotebookInstances`, the 2023
+  CodeCommit repo `AmazonSageMaker-assignment1-mlops-final` (no copy, owner's choice against the
+  recommended clone), and the SageMaker Notebooks, Braket and EFS service-linked roles
+  (SUCCEEDED). Read back: the roles left are the project's three, the SSO role and five AWS
+  service roles; the one customer policy is `pm25-forecast-pipeline`; the watchdog is Active.
+  Nothing Terraform manages was touched.
+
+### Traps found
+
+- **The SSO session had expired overnight** (8 hours): the check waited on the owner's
+  `aws sso login`.
+- **`aws s3 cp` has no `-q`;** it's `--only-show-errors`.
+- **#3 is in milestone A, not B:** the earlier "Next" lines said closing it closes milestone B.
+  B had 0 open issues already; #3 was A's last.
+- **AWS CLI text output on Windows ends in `\r`:** a domain ID read into a shell variable failed
+  validation until piped through `tr -d '\r'`.
+- **`list-objects-v2 --query KeyCount` printed `None`** under the CLI's paging; `aws s3 ls
+  --recursive --summarize` gives the real count.
+- **Policies made by AWS wizards live under `/service-role/`:** an ARN built as
+  `policy/<name>` isn't found. Read the ARN from `list-policies`. The script stopped there, as
+  `set -e` meant it to.
+- **Git Bash rewrites an argument starting with `/` into a Windows path** (`/aws/sagemaker/…`
+  as a log group name failed validation): set `MSYS_NO_PATHCONV=1`, as DEVELOPMENT.md does for WSL.
+
+### Next
+
+- `session-records-1125`'s PR (the owner decides when to open it).
+- **2026-11-30 (Mon) after 09:00 Chicago:** the first watchdog-started lock run; close #113, #43.
+- T15 (#21).
